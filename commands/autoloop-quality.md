@@ -35,58 +35,18 @@ description: >
 
 ## 企业级质量标准定义
 
-### 安全性（目标：≥ 9/10）
+> **评分标准完整定义见 `protocols/enterprise-standard.md`。**
+> T6 审查必须覆盖 enterprise-standard.md 中的所有检查项，包括但不限于：
+> 超时配置、重试逻辑、健康检查、测试覆盖、连接池配置等。
+> 不得仅依赖本文件中的简化列表，必须以 enterprise-standard.md 为准。
 
-| 评分 | 标准 |
-|------|------|
-| 10 | 零已知漏洞，所有输入验证，无敏感数据泄露，有安全审计日志 |
-| 9  | 零已知漏洞，核心路径输入验证，无敏感数据在日志/响应中 |
-| 8  | 无严重漏洞（SQL注入/XSS/命令注入），基本输入验证 |
-| 7  | 有中级漏洞但有缓解措施，输入验证不完整 |
-| ≤6 | 有严重漏洞，不可接受 |
+**目标分数快速参考**（完整标准见 enterprise-standard.md）：
+- 安全性：≥ 9/10（零已知漏洞，核心路径输入验证，无敏感数据泄露）
+- 可靠性：≥ 8/10（所有外部调用有 try/except，无静默失败，有降级回退）
+- 可维护性：≥ 8/10（类型正确，无重复，命名清晰，路由和模块导出完整）
 
-**自动扣分项**（各有具体分值）：
-- SQL 注入风险：-4 分
-- 命令注入：-4 分
-- XSS（反射型）：-3 分
-- 路径穿越：-3 分
-- 敏感数据暴露：-3 分（密钥/密码在响应/日志中）
-- 缺少输入验证（外部输入）：-2 分/每处
-- CORS 配置过宽（allow_origins=["*"]）：-1 分
-
-### 可靠性（目标：≥ 8/10）
-
-| 评分 | 标准 |
-|------|------|
-| 10 | 所有外部调用有 try/except，有降级回退，有健康检查，有告警 |
-| 9  | 所有外部调用有 try/except，关键路径有降级 |
-| 8  | 主要外部调用有 try/except，无静默失败 |
-| 7  | 大部分有 try/except，有少量静默失败 |
-| ≤6 | 大量未捕获异常，不可接受 |
-
-**自动扣分项**：
-- 静默失败（except: pass）：-2 分/每处
-- 未捕获外部调用（HTTP/Redis/DB）：-2 分/每处
-- 无降级回退（Redis 缓存失败崩溃主流程）：-2 分
-- 关键操作无事务：-1 分
-
-### 可维护性（目标：≥ 8/10）
-
-| 评分 | 标准 |
-|------|------|
-| 10 | 类型完整，无重复代码，命名语义清晰，有测试，有文档 |
-| 9  | 类型完整，极少重复代码，命名清晰 |
-| 8  | 基本类型标注，少量重复，命名合理 |
-| 7  | 部分类型标注，有重复，命名可改进 |
-| ≤6 | any 滥用，大量重复，命名混乱，不可接受 |
-
-**自动扣分项**：
-- `any` 类型滥用：-1 分/每处（最多 -3）
-- `# type: ignore`：-0.5 分/每处（最多 -2）
-- 重复代码块（> 10 行完全相同）：-1 分/每处
-- 硬编码配置值：-0.5 分/每处
-- 新文件无 `__init__.py` 导出：-1 分
-- 新路由未在 `main.py` 注册：-2 分
+**达标条件（复合判定，见 protocols/quality-gates.md T6 复合判定规则）**：
+- 分数达标 AND 计数达标（P1=0，安全P2=0）两个条件必须同时满足
 
 ---
 
@@ -127,8 +87,11 @@ description: >
    - 查找：.env 文件中的值被 response 返回
 
 6. 输入验证
-   - 查找：FastAPI 路由参数有无 Pydantic 模型
-   - 查找：接受文件上传的路由有无类型和大小检查
+### 技术栈适配（输入验证检查）
+根据实际技术栈检查对应的输入验证机制：
+- Python/FastAPI: 路由参数有无 Pydantic 模型；接受文件上传的路由有无类型和大小检查
+- Node.js/Express: 有无 express-validator / zod / joi 验证中间件
+- 其他框架: 检查等效的请求验证机制，有无任意用户输入直接传入数据库/命令
 
 搜索命令参考（在代码库中执行 grep）：
 grep -rn "execute(f" {路径}
@@ -227,24 +190,27 @@ P1/P2/P3 数量摘要
 1. 类型系统
    - 查找：any 类型（Python: Any / TypeScript: any）
    - 查找：# type: ignore
-   - 查找：缺少返回类型标注的函数（FastAPI 路由应有 response_model）
+   - 查找：缺少返回类型标注的函数
 
 2. 代码重复
    - 识别：超过 10 行的重复代码块
    - 识别：同样的功能在多处实现
 
 3. 硬编码
-   - 查找：URL / 端口 / 超时时间 硬编码（非 settings）
+   - 查找：URL / 端口 / 超时时间 硬编码（非配置文件）
    - 查找：魔法数字（如 3600 而不是 CACHE_TTL）
 
 4. 模块化
-   - 检查：新文件是否在 __init__.py 中导出
-   - 检查：新路由是否在 main.py 注册
-   - 检查：函数单一职责（超过 50 行的函数是否需要分解）
+### 技术栈适配（模块化检查）
+根据实际技术栈检查对应的模块导出和路由注册：
+- Python: 新文件是否在 __init__.py 中导出；新路由是否在 {main_entry_file} 注册
+- Node.js/TypeScript: 新文件是否在 index.ts barrel export 中声明；新路由是否在入口文件（app.ts）注册
+- 其他框架: 按项目规范检查等效的模块导出和路由注册机制
+- 通用: 函数单一职责（超过 50 行的函数是否需要分解）
 
 5. 命名规范
    - 查找：缩写变量名（如 d, tmp, x）
-   - 查找：混合命名风格（camelCase 在 Python 中）
+   - 查找：不符合项目规范的命名风格（如 Python 中用 camelCase）
 
 搜索命令参考：
 grep -rn "Any" {路径}
@@ -339,16 +305,18 @@ grep -rn "http://\|https://" {路径}  # 硬编码 URL
 
 ```bash
 # 语法验证（使用 autoloop-plan.md 中的 syntax_check_cmd）
-{syntax_check_cmd} {修改的文件}
+# 注意：某些命令（如 tsc --noEmit）是项目级验证，不接受单文件参数；
+# 某些命令（如 python3 -m py_compile）接受文件参数。
+# plan 阶段应明确 syntax_check_file_arg: true/false。
+# - syntax_check_file_arg=true：  {syntax_check_cmd} {修改的文件}
+# - syntax_check_file_arg=false： {syntax_check_cmd}（不附加文件参数）
 
-# Python 项目：如果是路由文件，检查注册
-grep -n "include_router\|router\." {main_entry_file}
+# 如果路由文件被修改，检查主入口注册
+grep -n "include_router\|router\.\|app\.use\|app\.route" {main_entry_file}
 
-# Python 项目：如果修改了关键 import，检查循环依赖
-python3 -c "import {模块名}"
-
-# TypeScript 项目：全量类型检查
-npx tsc --noEmit
+# 如果修改了关键 import，检查循环依赖（按技术栈执行）
+# Python: python3 -c "import {模块名}"
+# Node.js/TS: node -e "require('{模块路径}')"  或  npx tsc --noEmit
 ```
 
 3. **更新问题清单状态**：将已修复的问题标记为 "✓ 已修复"。

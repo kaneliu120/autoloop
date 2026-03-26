@@ -177,4 +177,4 @@
 | 发现记录 | {路径}/autoloop-findings.md | 完整的发现和问题清单 |
 | 进度追踪 | {路径}/autoloop-progress.md | 每轮迭代详细记录 |
 | 本报告 | {路径}/autoloop-report-{date}.md | 最终报告 |
-| 结构化数据 | {路径}/autoloop-results.tsv | （T2/T4 适用）|
+| 结构化数据 | {路径}/autoloop-results.tsv | 结构化迭代日志（所有模板通用）|

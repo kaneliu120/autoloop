@@ -16,10 +16,14 @@ description: >
 - 代码库路径（绝对路径）
 - 技术栈信息（框架、数据库）
 - 部署目标（deploy_target）
-- 服务列表（services）
+- 部署命令（deploy_command）
+- 服务列表（service_list）
 - 文档输出路径（doc_output_path，默认：工作目录）
-- 健康检查 URL（health_url）
+- 健康检查 URL（health_check_url）
 - 线上验收 URL（acceptance_url）
+- 语法检查命令（syntax_check_cmd）
+- 主入口文件（main_entry_file）
+- 新路由变量名（new_router_name）
 
 **严格遵守 CLAUDE.md 强制开发流程，不可跳步。**
 
@@ -91,12 +95,12 @@ description: >
 ```
 你是 researcher subagent，调研以下技术实现的最佳实践：
 
-问题：{如：FastAPI 如何实现 WebSocket 认证 / SQLAlchemy 2.0 如何做批量 upsert}
+问题：{如：{技术栈} 如何实现 WebSocket 认证 / {ORM} 如何做批量 upsert}
 
 要求：
 1. 找到 3 个实际可用的代码示例
 2. 分析各方法的优缺点
-3. 推荐最适合 FastAPI + SQLAlchemy 2.0 + async 环境的方案
+3. 推荐最适合当前技术栈（{从 autoloop-plan.md 读取的技术栈}）的方案
 
 输出：推荐方案 + 示例代码
 ```
@@ -231,24 +235,44 @@ db-migrator subagent：
 ```
 你是 db-migrator subagent。
 
-任务：创建 Alembic 数据库迁移脚本。
+任务：创建数据库迁移脚本。
 
 变更内容：
 {从方案文档提取的数据库变更}
 
 代码库路径：{绝对路径}
-迁移目录：{绝对路径}/backend/db/migrations/
+迁移工具：{从 autoloop-plan.md 读取的数据库/ORM 类型}
 
-要求：
-1. 创建新的 Alembic 版本文件
-2. upgrade() 和 downgrade() 都必须实现
-3. 使用 IF NOT EXISTS 防止重复执行报错
-4. 迁移完成后验证：python -m alembic upgrade head
+### 技术栈适配（迁移命令）
+根据实际迁移工具执行对应操作：
+
+- Python/Alembic:
+  迁移目录：{项目根目录}/backend/db/migrations/
+  1. 创建新版本文件（alembic revision --autogenerate 或手动创建）
+  2. 实现 upgrade() 和 downgrade()
+  3. 使用 IF NOT EXISTS 防止重复执行报错
+  4. 验证：python -m alembic upgrade head
+
+- Node.js/Prisma:
+  1. 编辑 schema.prisma
+  2. 运行 npx prisma migrate dev --name {migration_name}
+  3. 验证 migration 文件内容正确
+
+- Node.js/Knex 或 TypeORM:
+  1. 创建迁移文件（npx knex migrate:make / npx typeorm migration:generate）
+  2. 实现 up() 和 down()
+  3. 验证：npx knex migrate:latest 或等效命令
+
+- 其他: 按项目规范执行迁移，必须有回滚方案
+
+通用要求：
+- 必须有回滚（downgrade/down/revert）实现
+- 使用幂等操作（IF NOT EXISTS / IF EXISTS）
 
 输出：
 - 迁移文件路径
-- upgrade() 内容
-- downgrade() 内容
+- 迁移内容摘要（新增/修改的表/列）
+- 回滚方案
 - 验证结果
 ```
 
@@ -256,50 +280,85 @@ db-migrator subagent：
 
 backend-dev subagent：
 ```
-你是 backend-dev subagent，负责后端 Python/FastAPI 代码实现。
+你是 backend-dev subagent，负责后端代码实现。
 
 方案文档：{路径}
+技术栈：{从 autoloop-plan.md 读取}
+syntax_check_cmd：{从 autoloop-plan.md 读取}
+main_entry_file：{从 autoloop-plan.md 读取}
 
-要求：
+通用要求：
+- 所有外部调用有 try/except，不允许静默失败
+- 新文件在模块导出文件中声明（__init__.py / index.ts / 其他）
+- 新路由在主入口文件（{main_entry_file}）中注册
+- 每修改一个文件立即运行 {syntax_check_cmd} 验证
+
+### 技术栈适配
+根据 plan 中确认的技术栈执行对应验证：
+
+**Python/FastAPI**:
 - 所有路由使用 async def
-- 所有外部调用有 try/except，不允许 except: pass
 - 数据库操作使用 SQLAlchemy 2.0 async session
-- 新文件在 __init__.py 中导出
-- 新路由在 main.py 中注册
-- 每修改一个文件立即运行 python3 -m py_compile {文件路径} 验证
+- 运行 python3 -m py_compile {文件路径} 验证每个文件
+- 新路由在 main.py 中 include_router
+
+**Node.js/Express 或 Fastify**:
+- 路由函数使用 async/await
+- 运行 npx tsc --noEmit（如使用 TypeScript）验证
+- 新路由在入口文件（app.ts / index.ts）注册
+
+**其他技术栈**:
+- 运行 {syntax_check_cmd} 验证
+- 按项目规范注册新路由/模块
 
 对每个文件的修改：
 1. 读取现有文件（不盲改）
 2. 实施修改
-3. 运行 py_compile 验证
+3. 运行 {syntax_check_cmd} 验证
 4. 报告修改内容
 
 输出：
 - 修改/新建的文件列表（绝对路径）
 - 每个文件的关键变更摘要
-- py_compile 验证结果（全部通过）
-- main.py 路由注册确认（如有新路由）
+- {syntax_check_cmd} 验证结果（全部通过）
+- 主入口路由注册确认（如有新路由）
 ```
 
 **1c. 前端开发（如有）** — 可与后端并行
 
 frontend-dev subagent：
 ```
-你是 frontend-dev subagent，负责 Next.js/TypeScript 前端实现。
+你是 frontend-dev subagent，负责前端代码实现。
 
 方案文档：{路径}
-前端目录：{绝对路径}/frontend/
+技术栈：{从 autoloop-plan.md 读取}
+syntax_check_cmd：{从 autoloop-plan.md 读取}
+前端目录：{从 autoloop-plan.md 读取}
 
-要求：
-- TypeScript 类型必须正确，无 any 滥用
+通用要求：
+- 类型必须正确，无 any 滥用（TypeScript 项目）
+- API 调用通过项目规定的代理/封装层
+- 每修改一个文件立即运行 {syntax_check_cmd} 验证
+- 新组件在 barrel export 文件中导出（如项目有此规范）
+
+### 技术栈适配
+根据 plan 中确认的技术栈执行对应验证：
+
+**Next.js/React**:
 - API 调用通过 /api/* 路由（Next.js Rewrite 代理）
-- 使用 TanStack Query v5 管理服务端状态
-- 每修改一个文件立即运行 npx tsc --noEmit 验证
-- 新组件在 index.ts 中导出（如果有 barrel export）
+- 使用项目实际的状态管理库（TanStack Query / SWR / Zustand / 其他）
+- 运行 npx tsc --noEmit 验证
+
+**Vue/Nuxt**:
+- 运行 vue-tsc --noEmit（如使用 TypeScript）验证
+- 使用 Pinia 或项目规范的状态管理
+
+**其他框架**:
+- 运行 {syntax_check_cmd} 验证
 
 输出：
 - 修改/新建的文件列表（绝对路径）
-- tsc --noEmit 验证结果（通过）
+- {syntax_check_cmd} 验证结果（通过）
 ```
 
 ### 质量门禁（阶段 1）
@@ -430,21 +489,21 @@ verifier subagent：
    git push origin main
 
 2. 线上部署
-   {deploy_target}（来自 autoloop-plan.md，如：gcloud compute ssh {host} --zone={zone} --command="..."）
+   {deploy_command}（来自 autoloop-plan.md）
 
 3. 部署后检查
-   检查所有服务全部 active：
-   {services}（来自 autoloop-plan.md 的 services 列表）
+   检查 service_list 中所有服务全部 active：
+   {service_list}（来自 autoloop-plan.md）
 
 4. Health check
-   curl {health_url}
+   curl {health_check_url}
    期望：HTTP 200，{"status": "ok"}
 ```
 
 ### 质量门禁（阶段 4）
 - [ ] git push 成功
-- [ ] {services} 列表中所有服务全部 active
-- [ ] Health check（{health_url}）返回 200
+- [ ] {service_list} 中所有服务全部 active
+- [ ] Health check（{health_check_url}）返回 200
 
 ---
 

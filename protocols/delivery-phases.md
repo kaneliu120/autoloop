@@ -16,7 +16,7 @@
 | Phase 2: 审查 | 阶段 2: 审查 | code-reviewer 串行审查 |
 | Phase 3: 测试 | 阶段 3: 测试验证 | verifier 执行 |
 | Phase 4: 部署 | 阶段 4: 部署上线 | git push + {deploy_command} |
-| Phase 5: 验收 | 阶段 5: 线上验收 | browse + 人工确认 |
+| Phase 5: 验收 | 阶段 5: 线上验收 | verifier + 人工确认 |
 
 ---
 
@@ -28,17 +28,22 @@
 - 技术栈信息
 - **T5 必须额外收集（在 plan 阶段）**：
   - `deploy_target`：部署目标主机（例：`sip-server`、`prod-01`）
-  - `service_count`：需要检查的服务数量（例：`4`）
-  - `deploy_command`：完整部署命令（例：`sudo bash deploy.sh`）
+  - `deploy_command`：完整部署执行命令（例：`gcloud compute ssh sip-server --zone=... --command="cd /opt/sip && git pull && sudo bash deploy.sh"`）
+  - `service_list`：需要检查的服务名称列表（例：`[sip-backend, sip-worker, sip-scheduler, sip-frontend]`）
   - `health_check_url`：健康检查端点 URL（例：`https://example.com/api/health`）
+  - `acceptance_url`：线上验收 URL（例：`https://example.com`）
+  - `doc_output_path`：方案文档输出目录绝对路径
+  - `syntax_check_cmd`：语法检查命令（例：`python3 -m py_compile`）
+  - `new_router_name`：本次新增的 router 变量名（例：`comments_router`，无新路由填 N/A）
+  - `main_entry_file`：主入口文件绝对路径（例：`/opt/sip/backend/main.py`）
 
 ### 执行（并行）
 
 **planner subagent（必须）**：
 - 读取代码库的关键模块（main.py、相关路由、相关 model）
 - 识别影响范围（修改文件 + 新建文件）
-- 设计数据库变更（有 SQL）
-- 设计 API 接口（有路径/方法/schema）
+- 识别数据库变更需求（描述变更内容，无需写 SQL — SQL 在 Phase 0.5 产出）
+- 识别 API 接口（路径/方法，无需完整 schema — schema 在 Phase 0.5 产出）
 - 识别实施顺序和依赖关系
 - 识别风险
 
@@ -50,15 +55,17 @@
 ### 输出
 - 技术方案（写入 autoloop-findings.md 的"分析结果"部分）
 - 影响文件列表（绝对路径）
-- API 接口设计
-- 数据库变更 SQL
+- API 接口列表（路径/方法，无需完整 schema）
+- 数据库变更描述（变更内容说明，无需 SQL）
 - 风险清单
 
 ### 质量门禁
-- [ ] 所有需要修改的文件已识别（不是猜测）
-- [ ] 数据库变更有具体 SQL（不是"需要加个字段"这种描述）
-- [ ] API 设计有请求/响应的具体 schema
+- [ ] 所有需要修改的文件已识别（通过读取代码确认，不是猜测）
+- [ ] 数据库变更已描述（描述变更内容和原因，无需具体 SQL — SQL 在 Phase 0.5 方案文档中产出）
+- [ ] 新增/修改路由已列出（路径和方法，无需完整 schema — schema 在 Phase 0.5 方案文档中产出）
+- [ ] 风险已识别
 - [ ] 实施顺序已解决依赖关系冲突
+- [ ] 验收标准已明确（可测量的功能验收条件）
 
 ### 阻塞条件
 无（自动进入 Phase 0.5）
@@ -82,8 +89,8 @@
 
 ### 质量门禁
 - [ ] 文档包含：问题描述、影响范围、具体方案、实施步骤、验收标准
-- [ ] 数据库变更有具体 SQL
-- [ ] API 接口有明确定义
+- [ ] 数据库变更有具体 SQL（CREATE TABLE / ALTER TABLE 语句，有则必须，无变更则标注"无"）
+- [ ] API 接口有明确定义（路径、方法、请求/响应 schema，有则必须，无新路由则标注"无"）
 - [ ] 有回滚方案
 
 ### 阻塞条件
@@ -133,7 +140,7 @@
 ### 质量门禁
 - [ ] 所有 Python 文件 py_compile 通过（零错误）
 - [ ] 所有 TypeScript 文件 tsc --noEmit 通过（零错误）
-- [ ] 新路由已在 main.py 注册（`grep -n "include_router.*{new_router_name}" {main.py}`）
+- [ ] 新路由已在主入口注册（`grep -n "include_router.*{new_router_name}" {main_entry_file}`）
 - [ ] 新文件已在 __init__.py 导出
 - [ ] Alembic 迁移有 downgrade() 实现
 - [ ] 无 `except: pass` / `# type: ignore` / `any` 滥用
@@ -202,7 +209,7 @@ python3 -m py_compile {每个文件}
 cd {前端目录} && npx tsc --noEmit
 
 # 3. 路由注册验证（{new_router_name} = 本次新增的 router 变量名，在 plan 中收集）
-grep -n "include_router.*{new_router_name}" {main.py}
+grep -n "include_router.*{new_router_name}" {main_entry_file}
 
 # 4. Alembic 状态检查（如有数据库迁移）
 cd {项目根目录} && python -m alembic check
@@ -241,7 +248,7 @@ curl -X GET {API端点} \
 
 ### 执行（人工或自动）
 
-> 以下变量在 plan 收集阶段定义（T5需额外收集：deploy_target, service_count, deploy_command, health_check_url）
+> 以下变量在 plan 收集阶段定义（T5需额外收集：deploy_target, deploy_command, service_list, health_check_url）
 
 ```bash
 # 1. 提交代码
@@ -261,22 +268,22 @@ git push origin main
 {deploy_command}
 # deploy_command 示例（在 plan 中收集）：
 #   SIP 项目：gcloud compute ssh {deploy_target} --zone=... --command="cd /opt/sip && git pull && sudo bash deploy.sh"
-#   其他项目：ssh {deploy_target} "cd {project_path} && git pull && {deploy_command}"
+#   其他项目：ssh {deploy_target} "cd {project_path} && git pull && bash deploy.sh"
 
 # 4. 服务健康检查
-# 检查 {service_count} 个服务全部 active（服务名称列表在 plan 中定义）
+# 检查 service_list 中每个服务全部 active（服务名称在 plan 中的 service_list 定义）
 ```
 
 ### 输出
 - git commit hash
 - 部署命令执行结果
-- 服务状态（{service_count} 个全部 active）
+- 服务状态（{service_list} 中全部 active）
 - Health check 响应（{health_check_url}）
 
 ### 质量门禁
 - [ ] git push 成功
 - [ ] {deploy_command} 执行无报错
-- [ ] {service_count} 个服务全部 active（systemctl status）
+- [ ] {service_list} 中所有服务全部 active（systemctl status）
 - [ ] Health check 返回 HTTP 200（{health_check_url}）
 
 ### 阻塞条件
@@ -292,7 +299,11 @@ git push origin main
 
 ### 执行
 
-**自动验证（browse subagent）**：
+**自动验证（verifier subagent）**：
+
+调用方式：`Agent(subagent_type="code-reviewer", prompt="你是线上验收测试员。使用浏览器工具验证以下功能...")`
+可选工具：Chrome DevTools MCP（如果已配置）
+
 - 访问相关页面，验证新功能是否可见
 - 执行功能操作，验证结果正确
 - 检查浏览器 Console 无错误

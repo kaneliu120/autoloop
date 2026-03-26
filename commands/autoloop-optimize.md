@@ -94,11 +94,14 @@ description: >
    目标：识别是否有清晰的层次结构（路由层 → 服务层 → 数据层）
 
    检查：
-   - 路由文件（backend/api/）是否直接操作数据库（应该通过 service 层）
+   - 路由文件是否直接操作数据库（应该通过 service 层）
    - 是否有 service 层？还是业务逻辑直接在路由中？
    - 数据模型是否混杂了业务逻辑？
 
-   工具：grep -rn "from backend.db\|from db\|session.execute" backend/api/
+   ### 技术栈适配（分层检查命令）
+   - Python/FastAPI: grep -rn "from.*db\|session.execute" {路由目录，如 backend/api/}
+   - Node.js: grep -rn "prisma\.\|sequelize\.\|mongoose\." {路由目录，如 src/routes/}
+   - 其他: 根据项目结构，在路由目录中搜索直接数据库调用
 
 2. 耦合分析
    检查：
@@ -310,13 +313,19 @@ description: >
 约束（不可违反）：
 - 不改变 public API 签名（路由路径、请求/响应格式）
 - 不改变数据库 schema（除非方案中明确说明）
-- 修改后必须通过 py_compile 验证
+- 修改后必须通过语法验证（使用 autoloop-plan.md 中的 {syntax_check_cmd}）
+
+### 技术栈适配（验证命令）
+根据实际技术栈选择对应的验证：
+- Python/FastAPI: python3 -m py_compile {file}（单文件，syntax_check_file_arg=true）
+- TypeScript/Node.js: npx tsc --noEmit（项目级，syntax_check_file_arg=false，不附加文件参数）
+- 其他: {syntax_check_cmd}，按 syntax_check_file_arg 决定是否附加文件名
 
 执行步骤：
 1. 读取相关文件（读全，不要猜）
 2. 分析影响范围（修改这个会影响哪些调用者）
 3. 实施最小化修复
-4. 运行验证
+4. 运行 {syntax_check_cmd}（按 syntax_check_file_arg 决定是否附加文件参数）
 5. 报告修改内容
 
 输出：
@@ -327,9 +336,10 @@ description: >
 - 是否需要测试关联功能
 ```
 
-### 常见优化方案模板
+### 常见优化方案模板（示例，以实际技术栈为准）
 
-**N+1 查询修复**：
+**N+1 查询修复**（示例使用 Python/SQLAlchemy，其他 ORM 按等效方式修复）：
+
 ```python
 # 修复前（N+1）
 companies = await session.execute(select(Company))
@@ -344,30 +354,35 @@ from sqlalchemy.orm import selectinload
 companies = await session.execute(
     select(Company).options(selectinload(Company.contacts))
 )
+# Node.js/Prisma 等效：include: { contacts: true }
+# 其他 ORM：使用对应的 eager loading / JOIN 机制
 ```
 
-**Redis 降级回退修复**：
+**缓存降级回退修复**（示例使用 Python/Redis，其他缓存层按等效方式修复）：
+
 ```python
-# 修复前（Redis 失败直接崩溃）
+# 修复前（缓存失败直接崩溃）
 async def get_cached_data(key: str) -> dict:
-    return await redis.get(key)  # RedisError 会 500
+    return await redis.get(key)  # 异常会导致 500
 
 # 修复后（有降级）
 async def get_cached_data(key: str) -> dict | None:
     try:
         result = await redis.get(key)
         return result
-    except RedisError as e:
-        logger.warning(f"Redis cache miss for {key}: {e}")
+    except Exception as e:
+        logger.warning(f"Cache miss for {key}: {e}")
         return None  # 降级到数据库查询
+# Node.js 等效：同样的 try/catch 模式
 ```
 
-**服务层提取修复**：
+**服务层提取修复**（示例使用 Python/FastAPI，其他框架按等效分层方式修复）：
+
 ```python
 # 修复前（路由层直接操作 DB）
 @router.get("/companies")
 async def list_companies(session: AsyncSession = Depends(get_session)):
-    result = await session.execute(select(Company))  # 直接在路由层
+    result = await session.execute(select(Company))  # 路由层直接查库
     return result.scalars().all()
 
 # 修复后（通过 service 层）
@@ -380,6 +395,7 @@ async def list_companies(session: AsyncSession) -> list[Company]:
 @router.get("/companies")
 async def list_companies_route(session: AsyncSession = Depends(get_session)):
     return await company_service.list_companies(session)
+# Node.js/Express 等效：controller 调用 service，service 操作 repository
 ```
 
 ---

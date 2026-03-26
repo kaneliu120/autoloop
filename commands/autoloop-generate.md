@@ -2,7 +2,7 @@
 name: autoloop-generate
 description: >
   AutoLoop T4: 批量内容生成模板。模板驱动 + 并行生成 + 逐项质量检查 + 自动重试。
-  每个生成单元独立评分，低分自动重生成（最多 3 次），批次整体通过率 ≥ 95%。
+  每个生成单元独立评分，低分自动重生成（最多 2 次，遵循统一重试规则），批次整体通过率 ≥ 95%。
   触发：/autoloop:generate 或任何需要批量生成同类内容的任务。
 ---
 
@@ -185,7 +185,7 @@ iteration	phase	status	metric_name	metric_value	delta	details
 
 ## 重试机制
 
-对于评分 < 7/10 的单元，触发重试：
+重试上限遵循 protocols/loop-protocol.md 统一重试规则（默认 2 次）。对于评分 < 7/10 的单元，触发重试：
 
 **重试策略**：
 
@@ -201,12 +201,9 @@ iteration	phase	status	metric_name	metric_value	delta	details
 {具体改进点}
 ```
 
-**第 2 次重试**：
+**第 2 次重试（最后一次）**：
 - 换一个不同的生成策略
 - 完全重新生成，不参考之前的版本
-
-**第 3 次重试（最后一次）**：
-- 生成 2 个版本，选择得分更高的
 - 如果仍 < 7/10，标注为"需人工审查"，继续其他单元
 
 ---
