@@ -170,11 +170,11 @@ def downgrade() -> None:
 - [ ] {验收标准 3}
 
 **技术验收**：
-- [ ] 所有修改文件 py_compile 通过
-- [ ] 新路由在 main.py 注册（grep 验证）
+- [ ] 所有修改文件通过语法检查（py_compile / tsc --noEmit，视技术栈而定）
+- [ ] 新路由已注册（grep 验证）
 - [ ] 代码审查 P1/P2 = 0
-- [ ] Health check 返回 200
-- [ ] 4 个服务全部 active
+- [ ] Health check（{health_url}）返回 200
+- [ ] {services} 列表中所有服务全部 active
 
 **线上验收**：
 - [ ] 浏览器（桌面）功能正常
@@ -195,9 +195,8 @@ def downgrade() -> None:
 git revert {commit_hash}
 git push origin main
 
-# 2. 线上更新
-gcloud compute ssh sip-server --zone=asia-southeast1-b \
-  --command="cd /opt/sip && git pull origin main && sudo bash deploy.sh"
+# 2. 线上更新（deploy_target 来自 autoloop-plan.md）
+{deploy_target}
 
 # 3. 数据库回滚（如有迁移）
 python -m alembic downgrade -1

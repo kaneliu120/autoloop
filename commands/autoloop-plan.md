@@ -42,6 +42,22 @@ description: >
 
 ---
 
+## 模板默认参数参考表
+
+| 模板 | 默认轮次 | 默认预算 | 默认质量门禁 |
+|------|---------|---------|------------|
+| T1 Research | 3 | 无限制 | coverage ≥ 85%，credibility ≥ 80% |
+| T2 Compare | 2 | 无限制 | completeness ≥ 90%，evidence ≥ 80% |
+| T3 Iterate | 无上限 | 用户定义 | KPI 达到用户指定目标值 |
+| T4 Generate | items × 2 | 无限制 | pass_rate ≥ 90%，avg_score ≥ 8/10 |
+| T5 Deliver | 1（线性阶段制） | 无限制 | 全阶段门禁通过（含 2 个人工确认点） |
+| T6 Quality | 无上限 | 无限制 | security ≥ 9/10，reliability ≥ 8/10，maintainability ≥ 8/10 |
+| T7 Optimize | 无上限 | 无限制 | architecture ≥ 8/10，performance ≥ 8/10，stability ≥ 8/10 |
+
+向导在 Step 4/5 展示对应行的默认值，用户可调整。
+
+---
+
 ## Step 2: 模板确认
 
 展示推断结果并确认：
@@ -146,6 +162,12 @@ description: >
 
 5. 质量标准（什么算"好"？）：
    {具体描述}
+
+6. 输出位置（output_path）：
+   {绝对路径，默认: {工作目录}/autoloop-output/}
+
+7. 文件命名规则（naming_pattern）：
+   {默认: {template_name}-{index}.md，如 cold-email-001.md}
 ```
 
 ### T5 Deliver — 交付配置
@@ -158,7 +180,7 @@ description: >
 2. 代码库信息：
    - 路径：{绝对路径}
    - 后端框架：{FastAPI/其他}
-   - 前端框架：{Next.js/其他}
+   - 前端框架：{Next.js/其他/无}
    - 数据库：{PostgreSQL/其他}
 
 3. 接口约定：
@@ -170,9 +192,22 @@ description: >
    - 是否需要新增/修改表？{是/否}
    - 如果是：{描述变更}
 
-5. 部署信息：
-   - 目标环境：{GCP/AWS/本地}
-   - 部署命令：{如 bash deploy.sh}
+5. 部署目标（deploy_target）：
+   {完整的部署命令，如: gcloud compute ssh {host} --zone={zone} --command="cd {path} && git pull origin main && sudo bash deploy.sh"}
+   如无远程部署：{本地命令，如 docker-compose up -d --build}
+
+6. 服务列表（services）：
+   {部署后需要检查的服务名称列表，如: backend, worker, scheduler, frontend}
+   如不适用：{留空或填 N/A}
+
+7. 文档输出路径（doc_output_path）：
+   {方案文档存放的目录绝对路径，默认: 工作目录}
+
+8. 健康检查 URL（health_url）：
+   {如 https://example.com/api/health，或留空跳过健康检查}
+
+9. 线上验收 URL（acceptance_url）：
+   {验收时打开的线上地址，如 https://example.com}
 ```
 
 ### T6 Quality — 质量审查配置
@@ -335,7 +370,7 @@ description: >
 | {创建时间} | 初始创建 | — |
 ```
 
-生成文件后，输出确认：
+生成文件后，输出确认并自动进入执行：
 
 ```
 计划文件已创建：{工作目录}/autoloop-plan.md
@@ -346,7 +381,7 @@ description: >
   轮次预算：{N} 轮
   质量门禁：{维度数} 个维度
 
-是否立即开始？(y/n)
+如有需要修改计划参数，请现在说明；否则将在 5 秒后自动进入 Round 1。
 ```
 
-用户确认后，立即启动对应模板的第一轮执行。
+如果用户在确认摘要时提出修改意见，更新计划文件后再启动；否则直接启动对应模板的第一轮执行，无需用户再次输入 "y"。

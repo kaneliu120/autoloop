@@ -23,9 +23,41 @@
 ```
 T1 Research：多个 researcher 搜索不同维度 → 必须并行
 T2 Compare：多个 analyzer 分析不同选项 → 必须并行
-T6 Quality：security-reviewer + reliability-reviewer + maintainability-reviewer → 必须并行
-T7 Optimize：architecture + performance + stability diagnostic → 必须并行
+T6 Quality：安全审查 + 可靠性审查 + 可维护性审查 → 必须并行（三者均通过 code-reviewer 角色化实现，见下方说明）
+T7 Optimize：架构诊断 + 性能诊断 + 稳定性诊断 → 必须并行（同上）
 ```
+
+**T6/T7 专业审查角色说明**：
+
+security-reviewer、reliability-reviewer、maintainability-reviewer 等**不是独立的 agent 定义文件**，而是通过 Agent tool 的 `prompt` 参数向通用 code-reviewer 传递角色化指令实现的。调度示例：
+
+```
+# 安全审查
+Agent(
+  subagent_type='code-reviewer',
+  prompt='你是安全审查专家，只关注安全维度（SQL注入/命令注入/XSS/路径穿越/敏感数据暴露）。
+          使用 quality-gates.md 的安全性门禁评分规则（P1/P2/P3）。
+          忽略可靠性和可维护性维度。'
+)
+
+# 可靠性审查
+Agent(
+  subagent_type='code-reviewer',
+  prompt='你是可靠性审查专家，只关注可靠性维度（静默失败/缺少异常处理/无超时配置/缺少降级回退）。
+          使用 quality-gates.md 的可靠性门禁评分规则。
+          忽略安全性和可维护性维度。'
+)
+
+# 可维护性审查
+Agent(
+  subagent_type='code-reviewer',
+  prompt='你是可维护性审查专家，只关注可维护性维度（路由注册/模块导出/类型规范/代码重复）。
+          使用 quality-gates.md 的可维护性门禁评分规则。
+          忽略安全性和可靠性维度。'
+)
+```
+
+browse subagent 同理：通过 prompt 参数角色化为线上验收专家，不需要独立定义文件。
 
 ### 必须串行（按顺序调度）
 
@@ -348,6 +380,6 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 |---------|---------|
 | Subagent 无法找到信息 | 换关键词/换来源/标注"信息不可用" |
 | Subagent 输出格式错误 | 提取可用部分，补充缺失字段 |
-| Subagent 代码验证失败 | 返回详细错误给 subagent，要求修复（最多 2 次重试）|
+| Subagent 代码验证失败 | 返回详细错误给 subagent，要求修复（遵守统一重试上限 = 2 次，见 loop-protocol.md）|
 | Subagent 超时 | 标记为"部分完成"，记录进度，继续其他任务 |
 | 并行 subagents 产生冲突 | 以保守的（改动更小的）为准，记录两种方案 |

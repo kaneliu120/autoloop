@@ -237,14 +237,16 @@ description: >
 
 ## 结果文件
 
-生成 `autoloop-results.tsv` 用于程序处理：
+生成 `autoloop-results.tsv`（使用标准 schema，见 autoloop.md）：
 
 ```tsv
-option	dimension	score	weight	evidence_count	sources
-选项A	功能匹配度	8	0.25	3	https://...
-选项A	技术成熟度	9	0.20	5	https://...
-选项B	功能匹配度	7	0.25	2	https://...
+iteration	phase	status	metric_name	metric_value	delta	details
+1	compare	pass	选项A_功能匹配度	8	—	权重0.25, 证据3条
+1	compare	pass	选项A_技术成熟度	9	—	权重0.20, 证据5条
+1	compare	pass	选项B_功能匹配度	7	—	权重0.25, 证据2条
 ```
+
+证据来源 URL 和详细分析记录到 autoloop-findings.md，不放在 results.tsv。
 
 ---
 
