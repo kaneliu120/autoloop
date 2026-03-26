@@ -291,7 +291,7 @@ T7 企业级标准：稳定性得分 ≥ 8/10
 | T2 Compare | 覆盖率 100% | 可信度 ≥ 80% | 偏见检查通过（每选项≥2 subagent评估且评分差<15%） | 敏感性分析完成（关键假设±20%后推荐排名不变） | 任一未达标 |
 | T3 Iterate | KPI 达目标值（用户在 plan 中设定的 KPI 数值达到目标阈值） | — | — | — | KPI 未达标 |
 | T4 Generate | 通过率 ≥ 95%（通过质检的内容数 / 总生成数 × 100%） | 平均分 ≥ 7/10（所有内容项质量评分的算术平均值，评分标准见 plan） | — | — | 任一未达标 |
-| T5 Deliver | py_compile 通过 | P1/P2 = 0 | Phase 4: {health_check_url} 返回200 + {service_list} 全部 active | Phase 5: 用户输入 "verified"（人工线上验收确认）。两个阶段都通过 = T5完成 | 任一未达标 |
+| T5 Deliver | py_compile 通过 | P1/P2 = 0 | Phase 4: {health_check_url} 返回200（如为空则标记 N/A）+ {service_list} 全部 active（如为 N/A 则跳过；service_list 和 health_check_url 至少一项须提供）| Phase 5: 用户输入 "verified"（人工线上验收确认）。两个阶段都通过 = T5完成 | 任一未达标 |
 | T6 Quality | 安全 ≥ 9/10 | 可靠 ≥ 8/10 | 可维护 ≥ 8/10 | — | 复合判定（见下方规则） |
 | T7 Optimize | 架构 ≥ 8/10 | 性能 ≥ 8/10 | 稳定 ≥ 8/10 | — | 任一未达标 |
 

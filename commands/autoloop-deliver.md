@@ -38,7 +38,7 @@ description: >
 阶段 2  → 审查（code-reviewer）
 阶段 3  → 测试验证（verifier）
 阶段 4  → 部署（git push + deploy.sh）
-阶段 5  → 线上验收（browse agent + 人工确认）
+阶段 5  → 线上验收（verifier + 人工确认）
 ```
 
 **阻塞门禁（Blocking Gate）**：阶段 0.5 和阶段 5 必须人工确认，系统不自动跳过。
@@ -300,7 +300,7 @@ main_entry_file：{从 autoloop-plan.md 读取}
 - 所有路由使用 async def
 - 数据库操作使用 SQLAlchemy 2.0 async session
 - 运行 python3 -m py_compile {文件路径} 验证每个文件
-- 新路由在 main.py 中 include_router
+- 新路由在 `{main_entry_file}` 中 `include_router`
 
 **Node.js/Express 或 Fastify**:
 - 路由函数使用 async/await
@@ -362,10 +362,15 @@ syntax_check_cmd：{从 autoloop-plan.md 读取}
 ```
 
 ### 质量门禁（阶段 1）
-- [ ] 所有 Python 文件 py_compile 通过
-- [ ] 所有 TypeScript 文件 tsc --noEmit 通过
-- [ ] 新路由已在 main.py 注册
-- [ ] 新文件已在 __init__.py 导出
+
+验证命令根据技术栈执行（参见 plan 中的 `syntax_check_cmd` 和 `main_entry_file`）：
+- Python: `python3 -m py_compile {file}` 验证每个修改文件；检查 `__init__.py` 导出；在 `{main_entry_file}` 中检查 `include_router` 注册
+- TypeScript/Node: `npx tsc --noEmit`（项目级）；检查 `index.ts` barrel export；在 `{main_entry_file}` 中检查路由注册
+- 其他: `{syntax_check_cmd}`（按 `syntax_check_file_arg` 决定是否附加文件参数）
+
+- [ ] 语法验证通过（对每个修改文件运行 `{syntax_check_cmd}`，按 `syntax_check_file_arg` 决定是否附加文件名）
+- [ ] 新路由已在 `{main_entry_file}` 注册（`grep -n "include_router.*{new_router_name}" {main_entry_file}` 或等效命令）
+- [ ] 新文件已在模块导出文件中声明（Python: `__init__.py`；TypeScript: `index.ts` barrel；其他: 按项目规范）
 - [ ] 数据库迁移脚本有 downgrade()
 - [ ] 无 except: pass / # type: ignore / any 滥用
 
@@ -451,8 +456,10 @@ verifier subagent：
 2. TypeScript 类型检查（如有前端修改）
    cd {前端目录} && npx tsc --noEmit
 
-3. 路由注册检查
-   grep -r "include_router" {main.py 路径}
+3. 路由注册检查（根据技术栈执行对应命令）
+   # Python: grep -n "include_router.*{new_router_name}" {main_entry_file}
+   # Node.js: grep -n "use\|route" {main_entry_file}
+   # 其他: 按项目规范检查主入口的路由注册
 
 4. 新路由功能验证（如果服务器在运行）
    curl -X {方法} {URL} -H "X-API-Key: {key}" {-d "{body}"}
@@ -468,9 +475,9 @@ verifier subagent：
 ```
 
 ### 质量门禁（阶段 3）
-- [ ] 所有 py_compile 通过
-- [ ] tsc --noEmit 通过（如有前端）
-- [ ] 新路由在 main.py 注册（grep 确认）
+- [ ] 语法验证通过（`{syntax_check_cmd}`，按 `syntax_check_file_arg` 决定是否附加文件参数）
+- [ ] tsc --noEmit 通过（如有前端 TypeScript）
+- [ ] 新路由已在 `{main_entry_file}` 注册（grep 确认）
 - [ ] 数据库迁移状态正确
 
 ---
@@ -509,10 +516,10 @@ verifier subagent：
 
 ## 阶段 5: 线上验收 ⚠️ 阻塞门禁
 
-browse agent（线上功能验证）：
+verifier subagent（线上功能验证，统一角色名，参见 protocols/agent-dispatch.md）：
 
 ```
-你是 browse subagent，负责线上功能验证。
+你是 verifier subagent，负责线上功能验证。
 
 线上环境：{acceptance_url}（来自 autoloop-plan.md）
 
@@ -548,6 +555,8 @@ browse agent（线上功能验证）：
 ---
 
 ## 交付完成报告
+
+文件名遵循 `commands/autoloop.md` 最终输出文件命名规则（T5: `autoloop-delivery-{feature}-{date}.md`）。
 
 人工确认后，输出最终交付报告：
 

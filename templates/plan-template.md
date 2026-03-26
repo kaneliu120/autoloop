@@ -46,6 +46,10 @@
 - 选项 B：{描述}
 - 评估维度：{维度 1}（权重 {X}%）、{维度 2}（权重 {Y}%）...
 - 决策标准：{最重要的因素}
+- key_assumptions：
+  - {关键假设 1，如：市场增长率 = X%}
+  - {关键假设 2，如：实施周期 = N 个月}
+  - {关键假设 3，如：团队规模 = N 人}
 
 **T3 Iterate**：
 - KPI：{指标名} = {目标值}
@@ -66,29 +70,32 @@
 - 代码库路径：{绝对路径}
 - 新增路由：{是/否}，路由前缀：{前缀}
 - new_router_name：{本次新增的 router 变量名，如 comments_router}
-- main_entry_file：{main.py 绝对路径}
+- main_entry_file：{主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
 - 数据库变更：{是/否}，变更内容：{描述}
 - syntax_check_cmd：{语法检查命令，如 python3 -m py_compile {file}}
+- syntax_check_file_arg：{true/false，语法检查命令是否接受单文件参数；python3 -m py_compile → true，npx tsc --noEmit → false}
 - deploy_target：{部署目标主机/环境，如 sip-server}
 - deploy_command：{完整部署执行命令，如 gcloud compute ssh ... --command="cd /opt/sip && git pull && sudo bash deploy.sh"}
-- service_list：{服务名称列表，如 [sip-backend, sip-worker, sip-scheduler, sip-frontend]}
-- service_count：{自动计算，= len(service_list)}
-- health_check_url：{健康检查 URL，如 https://example.com/api/health}
+- service_list：{服务名称列表，如 [sip-backend, sip-worker, sip-scheduler, sip-frontend]；不适用则填 N/A}
+- service_count：{自动计算，= len(service_list)；service_list=N/A 时填 0}
+- health_check_url：{健康检查 URL，如 https://example.com/api/health；不适用则留空}
 - acceptance_url：{线上验收 URL，如 https://example.com}
 - doc_output_path：{方案文档输出目录绝对路径}
 
 **T6 Quality**：
 - 代码库路径：{绝对路径}
-- main_entry_file：{main.py 绝对路径}
+- main_entry_file：{主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
 - 审查模块：{模块列表 / 全量}
 - syntax_check_cmd：{语法检查命令，如 python3 -m py_compile {file}}
+- syntax_check_file_arg：{true/false，语法检查命令是否接受单文件参数}
 - 已知问题：{描述 / 无}
 - 特殊约束：{约束 / 无}
 
 **T7 Optimize**：
 - 系统路径：{绝对路径}
-- main_entry_file：{main.py 绝对路径}
+- main_entry_file：{主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
 - syntax_check_cmd：{语法检查命令，如 python3 -m py_compile {file}}
+- syntax_check_file_arg：{true/false，语法检查命令是否接受单文件参数}
 - 当前性能：{指标：值}
 - 优先方向：{全部 / 架构 / 性能 / 稳定性}
 - 不可修改：{内容}

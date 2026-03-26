@@ -365,13 +365,23 @@ Checkpoint（已修复 {N} 个问题）
 
 ### 终止判断
 
+终止条件为复合判定（必须同时满足两个条件），完整规则见 `protocols/quality-gates.md` T6 复合判定规则。
+
 ```
-三维度全部达标：
+条件一：分数达标
   安全性 {N}/10 ≥ 9 ✓
   可靠性 {N}/10 ≥ 8 ✓
   可维护性 {N}/10 ≥ 8 ✓
 
-→ 终止迭代，生成最终审计报告
+条件二：计数达标
+  P1 问题 = 0（所有维度）✓
+  安全 P2 问题 = 0 ✓
+  可靠性 P2 问题 ≤ 3 ✓
+  可维护性 P2 问题 ≤ 5 ✓
+
+两个条件必须同时满足 → 终止迭代，生成最终审计报告
+
+注意：分数达标但 P1 仍存在 → 不得终止，必须继续修复 P1
 ```
 
 未全部达标 → 继续修复轮次（但 P3 问题可根据预算决定是否处理）。
@@ -380,7 +390,7 @@ Checkpoint（已修复 {N} 个问题）
 
 ## 最终审计报告
 
-写入 `autoloop-audit-{YYYYMMDD}.md`（使用 `templates/audit-template.md`）：
+文件名遵循 `commands/autoloop.md` 最终输出文件命名规则（T6: `autoloop-audit-{date}.md`）。写入时使用 `templates/audit-template.md`：
 
 ```markdown
 # 企业级质量审计报告

@@ -14,6 +14,7 @@
 | acceptance_url | string | 线上验收 URL（如 https://example.com）| plan | T5 |
 | doc_output_path | string | 方案文档输出目录（绝对路径）| plan | T5 |
 | syntax_check_cmd | string | 语法检查命令（如 python3 -m py_compile {file}）| plan | T5/T6/T7 |
+| syntax_check_file_arg | boolean | 语法检查命令是否接受单文件参数（python3 -m py_compile → true；npx tsc --noEmit → false）| plan | T5/T6/T7 |
 | new_router_name | string | 本次新增的 router 变量名（如 comments_router）| plan | T5 |
 | main_entry_file | string | 主入口文件绝对路径（如 /opt/sip/backend/main.py）| plan | T5/T6 |
 | output_path | string | 输出目录绝对路径（默认 {工作目录}/autoloop-output/）| plan | T4 |

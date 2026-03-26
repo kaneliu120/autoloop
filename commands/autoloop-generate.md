@@ -216,7 +216,7 @@ iteration	phase	status	metric_name	metric_value	delta	details
 iteration	phase	status	metric_name	metric_value	delta	details
 001	generate	pass	score	8.5	—	重试0次
 002	generate	pass	score	7.2	—	重试1次: 第一次生成语调不对
-003	generate	review	score	6.0	—	重试3次仍未达标: 变量信息不足
+003	generate	review	score	6.0	—	重试2次仍未达标: 变量信息不足
 004	generate	pending	score	—	—	生成中
 ```
 
@@ -289,4 +289,4 @@ iteration	phase	status	metric_name	metric_value	delta	details
 - **结构化数据**：TSV 或 JSON
 - **邮件**：每封邮件独立 Markdown，包含 Subject / Body / Variables
 
-所有输出文件写入用户指定的输出目录（或默认 `./output/`）。
+所有输出文件写入 `{output_path}`（来自 `autoloop-plan.md` 的 `output_path` 字段，默认：`{工作目录}/autoloop-output/`）。不使用 `./output/` 相对路径。

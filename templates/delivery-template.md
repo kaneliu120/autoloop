@@ -142,7 +142,7 @@ def downgrade(): op.drop_table('{table_name}')
 **Step 2**：实现数据模型（{model 文件路径}）
 **Step 3**：实现 Schema（Pydantic 模型）
 **Step 4**：实现路由函数（{路由文件路径}）
-**Step 5**：在 main.py 注册路由
+**Step 5**：在 `{main_entry_file}` 注册路由（Python: `include_router`；TypeScript/Node: 按框架规范；其他: 按项目规范）
 **Step 6**：实现前端组件（如有，可与 Step 2-5 并行）
 **Step 7**：运行所有修改文件的 py_compile / tsc --noEmit
 **Step 8**：代码审查（安全/可靠/接口一致性）
