@@ -166,14 +166,16 @@ AutoLoop 将：
 
 ## 核心设计原则
 
-### OODA 循环
+### OODA 循环 + 认知积累反馈
 
-每轮迭代严格执行：
+每轮迭代严格执行 8 个阶段：
 ```
-OBSERVE → ORIENT → DECIDE → ACT → VERIFY → SYNTHESIZE → EVOLVE
+OBSERVE → ORIENT → DECIDE → ACT → VERIFY → SYNTHESIZE → EVOLVE → REFLECT
+    ↑                                                                   |
+    └───────────── 认知积累反馈 ──────────────────────────────────────────┘
 ```
 
-不跳步，不合并，每步有明确的输入/输出。
+不跳步，不合并，每步有明确的输入/输出。REFLECT 是强制环节，每轮必须写入 `autoloop-findings.md`，下一轮 OBSERVE 首先读取。
 
 ### 并行优先
 

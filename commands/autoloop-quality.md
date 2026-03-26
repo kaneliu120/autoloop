@@ -388,6 +388,21 @@ Checkpoint（已修复 {N} 个问题）
 
 ---
 
+## 每轮 REFLECT 执行规范
+
+每修复批次（checkpoint）完成后，在 EVOLVE 判断之后执行：
+
+```
+REFLECT:
+- 问题登记: 记录本轮发现的代码问题、修复是否引入新问题、审查遗漏
+- 策略复盘: 修复策略/审查方法/验证命令的效果评估（保持/避免）
+- 模式识别: 反复出现的代码问题类型（说明有架构级根因）、修复→新问题的因果链
+- 经验教训: 哪类修复最有效、哪些验证步骤能发现最多问题
+将反思结果写入 autoloop-findings.md 的反思章节
+```
+
+---
+
 ## 最终审计报告
 
 文件名遵循 `commands/autoloop.md` 最终输出文件命名规则（T6: `autoloop-audit-{date}.md`）。写入时使用 `templates/audit-template.md`：
