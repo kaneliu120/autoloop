@@ -49,7 +49,7 @@ description: >
 | T1 Research | 3 | 无限制 | coverage ≥ 85%，credibility ≥ 80% |
 | T2 Compare | 2 | 无限制 | completeness ≥ 90%，evidence ≥ 80% |
 | T3 Iterate | 无上限 | 用户定义 | KPI 达到用户指定目标值 |
-| T4 Generate | items × 2 | 无限制 | pass_rate ≥ 90%，avg_score ≥ 8/10 |
+| T4 Generate | items × 2 | 无限制 | pass_rate ≥ 95%，avg_score ≥ 7/10 |
 | T5 Deliver | 1（线性阶段制） | 无限制 | 全阶段门禁通过（含 2 个人工确认点） |
 | T6 Quality | 无上限 | 无限制 | security ≥ 9/10，reliability ≥ 8/10，maintainability ≥ 8/10 |
 | T7 Optimize | 无上限 | 无限制 | architecture ≥ 8/10，performance ≥ 8/10，stability ≥ 8/10 |
@@ -193,21 +193,33 @@ description: >
    - 如果是：{描述变更}
 
 5. 部署目标（deploy_target）：
-   {完整的部署命令，如: gcloud compute ssh {host} --zone={zone} --command="cd {path} && git pull origin main && sudo bash deploy.sh"}
+   {部署目标主机/环境，如: sip-server 或 prod-01}
+
+6. 部署命令（deploy_command）：
+   {完整的部署执行命令，如: gcloud compute ssh {host} --zone={zone} --command="cd {path} && git pull origin main && sudo bash deploy.sh"}
    如无远程部署：{本地命令，如 docker-compose up -d --build}
 
-6. 服务列表（services）：
-   {部署后需要检查的服务名称列表，如: backend, worker, scheduler, frontend}
+7. 服务列表（service_list）：
+   {部署后需要检查的服务名称列表，如: [sip-backend, sip-worker, sip-scheduler, sip-frontend]}
    如不适用：{留空或填 N/A}
 
-7. 文档输出路径（doc_output_path）：
+8. 文档输出路径（doc_output_path）：
    {方案文档存放的目录绝对路径，默认: 工作目录}
 
-8. 健康检查 URL（health_url）：
+9. 健康检查 URL（health_check_url）：
    {如 https://example.com/api/health，或留空跳过健康检查}
 
-9. 线上验收 URL（acceptance_url）：
-   {验收时打开的线上地址，如 https://example.com}
+10. 线上验收 URL（acceptance_url）：
+    {验收时打开的线上地址，如 https://example.com}
+
+11. 语法检查命令（syntax_check_cmd）：
+    {语法检查命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
+
+12. 主入口文件（main_entry_file）：
+    {主入口文件绝对路径，如 /project/backend/main.py}
+
+13. 新路由变量名（new_router_name）：
+    {本次新增的 router 变量名，如 comments_router，无新路由则填 N/A}
 ```
 
 ### T6 Quality — 质量审查配置
@@ -227,6 +239,15 @@ description: >
 
 5. 特殊约束：
    {如：不能改动 API 接口签名 / 保持向后兼容}
+
+6. 语法检查命令（syntax_check_cmd）：
+   {语法检查命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
+   注意：是否接受文件参数（syntax_check_file_arg）：{true/false}
+   - python3 -m py_compile → true（接受单文件参数）
+   - npx tsc --noEmit → false（项目级验证，不接受文件参数）
+
+7. 主入口文件（main_entry_file）：
+   {主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
 ```
 
 ### T7 Optimize — 优化配置
@@ -289,32 +310,43 @@ description: >
 
 ## Step 6: 生成计划文件
 
-收集所有参数后，生成完整的 `autoloop-plan.md`：
+收集所有参数后，生成完整的 `autoloop-plan.md`，必须严格遵循 `templates/plan-template.md` 的结构，包含所有章节（含 **扩展维度** 和 **策略历史**）：
 
 ```markdown
 # AutoLoop 任务计划
 
 ## 元信息
-- 任务 ID: autoloop-{YYYYMMDD-HHMMSS}
-- 模板: T{N}: {名称}
-- 目标: {用户目标的一句话摘要}
-- 创建时间: {ISO 8601 时间}
-- 工作目录: {绝对路径}
-- 计划版本: 1.0
+
+| 字段 | 值 |
+|------|-----|
+| 任务 ID | autoloop-{YYYYMMDD-HHMMSS} |
+| 模板 | T{N}: {名称} |
+| 状态 | 准备开始 |
+| 创建时间 | {ISO 8601} |
+| 最后更新 | {ISO 8601} |
+| 工作目录 | {绝对路径} |
+| 计划版本 | 1.0 |
 
 ---
 
 ## 目标描述
 
-{用户目标的完整描述，包含背景和期望结果}
+**一句话目标**：{简洁描述，最多 1 句}
 
-**成功标准**：{具体、可测量的成功判断条件}
+**详细背景**：
+{用户目标的完整描述，包含背景、现状、期望结果}
+
+**成功标准**（可测量）：
+- {标准 1}：{具体判断方法}
+- {标准 2}：{具体判断方法}
 
 ---
 
 ## 任务参数
 
-{按模板填写具体参数}
+### 模板特定参数
+
+{按 templates/plan-template.md 中该模板的完整字段填写，不得省略任何字段，包括 T5 的 deploy_target / deploy_command / service_list / service_count / health_check_url / acceptance_url / doc_output_path / syntax_check_cmd / new_router_name / main_entry_file 等}
 
 ---
 
@@ -325,49 +357,61 @@ description: >
 - {范围 2}
 
 **排除**：
-- {排除项 1}
-- {排除项 2}
+- {排除项 1}（原因：{原因}）
+
+**扩展维度**（迭代中新增）：
+- （初始为空，迭代过程中如发现新维度则追加）
 
 ---
 
 ## 质量门禁
 
-| 维度 | 目标分数 | 当前分数 | 状态 |
-|------|---------|---------|------|
-| {维度 1} | {N}/10 | 未测量 | 待启动 |
-| {维度 2} | {N}/10 | 未测量 | 待启动 |
-| {维度 3} | {N}/10 | 未测量 | 待启动 |
+| 维度 | 目标分数 | 当前分数 | 目标阈值 | 状态 |
+|------|---------|---------|---------|------|
+| {维度 1} | — | — | ≥ {阈值} | 待启动 |
+| {维度 2} | — | — | ≥ {阈值} | 待启动 |
+| {维度 3} | — | — | ≥ {阈值} | 待启动 |
 
-**通过条件**：所有维度同时达标
+**全部达标条件**：所有维度同时达到目标阈值
 
 ---
 
 ## 迭代预算
 
-- 最大轮次: {N}
-- 时间限制: {无限制 | N 分钟}
-- 当前状态: 第 0 轮（准备开始）
-- 预算耗尽策略: {输出当前最优 | 询问用户}
+| 字段 | 值 |
+|------|-----|
+| 最大轮次 | {N} |
+| 当前轮次 | 0 |
+| 时间限制 | {无限制 / N 分钟} |
+| 预算耗尽策略 | {输出当前最优 / 询问用户} |
 
 ---
 
-## 输出计划
+## 输出文件
 
-| 文件 | 路径 | 用途 |
-|------|------|------|
-| autoloop-plan.md | {工作目录}/autoloop-plan.md | 本文件，任务计划 |
-| autoloop-progress.md | {工作目录}/autoloop-progress.md | 迭代进度追踪 |
-| autoloop-findings.md | {工作目录}/autoloop-findings.md | 发现记录 |
-| autoloop-report-{date}.md | {工作目录}/autoloop-report-{date}.md | 最终报告 |
-{如有 TSV 输出则添加}
+| 文件 | 路径 | 用途 | 状态 |
+|------|------|------|------|
+| autoloop-plan.md | {工作目录}/autoloop-plan.md | 任务计划（本文件）| 已创建 |
+| autoloop-progress.md | {工作目录}/autoloop-progress.md | 迭代进度 | 待创建 |
+| autoloop-findings.md | {工作目录}/autoloop-findings.md | 发现记录 | 待创建 |
+| autoloop-report-{date}.md | {工作目录}/autoloop-report-{date}.md | 最终报告 | 待创建 |
+| autoloop-results.tsv | {工作目录}/autoloop-results.tsv | 结构化迭代日志（所有模板）| 待创建 |
+
+---
+
+## 策略历史（已尝试方法）
+
+| 轮次 | 维度 | 策略 | 结果 | 弃用原因 |
+|------|------|------|------|---------|
+| — | — | — | — | — |
 
 ---
 
 ## 变更记录
 
-| 时间 | 变更 | 原因 |
-|------|------|------|
-| {创建时间} | 初始创建 | — |
+| 时间 | 字段 | 变更前 | 变更后 | 原因 |
+|------|------|--------|--------|------|
+| {创建时间} | 初始创建 | — | — | — |
 ```
 
 生成文件后，输出确认并自动进入执行：

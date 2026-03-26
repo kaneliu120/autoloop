@@ -122,24 +122,30 @@
 
 ---
 
-## 检测命令参考
+## 检测命令参考（以实际技术栈为准）
 
-以下命令可用于验证最终状态：
+以下命令可用于验证最终状态，按实际技术栈选择对应命令：
 
 ```bash
 # 安全性验证
-grep -rn "execute(f\|execute(\".*{" {路径}  # 应该无结果
-grep -rn "subprocess\|os.system" {路径}  # 检查是否有未验证的输入
-grep -rn "except.*pass" {路径}  # 应该无结果
+grep -rn "execute(f\|execute(\".*{" {路径}  # Python/SQL 注入检查，应该无结果
+grep -rn "subprocess\|os.system" {路径}  # 命令注入检查
+grep -rn "except.*pass" {路径}  # 静默失败检查，应该无结果
 
 # 可靠性验证
-grep -rn "except:" {路径}  # 检查 bare except
-grep -rn "httpx\|aiohttp\|requests\." {路径}  # 检查 HTTP 调用是否有 try/except
+grep -rn "except:" {路径}  # 检查 bare except（Python）
+grep -rn "httpx\|aiohttp\|requests\." {路径}  # Python HTTP 调用覆盖检查
+grep -rn "fetch\|axios\|got\b" {路径}  # Node.js HTTP 调用覆盖检查
 
-# 可维护性验证
-grep -rn ": any\b\|<any>" {路径}  # TypeScript any
+# 可维护性验证（按技术栈选择）
+grep -rn ": any\b\|<any>" {路径}          # TypeScript any
 grep -rn "from typing import.*Any\|: Any\b" {路径}  # Python Any
-grep -n "include_router" {main.py}  # 路由注册
+grep -n "include_router" {main_entry_file}  # Python/FastAPI 路由注册
+grep -rn "app\.use\|app\.route\|router\." {main_entry_file}  # Node.js 路由注册
+
+# 语法验证（使用 autoloop-plan.md 中的 syntax_check_cmd）
+# syntax_check_file_arg=true:  {syntax_check_cmd} {每个修改文件}
+# syntax_check_file_arg=false: {syntax_check_cmd}（项目级，不附加文件名）
 ```
 
 ---

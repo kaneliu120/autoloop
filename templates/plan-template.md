@@ -58,22 +58,37 @@
 - 数量：{N} 个
 - 变量：{变量 1}、{变量 2}
 - 质量阈值：{N}/10
+- output_path：{输出目录绝对路径，默认 {工作目录}/autoloop-output/}
+- naming_pattern：{文件命名规则，如 {template_name}-{index}.md}
 
 **T5 Deliver**：
 - 功能描述：{详细需求}
 - 代码库路径：{绝对路径}
 - 新增路由：{是/否}，路由前缀：{前缀}
+- new_router_name：{本次新增的 router 变量名，如 comments_router}
+- main_entry_file：{main.py 绝对路径}
 - 数据库变更：{是/否}，变更内容：{描述}
-- 部署命令：{命令}
+- syntax_check_cmd：{语法检查命令，如 python3 -m py_compile {file}}
+- deploy_target：{部署目标主机/环境，如 sip-server}
+- deploy_command：{完整部署执行命令，如 gcloud compute ssh ... --command="cd /opt/sip && git pull && sudo bash deploy.sh"}
+- service_list：{服务名称列表，如 [sip-backend, sip-worker, sip-scheduler, sip-frontend]}
+- service_count：{自动计算，= len(service_list)}
+- health_check_url：{健康检查 URL，如 https://example.com/api/health}
+- acceptance_url：{线上验收 URL，如 https://example.com}
+- doc_output_path：{方案文档输出目录绝对路径}
 
 **T6 Quality**：
 - 代码库路径：{绝对路径}
+- main_entry_file：{main.py 绝对路径}
 - 审查模块：{模块列表 / 全量}
+- syntax_check_cmd：{语法检查命令，如 python3 -m py_compile {file}}
 - 已知问题：{描述 / 无}
 - 特殊约束：{约束 / 无}
 
 **T7 Optimize**：
 - 系统路径：{绝对路径}
+- main_entry_file：{main.py 绝对路径}
+- syntax_check_cmd：{语法检查命令，如 python3 -m py_compile {file}}
 - 当前性能：{指标：值}
 - 优先方向：{全部 / 架构 / 性能 / 稳定性}
 - 不可修改：{内容}
@@ -126,7 +141,7 @@
 | autoloop-progress.md | {工作目录}/autoloop-progress.md | 迭代进度 | 待创建 |
 | autoloop-findings.md | {工作目录}/autoloop-findings.md | 发现记录 | 待创建 |
 | autoloop-report-{date}.md | {工作目录}/autoloop-report-{date}.md | 最终报告 | 待创建 |
-| autoloop-results.tsv | {工作目录}/autoloop-results.tsv | 结构化数据 | 待创建（T2/T4）|
+| autoloop-results.tsv | {工作目录}/autoloop-results.tsv | 结构化迭代日志（所有模板）| 待创建 |
 
 ---
 

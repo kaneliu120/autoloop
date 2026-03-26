@@ -1,5 +1,26 @@
 # Loop Protocol — OODA 迭代循环规范
 
+## 统一参数词汇表
+
+**规则**：所有 AutoLoop 文件（commands/、protocols/、templates/）中涉及下列概念时，必须使用下表中的变量名，不得自行发明同义词。
+
+| 变量名 | 类型 | 用途 | 收集时机 | 适用模板 |
+|--------|------|------|---------|---------|
+| deploy_target | string | 部署目标主机/环境（如 sip-server、prod-01）| plan | T5 |
+| deploy_command | string | 部署执行命令（完整命令，如 gcloud compute ssh ...）| plan | T5 |
+| service_list | string[] | 服务名称列表（如 [sip-backend, sip-worker]）| plan | T5 |
+| service_count | int | 服务数量（自动计算 = len(service_list)，不手动填写）| 自动 | T5 |
+| health_check_url | string | 健康检查 URL（如 https://example.com/api/health）| plan | T5 |
+| acceptance_url | string | 线上验收 URL（如 https://example.com）| plan | T5 |
+| doc_output_path | string | 方案文档输出目录（绝对路径）| plan | T5 |
+| syntax_check_cmd | string | 语法检查命令（如 python3 -m py_compile {file}）| plan | T5/T6/T7 |
+| new_router_name | string | 本次新增的 router 变量名（如 comments_router）| plan | T5 |
+| main_entry_file | string | 主入口文件绝对路径（如 /opt/sip/backend/main.py）| plan | T5/T6 |
+| output_path | string | 输出目录绝对路径（默认 {工作目录}/autoloop-output/）| plan | T4 |
+| naming_pattern | string | 文件命名规则（如 {template_name}-{index}.md）| plan | T4 |
+
+---
+
 ## 概述
 
 每次 AutoLoop 执行都遵循标准的 OODA 循环。本文档定义每个阶段的具体行为、输入输出规范和状态机转换规则。
@@ -29,7 +50,13 @@
   [OBSERVE]       [TERMINATE]
                       ↓
                   生成最终报告
+
+[AWAIT_USER]  ← 从 EVOLVE / Phase 0.5 / Phase 5 进入
+  ↓ 等待人工输入（"confirmed" / "verified" / 修改意见）
+  ↓ 收到输入后恢复到下一阶段
 ```
+
+**AWAIT_USER 状态**：当需要人工确认时（T5 Phase 0.5 文档确认、T5 Phase 5 线上验收、以及任何 blocking gate），状态机进入 AWAIT_USER。系统在此状态停止自动推进，等待用户输入。用户输入 `confirmed`（Phase 0.5）或 `verified`（Phase 5）后，恢复到下一阶段。用户提出修改意见时，先处理修改，再自动恢复。
 
 **状态不可逆**：不能从 ACT 回退到 DECIDE（当轮的决策在 ACT 开始后锁定）。
 **错误处理**：任何阶段发生错误 → 写入 progress.md → 尝试恢复 → 如无法恢复则进入 TERMINATE 并说明原因。
@@ -293,14 +320,18 @@ AutoLoop 有四种终止路径，按优先级排列：
       达到最大轮次？
         └─ 是 → 预算终止 → TERMINATE（预算耗尽，输出当前最优结果）
         └─ 否 →
-            连续 2 轮同一维度无进展（改善 < 当前分数的 3%，相对值）？
-              （示例：当前 80%，阈值 = 2.4%；当前 7/10 分，阈值 = 0.21 分）
-              └─ 是 → 换策略（记录已尝试方法）
+            连续 2 轮所有维度均无进展（所有维度改善均 < 相对 3%）？
+              └─ 是 → 阻塞终止 → TERMINATE（阻塞），输出当前最优结果并通知用户
+                        （列出阻塞原因和所需的用户输入，进入 AWAIT_USER）
               └─ 否 →
-                  剩余预算 < 20%？
-                    └─ 是 → 聚焦最高优先级维度
-                    └─ 否 → 继续标准策略
-            → 进入下一轮 OBSERVE
+                  连续 2 轮同一维度无进展（改善 < 当前分数的 3%，相对值）？
+                    （示例：当前 80%，阈值 = 2.4%；当前 7/10 分，阈值 = 0.21 分）
+                    └─ 是 → 换策略（记录已尝试方法到策略历史）
+                    └─ 否 →
+                        剩余预算 < 20%？
+                          └─ 是 → 聚焦最高优先级维度
+                          └─ 否 → 继续标准策略
+              → 进入下一轮 OBSERVE
 ```
 
 ### 进化输出

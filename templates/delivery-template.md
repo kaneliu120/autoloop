@@ -70,68 +70,67 @@ ON {table_name} ({column});
 
 ### 后端实现
 
-#### 数据模型
+{描述后端实现方案，包括数据模型设计、路由逻辑、关键函数签名}
 
-```python
-# {模型文件路径}
+#### 数据模型（示例，以实际技术栈为准）
+
+```
+# Python/SQLAlchemy 示例：
 class {ModelName}(Base):
     __tablename__ = "{table_name}"
+    id = mapped_column(BigInteger, primary_key=True)
+    {field} = mapped_column({type}, nullable=False)
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    {field}: Mapped[{type}] = mapped_column({SQLAlchemy type}, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+# Node.js/Prisma 示例：
+model {ModelName} {
+    id    Int    @id @default(autoincrement())
+    {field} {type}
+}
+
+# 其他技术栈按对应 ORM/ODM 规范实现
 ```
 
-#### API 路由
+#### API 路由（示例，以实际技术栈为准）
 
-```python
-# {路由文件路径}
+```
+# Python/FastAPI 示例：
 @router.get("/{resource}", response_model=list[{SchemaName}])
-async def list_{resource}(
-    session: AsyncSession = Depends(get_session)
-) -> list[{SchemaName}]:
-    try:
-        result = await session.execute(select({ModelName}))
-        return result.scalars().all()
-    except SQLAlchemyError as e:
-        logger.error(f"Database error in list_{resource}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Database error")
-```
+async def list_{resource}(session: AsyncSession = Depends(get_session)):
+    ...
 
-#### main.py 注册
+# Node.js/Express 示例：
+router.get('/{resource}', async (req, res) => { ... })
 
-```python
-from backend.api.{module} import router as {module}_router
-app.include_router({module}_router, prefix="/api/v1", tags=["{tag}"])
+# 主入口注册：{main_entry_file}
 ```
 
 ### 前端实现（如有）
 
-```typescript
-// {组件文件路径}
-// 使用 TanStack Query 获取数据
-const { data, isLoading } = useQuery({
-  queryKey: ['{resource}'],
-  queryFn: () => fetch('/api/v1/{resource}').then(r => r.json())
-})
+{描述前端实现方案，包括组件结构、状态管理、API 调用方式}
+
+#### 前端代码（示例，以实际技术栈为准）
+
+```
+# React/TanStack Query 示例：
+const { data } = useQuery({ queryKey: ['{resource}'], queryFn: ... })
+
+# Vue/Pinia 示例：
+const store = use{Resource}Store()
+await store.fetch{Resource}()
+
+# 其他框架按项目规范实现
 ```
 
-### 数据库迁移
+### 数据库迁移（示例，以实际技术栈为准）
 
-```python
-# backend/db/migrations/versions/{hash}_{description}.py
-def upgrade() -> None:
-    op.create_table(
-        '{table_name}',
-        sa.Column('id', sa.BigInteger(), nullable=False),
-        # ...
-        sa.PrimaryKeyConstraint('id')
-    )
+```
+# Alembic (Python) 示例：
+def upgrade(): op.create_table('{table_name}', ...)
+def downgrade(): op.drop_table('{table_name}')
 
-def downgrade() -> None:
-    op.drop_table('{table_name}')
+# Prisma 示例：npx prisma migrate dev --name {migration_name}
+
+# 其他按项目实际迁移工具执行
 ```
 
 ---
@@ -170,11 +169,11 @@ def downgrade() -> None:
 - [ ] {验收标准 3}
 
 **技术验收**：
-- [ ] 所有修改文件通过语法检查（py_compile / tsc --noEmit，视技术栈而定）
-- [ ] 新路由已注册（grep 验证）
+- [ ] 所有修改文件通过语法检查（{syntax_check_cmd}，视技术栈而定）
+- [ ] 新路由已注册（grep 验证 {main_entry_file}）
 - [ ] 代码审查 P1/P2 = 0
-- [ ] Health check（{health_url}）返回 200
-- [ ] {services} 列表中所有服务全部 active
+- [ ] Health check（{health_check_url}）返回 200
+- [ ] {service_list} 中所有服务全部 active
 
 **线上验收**：
 - [ ] 浏览器（桌面）功能正常
@@ -195,11 +194,13 @@ def downgrade() -> None:
 git revert {commit_hash}
 git push origin main
 
-# 2. 线上更新（deploy_target 来自 autoloop-plan.md）
-{deploy_target}
+# 2. 线上重新部署（deploy_command 来自 autoloop-plan.md）
+{deploy_command}
 
-# 3. 数据库回滚（如有迁移）
-python -m alembic downgrade -1
+# 3. 数据库回滚（如有迁移，以下示例基于 Alembic，以实际技术栈为准）
+# Alembic: python -m alembic downgrade -1
+# Prisma: npx prisma migrate reset（谨慎使用）
+# 其他: 根据技术栈执行对应回滚命令
 ```
 
 **回滚预计耗时**：{N} 分钟
