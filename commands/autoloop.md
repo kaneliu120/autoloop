@@ -103,6 +103,8 @@ T7 Optimize: 系统/代码库路径（必须）、优先方向（可选）
 - T6: `/autoloop:quality` 第一轮：三维度并行扫描
 - T7: `/autoloop:optimize` 第一轮：全面诊断
 
+每轮结束后，**必须执行 REFLECT**（所有模板通用）：写入 `autoloop-findings.md` 的反思章节，下一轮 OBSERVE 首先读取。详见 `protocols/loop-protocol.md` Phase 8。
+
 ---
 
 ## 轮间汇报格式

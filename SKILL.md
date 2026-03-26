@@ -2,7 +2,7 @@
 name: autoloop
 description: >
   Autonomous iteration engine for knowledge work and engineering delivery.
-  Combines OODA loop + Karpathy autoresearch pattern + subagent parallel execution.
+  Combines OODA loop + Karpathy autoresearch pattern + subagent parallel execution + REFLECT cognitive accumulation.
   7 task templates: research, compare, iterate, generate, deliver, quality, optimize.
   Use when: "research X thoroughly", "compare options", "iterate until goal met",
   "generate batch content", "deliver feature end-to-end", "review code to enterprise grade",
@@ -22,10 +22,11 @@ description: >
 
 ---
 
-## 核心循环：OODA + 验证 + 进化
+## 核心循环：OODA + 验证 + 进化 + 反思
 
 ```
 OBSERVE（观察）
+  ↑ 读取上轮 REFLECT 记录（Round 2+）
   ↓ 扫描现状：目标是什么？已知什么？缺什么？
 ORIENT（定向）
   ↓ 分析差距：当前状态 vs 目标状态，识别关键缺口
@@ -39,6 +40,10 @@ SYNTHESIZE（整合）
   ↓ 合并所有 subagent 输出，识别矛盾，解决冲突
 EVOLVE（进化）
   ↓ 调整目标/范围/策略，进入下一轮或宣告完成
+REFLECT（反思）
+  ↓ 认知沉淀：问题登记 + 策略复盘 + 模式识别 + 经验沉淀，写入 findings.md
+    ↑                                                                   |
+    └───────────── 认知积累反馈 ──────────────────────────────────────────┘
 ```
 
 每轮循环必须产出：
@@ -46,6 +51,7 @@ EVOLVE（进化）
 2. 质量门禁当前得分（数字，不是"好/差"）
 3. 下一轮计划（具体行动，不是方向）
 4. 终止判断（继续/完成/需要用户决策）
+5. 反思记录（问题登记 + 策略复盘 + 模式识别 + 经验沉淀）
 
 ---
 
