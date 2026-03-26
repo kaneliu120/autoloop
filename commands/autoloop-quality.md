@@ -15,6 +15,21 @@ description: >
 - 代码库路径（绝对路径）
 - 重点审查模块（留空则全部扫描）
 - 特殊约束（不可修改的接口/文件）
+- 技术栈（在 plan 阶段检测或用户指定）
+- 验证命令（syntax_check_cmd，来自 plan 阶段，见下方技术栈检测说明）
+
+### 技术栈检测与验证命令
+
+在阶段 0 扫描前，先确认技术栈，选择对应的验证命令：
+
+| 技术栈 | 语法验证命令 | 模块导出检查 | 路由注册检查 |
+|--------|------------|------------|------------|
+| Python（FastAPI/Flask 等） | `python3 -m py_compile {file}` | 检查 `__init__.py` 导出 | 检查 `main.py` 或主入口的 router 注册 |
+| TypeScript/Node.js | `npx tsc --noEmit` | 检查 `index.ts` barrel export | 检查路由注册文件（如 `app.ts`） |
+| 其他 / 混合栈 | 使用 plan 阶段用户指定的 `syntax_check_cmd` | 用户在 plan 阶段指定 | 用户在 plan 阶段指定 |
+
+如果 plan 阶段未指定验证命令，在开始扫描前向用户确认：
+"检测到技术栈：{检测结果}。将使用 {验证命令} 进行语法验证，是否正确？"
 
 ---
 
@@ -305,12 +320,12 @@ grep -rn "http://\|https://" {路径}  # 硬编码 URL
 约束：
 - 只修改标注的问题，不做其他改动
 - 不改变函数签名和 API 接口
-- 修改后立即运行 python3 -m py_compile {文件} 验证
+- 修改后立即运行语法验证命令（{syntax_check_cmd}，来自 autoloop-plan.md）
 
 修复步骤：
 1. 读取文件
 2. 实施最小化修复
-3. 运行 py_compile（必须通过才报告完成）
+3. 运行 {syntax_check_cmd}（必须通过才报告完成）
 4. 确认修复解决了问题
 5. 确认没有引入新问题
 
@@ -323,14 +338,17 @@ grep -rn "http://\|https://" {路径}  # 硬编码 URL
 2. **验证无回归**（每次修复后）：
 
 ```bash
-# Python 语法验证
-python3 -m py_compile {修改的文件}
+# 语法验证（使用 autoloop-plan.md 中的 syntax_check_cmd）
+{syntax_check_cmd} {修改的文件}
 
-# 如果是路由文件，检查注册
-grep -n "include_router\|router\." {main.py}
+# Python 项目：如果是路由文件，检查注册
+grep -n "include_router\|router\." {main_entry_file}
 
-# 如果修改了关键 import，检查循环依赖
+# Python 项目：如果修改了关键 import，检查循环依赖
 python3 -c "import {模块名}"
+
+# TypeScript 项目：全量类型检查
+npx tsc --noEmit
 ```
 
 3. **更新问题清单状态**：将已修复的问题标记为 "✓ 已修复"。

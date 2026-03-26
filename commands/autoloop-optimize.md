@@ -386,13 +386,66 @@ async def list_companies_route(session: AsyncSession = Depends(get_session)):
 
 ## 每 5 个修复后 Checkpoint
 
+每个 Checkpoint 必须重新运行对应维度的验证命令，不允许仅凭代码审查更新分数。
+
+### 架构维度验证（架构相关修复后必须执行）
+
+```bash
+# 依赖分析（如工具可用）
+import-linter --config .importlinter   # 或 dep-tree src/
+# 备选：手动 grep 循环依赖
+python3 -c "
+import sys, importlib
+# 尝试导入关键模块，捕获循环 import 错误
+try: import {主模块}; print('OK')
+except ImportError as e: print('循环依赖:', e)
+"
+# 跨层访问检测
+grep -rn "from.*db\|session.execute" {路由层目录} | grep -v "Depends\|get_session"
+```
+
+### 性能维度验证（性能相关修复后必须执行）
+
+```bash
+# 关键查询 EXPLAIN ANALYZE（如有数据库）
+# psql -c "EXPLAIN ANALYZE {关键查询语句}"
+
+# API 响应时间采样（如服务在运行）
+for i in 1 2 3 4 5; do
+  curl -o /dev/null -s -w "%{time_total}s\n" {health_url 或关键 API endpoint}
+done
+
+# 前端 bundle 分析（如有前端，且工具可用）
+# npx next build --profile 2>&1 | grep "First Load JS"
+```
+
+### 稳定性维度验证（稳定性相关修复后必须执行）
+
+```bash
+# error handling 覆盖率统计
+TOTAL=$(grep -rn "def \|async def " {代码目录} | wc -l)
+WITH_TRY=$(grep -rn -A5 "def \|async def " {代码目录} | grep -c "try:")
+echo "函数总数: $TOTAL，有 try/except 的: $WITH_TRY"
+
+# 静默失败检测
+grep -rn "except.*pass\|except:$" {代码目录}
+
+# 服务状态检查（如有容器部署）
+# docker ps --format "table {{.Names}}\t{{.Status}}"
+```
+
 ```
 Checkpoint（已完成 {N} 个修复）
 
-得分更新：
-  架构：{旧} → {新}（{+/-}）
-  性能：{旧} → {新}（{+/-}）
-  稳定性：{旧} → {新}（{+/-}）
+验证结果（必须基于上方实际运行的命令输出）：
+  架构验证: {循环依赖检测结果 / 跨层访问数量}
+  性能验证: {API平均响应时间 / 查询耗时}
+  稳定性验证: {error handling覆盖率 / 静默失败数量}
+
+得分更新（基于验证结果重新计算，非估算）：
+  架构：{旧} → {新}（{+/-}，依据：{验证命令输出摘要}）
+  性能：{旧} → {新}（{+/-}，依据：{验证命令输出摘要}）
+  稳定性：{旧} → {新}（{+/-}，依据：{验证命令输出摘要}）
 
 剩余问题：{N}（P1:{N} P2:{N} P3:{N}）
 

@@ -15,7 +15,7 @@
 | Phase 1: 开发 | 阶段 1: 开发 | backend + frontend + db 并行 |
 | Phase 2: 审查 | 阶段 2: 审查 | code-reviewer 串行审查 |
 | Phase 3: 测试 | 阶段 3: 测试验证 | verifier 执行 |
-| Phase 4: 部署 | 阶段 4: 部署上线 | git push + deploy.sh |
+| Phase 4: 部署 | 阶段 4: 部署上线 | git push + {deploy_command} |
 | Phase 5: 验收 | 阶段 5: 线上验收 | browse + 人工确认 |
 
 ---
@@ -26,6 +26,11 @@
 - 功能需求描述（来自 autoloop-plan.md）
 - 代码库路径（绝对路径）
 - 技术栈信息
+- **T5 必须额外收集（在 plan 阶段）**：
+  - `deploy_target`：部署目标主机（例：`sip-server`、`prod-01`）
+  - `service_count`：需要检查的服务数量（例：`4`）
+  - `deploy_command`：完整部署命令（例：`sudo bash deploy.sh`）
+  - `health_check_url`：健康检查端点 URL（例：`https://example.com/api/health`）
 
 ### 执行（并行）
 
@@ -128,7 +133,7 @@
 ### 质量门禁
 - [ ] 所有 Python 文件 py_compile 通过（零错误）
 - [ ] 所有 TypeScript 文件 tsc --noEmit 通过（零错误）
-- [ ] 新路由已在 main.py 注册（grep 验证）
+- [ ] 新路由已在 main.py 注册（`grep -n "include_router.*{new_router_name}" {main.py}`）
 - [ ] 新文件已在 __init__.py 导出
 - [ ] Alembic 迁移有 downgrade() 实现
 - [ ] 无 `except: pass` / `# type: ignore` / `any` 滥用
@@ -175,7 +180,7 @@ P1: {N}，P2: {N}，P3: {N}
 - [ ] P3 问题已记录（不阻塞，但记入最终报告）
 
 ### 阻塞条件
-有 P1 或 P2 问题 → 返回 Phase 1 针对性修复（最多 3 轮修复-审查循环）
+有 P1 或 P2 问题 → 返回 Phase 1 针对性修复（最多 3 轮修复-审查循环；T5 因含人工确认环节，允许此例外，见 loop-protocol.md 统一重试上限规则）
 
 ---
 
@@ -196,8 +201,8 @@ python3 -m py_compile {每个文件}
 # 2. TypeScript 类型检查（如有前端修改）
 cd {前端目录} && npx tsc --noEmit
 
-# 3. 路由注册验证
-grep -n "include_router" {main.py}
+# 3. 路由注册验证（{new_router_name} = 本次新增的 router 变量名，在 plan 中收集）
+grep -n "include_router.*{new_router_name}" {main.py}
 
 # 4. Alembic 状态检查（如有数据库迁移）
 cd {项目根目录} && python -m alembic check
@@ -236,6 +241,8 @@ curl -X GET {API端点} \
 
 ### 执行（人工或自动）
 
+> 以下变量在 plan 收集阶段定义（T5需额外收集：deploy_target, service_count, deploy_command, health_check_url）
+
 ```bash
 # 1. 提交代码
 git add {所有修改文件（明确列出，不用 git add -A）}
@@ -250,27 +257,27 @@ EOF
 # 2. 推送
 git push origin main
 
-# 3. 线上部署（SIP 项目）
-gcloud compute ssh sip-server \
-  --zone=asia-southeast1-b \
-  --command="cd /opt/sip && git pull origin main && sudo bash deploy.sh"
+# 3. 线上部署
+{deploy_command}
+# deploy_command 示例（在 plan 中收集）：
+#   SIP 项目：gcloud compute ssh {deploy_target} --zone=... --command="cd /opt/sip && git pull && sudo bash deploy.sh"
+#   其他项目：ssh {deploy_target} "cd {project_path} && git pull && {deploy_command}"
 
 # 4. 服务健康检查
-# 检查 4 个服务全部 active:
-# sip-backend / sip-worker / sip-scheduler / sip-frontend
+# 检查 {service_count} 个服务全部 active（服务名称列表在 plan 中定义）
 ```
 
 ### 输出
 - git commit hash
 - 部署命令执行结果
-- 服务状态（4 个全部 active）
-- Health check 响应
+- 服务状态（{service_count} 个全部 active）
+- Health check 响应（{health_check_url}）
 
 ### 质量门禁
 - [ ] git push 成功
-- [ ] deploy.sh 执行无报错
-- [ ] 4 个服务全部 active（systemctl status）
-- [ ] Health check 返回 HTTP 200
+- [ ] {deploy_command} 执行无报错
+- [ ] {service_count} 个服务全部 active（systemctl status）
+- [ ] Health check 返回 HTTP 200（{health_check_url}）
 
 ### 阻塞条件
 服务未全部 active → 检查日志，修复后重部署
@@ -336,4 +343,4 @@ Console 无红色错误
 | Phase 4 部署失败 | Phase 3（修复后重测试）| 修复 + 重测 + 重部署 |
 | Phase 5 线上有问题 | Phase 4（回滚）or Phase 1（修复）| 用户决定回滚还是热修复 |
 
-**最大回退次数**：每个阶段最多回退 3 次，超过则向用户报告并等待人工决策。
+**最大回退次数**：每个阶段最多回退 2 次（遵守 loop-protocol.md 统一重试上限规则）；Phase 2 修复-审查循环例外，最多 3 轮。超过上限则向用户报告并等待人工决策。

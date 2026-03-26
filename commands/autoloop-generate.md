@@ -16,6 +16,8 @@ description: >
 - 数量
 - 质量标准（7/10 是最低要求，可调整）
 - 示例（至少 1 个用户认可的样本）
+- 输出位置（output_path，默认: {工作目录}/autoloop-output/）
+- 文件命名规则（naming_pattern，默认: {template_name}-{index}.md）
 
 ---
 
@@ -87,13 +89,15 @@ description: >
 如果变量需要推断，使用规则生成。
 如果变量需要用户提供，列出清单请用户确认。
 
-生成变量数据表（写入 autoloop-results.tsv）：
+生成变量数据表（写入 autoloop-results.tsv，使用标准 schema，见 autoloop.md）：
 
 ```tsv
-unit_id	variable_1	variable_2	variable_3	status	score
-001	{值}	{值}	{值}	待生成	—
-002	{值}	{值}	{值}	待生成	—
+iteration	phase	status	metric_name	metric_value	delta	details
+001	generate	pending	score	—	—	变量: {variable_1}={值}, {variable_2}={值}
+002	generate	pending	score	—	—	变量: {variable_1}={值}, {variable_2}={值}
 ```
+
+变量的完整取值记录到 autoloop-findings.md，不放在 results.tsv。
 
 ---
 
@@ -209,14 +213,14 @@ unit_id	variable_1	variable_2	variable_3	status	score
 
 ## 批次进度追踪
 
-实时更新 autoloop-results.tsv：
+实时更新 autoloop-results.tsv（使用标准 schema，见 autoloop.md）：
 
 ```tsv
-unit_id	status	score	retries	issue_notes
-001	通过	8.5	0
-002	通过	7.2	1	第一次生成语调不对
-003	人工审查	6.0	3	变量信息不足，无法生成高质量内容
-004	生成中	—	0
+iteration	phase	status	metric_name	metric_value	delta	details
+001	generate	pass	score	8.5	—	重试0次
+002	generate	pass	score	7.2	—	重试1次: 第一次生成语调不对
+003	generate	review	score	6.0	—	重试3次仍未达标: 变量信息不足
+004	generate	pending	score	—	—	生成中
 ```
 
 每完成 10% 输出进度：

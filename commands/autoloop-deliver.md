@@ -15,7 +15,11 @@ description: >
 - 功能需求（详细描述）
 - 代码库路径（绝对路径）
 - 技术栈信息（框架、数据库）
-- 部署信息（服务器、部署命令）
+- 部署目标（deploy_target）
+- 服务列表（services）
+- 文档输出路径（doc_output_path，默认：工作目录）
+- 健康检查 URL（health_url）
+- 线上验收 URL（acceptance_url）
 
 **严格遵守 CLAUDE.md 强制开发流程，不可跳步。**
 
@@ -99,10 +103,11 @@ description: >
 
 ### 质量门禁（阶段 0）
 - [ ] 所有需要修改的文件已识别（通过读取代码确认，不是猜测）
-- [ ] 数据库变更已明确（有具体 SQL）
-- [ ] API 路由已设计（有路径、方法、请求/响应 schema）
+- [ ] 数据库变更已描述（变更内容和原因，无需 SQL — SQL 在阶段 0.5 方案文档中产出）
+- [ ] 新增/修改路由已列出（路径和方法，无需完整 schema — schema 在阶段 0.5 方案文档中产出）
 - [ ] 风险已识别
 - [ ] 实施顺序已确定（解决依赖关系）
+- [ ] 验收标准已明确（可测量的功能验收条件）
 
 ---
 
@@ -113,7 +118,7 @@ description: >
 
 ### 生成文档
 
-写入 `/Users/kane/Documents/Obsidian Vault/线上项目/sip系统/问题与修复/{功能名}-{YYYY-MM-DD}.md`（如果在 SIP 项目中）。
+写入 `{doc_output_path}/{功能名}-{YYYY-MM-DD}.md`（路径来自 autoloop-plan.md 的 doc_output_path，默认为工作目录）。
 
 文档结构（使用 `templates/delivery-template.md`）：
 
@@ -425,22 +430,21 @@ verifier subagent：
    git push origin main
 
 2. 线上部署
-   gcloud compute ssh sip-server --zone=asia-southeast1-b \
-     --command="cd /opt/sip && git pull origin main && sudo bash deploy.sh"
+   {deploy_target}（来自 autoloop-plan.md，如：gcloud compute ssh {host} --zone={zone} --command="..."）
 
 3. 部署后检查
-   检查 4 个服务全部 active：
-   sip-backend / sip-worker / sip-scheduler / sip-frontend
+   检查所有服务全部 active：
+   {services}（来自 autoloop-plan.md 的 services 列表）
 
 4. Health check
-   curl https://{域名}/api/health
+   curl {health_url}
    期望：HTTP 200，{"status": "ok"}
 ```
 
 ### 质量门禁（阶段 4）
 - [ ] git push 成功
-- [ ] 4 个服务全部 active
-- [ ] Health check 返回 200
+- [ ] {services} 列表中所有服务全部 active
+- [ ] Health check（{health_url}）返回 200
 
 ---
 
@@ -451,7 +455,7 @@ browse agent（线上功能验证）：
 ```
 你是 browse subagent，负责线上功能验证。
 
-线上环境：{URL}
+线上环境：{acceptance_url}（来自 autoloop-plan.md）
 
 验证清单（逐项执行）：
 1. 新功能正常工作：{具体步骤}
