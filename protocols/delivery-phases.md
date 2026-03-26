@@ -79,8 +79,9 @@
 
 ### 执行
 生成方案文档，写入：
-- SIP 项目：`/Users/kane/Documents/Obsidian Vault/线上项目/sip系统/问题与修复/{功能名}-{YYYY-MM-DD}.md`
-- 其他项目：`{工作目录}/docs/{功能名}-{YYYY-MM-DD}.md`
+`{doc_output_path}/{功能名}-{YYYY-MM-DD}.md`
+
+其中 `{doc_output_path}` 的值来自 `autoloop-plan.md` 的 `doc_output_path` 字段（唯一来源，见 `protocols/loop-protocol.md` 统一参数词汇表）。不得在此处硬编码任何路径。
 
 文档格式参见 `templates/delivery-template.md`
 
@@ -122,9 +123,9 @@
 **1b. 后端开发（数据库迁移完成后）**：
 - backend-dev subagent
 - 按方案逐一实现后端功能
-- 每个文件修改后立即 py_compile 验证
-- 新路由在 main.py 注册
-- 新文件在 __init__.py 导出
+- 每个文件修改后立即运行 `{syntax_check_cmd}`（按 `syntax_check_file_arg` 决定是否附加文件参数）验证
+- 新路由在 `{main_entry_file}` 注册（Python: `include_router`；TypeScript: 按框架规范；其他: 按项目规范）
+- 新文件在模块导出文件中声明（Python: `__init__.py`；TypeScript: `index.ts` barrel export；其他: 按项目规范）
 
 **1c. 前端开发（可与 1b 并行，如果不依赖后端接口变化）**：
 - frontend-dev subagent
@@ -134,8 +135,8 @@
 
 ### 输出
 - 所有修改/新建的文件（绝对路径列表）
-- 每个文件的 py_compile / tsc 验证结果
-- main.py 路由注册状态
+- 每个文件的语法验证结果（`{syntax_check_cmd}`）
+- `{main_entry_file}` 路由注册状态
 
 ### 质量门禁
 - [ ] 所有 Python 文件 py_compile 通过（零错误）
@@ -195,7 +196,7 @@ P1: {N}，P2: {N}，P3: {N}
 
 ### 输入
 - Phase 1 产出的所有文件列表
-- main.py 路径
+- `{main_entry_file}` 路径（来自 autoloop-plan.md）
 
 ### 执行（verifier subagent）
 

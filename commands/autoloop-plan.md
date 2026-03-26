@@ -47,7 +47,7 @@ description: >
 | 模板 | 默认轮次 | 默认预算 | 默认质量门禁 |
 |------|---------|---------|------------|
 | T1 Research | 3 | 无限制 | coverage ≥ 85%，credibility ≥ 80% |
-| T2 Compare | 2 | 无限制 | completeness ≥ 90%，evidence ≥ 80% |
+| T2 Compare | 2 | 无限制 | 覆盖率 100%，可信度 ≥ 80%，偏见检查（每选项评分差 < 15%），敏感性分析（±20% 推荐不变）|
 | T3 Iterate | 无上限 | 用户定义 | KPI 达到用户指定目标值 |
 | T4 Generate | items × 2 | 无限制 | pass_rate ≥ 95%，avg_score ≥ 7/10 |
 | T5 Deliver | 1（线性阶段制） | 无限制 | 全阶段门禁通过（含 2 个人工确认点） |
@@ -122,6 +122,13 @@ description: >
 
 3. 决策权重（哪个维度最重要？）：
    最重要：___  其次：___
+
+4. 关键假设（key_assumptions）：
+   列出评分中隐含的关键假设（用于后续敏感性分析，见 protocols/quality-gates.md 敏感性分析章节）：
+   - {假设 1，如：团队有足够的学习时间，实施周期 ≥ 3 个月}
+   - {假设 2，如：当前月度预算上限 = $X}
+   - {假设 3，如：用户规模增长率 = Y%/年}
+   留空则向导自动从评估维度中推断关键假设（成本/时间/规模类维度自动识别为假设来源）。
 ```
 
 ### T3 Iterate — 迭代目标
@@ -201,13 +208,16 @@ description: >
 
 7. 服务列表（service_list）：
    {部署后需要检查的服务名称列表，如: [sip-backend, sip-worker, sip-scheduler, sip-frontend]}
-   如不适用：{留空或填 N/A}
+   如不适用：{填 N/A}
+   注意：service_list 和 health_check_url 至少须提供其中一项，否则 plan 不合法。
+   - 如果 service_list 为 N/A，Phase 4 服务检查门禁自动标记为 N/A（跳过）。
+   - 如果 health_check_url 为空，Phase 4 健康检查门禁自动标记为 N/A（跳过）。
 
 8. 文档输出路径（doc_output_path）：
-   {方案文档存放的目录绝对路径，默认: 工作目录}
+   {方案文档存放的目录绝对路径，来自 plan，见 protocols/loop-protocol.md doc_output_path 定义}
 
 9. 健康检查 URL（health_check_url）：
-   {如 https://example.com/api/health，或留空跳过健康检查}
+   {如 https://example.com/api/health，或留空（此时 service_list 必须非空）}
 
 10. 线上验收 URL（acceptance_url）：
     {验收时打开的线上地址，如 https://example.com}

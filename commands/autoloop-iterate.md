@@ -221,9 +221,25 @@ KPI 指标：{指标名}
   - {文件 1}（git commit: {hash}）
   - {文件 2}（git commit: {hash}）
 
-回滚命令：
-git checkout {commit_hash} -- {文件路径}
+回滚命令（含安全检查）：
+# 步骤 1：确认无非本轮的未提交修改
+git status
+
+# 步骤 2：如有脏文件，先暂存
+git stash  # 仅在 git status 显示非预期文件时执行
+
+# 步骤 3：用 git revert 回滚（保留完整历史，不使用 git checkout）
+git revert {commit_hash}
+
+# 步骤 4：恢复暂存的工作（如步骤 2 执行了 stash）
+git stash pop
 ```
+
+**回滚安全规则**：
+- 必须先 `git status` 确认无非本轮的未提交修改
+- 有脏文件时先 `git stash` 保存，回滚后 `git stash pop` 恢复
+- 使用 `git revert {commit}` 而非 `git checkout -- {file}`，保留完整历史
+- 不使用 `git reset --hard`（会销毁未提交的工作）
 
 ---
 

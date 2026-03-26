@@ -183,7 +183,7 @@ OBSERVE → ORIENT → DECIDE → ACT → VERIFY → SYNTHESIZE → EVOLVE
 ### 质量门禁数字化
 
 所有门禁是数字，不是"感觉好了"：
-- 覆盖率 87.5%（不是"大部分维度有内容"）
+- 覆盖率 87.5%（未达标：T1 需要 ≥ 85%，但此处举例说明数字化而非主观描述；见 `protocols/quality-gates.md` 精确阈值）
 - 安全得分 9.2/10（不是"安全性良好"）
 
 ### 阻塞点设计

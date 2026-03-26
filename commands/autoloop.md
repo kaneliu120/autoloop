@@ -146,7 +146,23 @@ AutoLoop 第 {N} 轮完成
 5. 遗留事项（如有）
 6. 推荐下一步
 
-最终报告写入 `autoloop-report-{YYYYMMDD}.md`。
+最终报告文件名遵循下方最终输出文件命名规则。
+
+---
+
+## 最终输出文件命名规则（规范来源，所有其他文件必须引用此处，不得自行定义）
+
+| 模板 | 输出文件名 |
+|------|----------|
+| T1 Research | `autoloop-report-{topic}-{date}.md` |
+| T2 Compare | `autoloop-report-{topic}-{date}.md` |
+| T3 Iterate | `autoloop-report-{topic}-{date}.md` |
+| T4 Generate | 输出到 `{output_path}/{naming_pattern}`（变量来自 plan） |
+| T5 Deliver | `autoloop-delivery-{feature}-{date}.md` |
+| T6 Quality | `autoloop-audit-{date}.md` |
+| T7 Optimize | `autoloop-audit-{date}.md` |
+
+其中 `{date}` = `YYYYMMDD`，`{topic}` / `{feature}` 从 plan 的一句话目标中提取（空格替换为 `-`，小写）。
 
 ---
 
