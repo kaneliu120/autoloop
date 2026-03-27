@@ -69,7 +69,7 @@
 - naming_pattern：{文件命名规则，如 {template_name}-{index}.md}
 
 **T5 Deliver**：
-- project_type：{backend-api / fullstack / frontend-only / script / data-pipeline / library}（枚举值和激活矩阵见 protocols/loop-protocol.md）
+- project_type：{枚举值见 protocols/loop-protocol.md project_type 枚举，激活矩阵见同文档}
 - 功能描述：{详细需求}
 - 代码库路径：{绝对路径}
 - 新增路由：{是/否}，路由前缀：{前缀}
@@ -89,7 +89,7 @@
 - frontend_dir：{前端代码目录绝对路径；无前端则填 N/A}
 
 **T6 Quality**：
-- project_type：{backend-api / fullstack / frontend-only / script / data-pipeline / library}（枚举值和激活矩阵见 protocols/loop-protocol.md）
+- project_type：{枚举值见 protocols/loop-protocol.md project_type 枚举，激活矩阵见同文档}
 - 代码库路径：{绝对路径}
 - 审查模块：{模块列表 / 全量}
 - syntax_check_cmd：{语法检查裸命令，如 python3 -m py_compile 或 npx tsc --noEmit，不含文件参数占位符；文件参数由 syntax_check_file_arg 控制}
@@ -99,7 +99,7 @@
 - 特殊约束：{约束 / 无}
 
 **T7 Optimize**：
-- project_type：{backend-api / fullstack / frontend-only / script / data-pipeline / library}（枚举值和激活矩阵见 protocols/loop-protocol.md）
+- project_type：{枚举值见 protocols/loop-protocol.md project_type 枚举，激活矩阵见同文档}
 - 系统路径：{绝对路径}
 - syntax_check_cmd：{语法检查裸命令，如 python3 -m py_compile 或 npx tsc --noEmit，不含文件参数占位符；文件参数由 syntax_check_file_arg 控制}
 - syntax_check_file_arg：{true/false，语法检查命令是否接受单文件参数}
