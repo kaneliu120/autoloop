@@ -137,7 +137,7 @@ AutoLoop 第 {N} 轮完成
   → {具体行动 1}
   → {具体行动 2}
 
-终止判断：{继续迭代 | 终止原因枚举见 protocols/loop-protocol.md 统一状态枚举}（终止层级见 protocols/quality-gates.md 概述章节）
+终止判断：{继续迭代 | 质量达标 | 预算耗尽 | 用户中断 | 阻塞终止}（终止层级见 protocols/quality-gates.md 概述章节）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
