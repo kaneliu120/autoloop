@@ -220,9 +220,12 @@ description: >
 7. 服务列表（service_list）：
    {部署后需要检查的服务名称列表，如: [sip-backend, sip-worker, sip-scheduler, sip-frontend]}
    如不适用：{填 N/A}
-   注意：service_list 和 health_check_url 至少须提供其中一项，否则 plan 不合法。
+   必填性由 project_type 激活矩阵决定（见 protocols/loop-protocol.md）：
+   - backend-api / fullstack：service_list 为必填（✓）
+   - frontend-only / script / data-pipeline / library：service_list 为可选（○），可填 N/A
    - 如果 service_list 为 N/A，Phase 4 服务检查门禁自动标记为 N/A（跳过）。
    - 如果 health_check_url 为空，Phase 4 健康检查门禁自动标记为 N/A（跳过）。
+   - script / library 类型允许 service_list 和 health_check_url 同时为 N/A（无常驻服务）。
    变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 8. 文档输出路径（doc_output_path）：
@@ -230,7 +233,10 @@ description: >
    变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 9. 健康检查 URL（health_check_url）：
-   {如 https://example.com/api/health，或留空（此时 service_list 必须非空）}
+   {如 https://example.com/api/health，或留空}
+   必填性由 project_type 激活矩阵决定（见 protocols/loop-protocol.md）：
+   - backend-api / fullstack：health_check_url 为必填（✓）
+   - 其他类型：可选（○），留空则 Phase 4 健康检查标记为 N/A
    变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 10. 线上验收 URL（acceptance_url）：
@@ -332,10 +338,6 @@ description: >
 
 6. 语法检查是否接受单文件参数（syntax_check_file_arg）：
    {true / false，规则见上方 T5 第12项说明}
-   变量名见 protocols/loop-protocol.md 统一参数词汇表
-
-7. 主入口文件（main_entry_file）：
-   {主入口文件绝对路径，如 /project/backend/main.py}
    变量名见 protocols/loop-protocol.md 统一参数词汇表
 ```
 

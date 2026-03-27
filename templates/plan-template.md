@@ -92,6 +92,7 @@
 - 审查模块：{模块列表 / 全量}
 - syntax_check_cmd：{语法检查裸命令，如 python3 -m py_compile 或 npx tsc --noEmit，不含文件参数占位符；文件参数由 syntax_check_file_arg 控制}
 - syntax_check_file_arg：{true/false，语法检查命令是否接受单文件参数}
+- main_entry_file：{主入口文件绝对路径，如 /project/backend/main.py；仅当 project_type ∈ {backend-api, fullstack} 时必填，其他类型可填 N/A}
 - 已知问题：{描述 / 无}
 - 特殊约束：{约束 / 无}
 

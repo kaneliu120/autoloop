@@ -358,10 +358,18 @@ T7 企业级标准：稳定性得分 ≥ 8/10
 ## T5 N/A 处理规则
 
 ```text
-如果 service_list 为空或 N/A：Phase 4 服务检查标记为 N/A（跳过）
-如果 health_check_url 为空：Phase 4 健康检查标记为 N/A（跳过）
-对于 script/library 类型的 project_type，两者均可为 N/A（无常驻服务）
-Phase 5：始终需要用户输入 'verified'，不受 N/A 影响
+Phase 4 条件化：
+  如果 deploy_command 为 N/A：部署步骤标记为 N/A（跳过）
+  如果 service_list 为空或 N/A：Phase 4 服务检查标记为 N/A（跳过）
+  如果 health_check_url 为空：Phase 4 健康检查标记为 N/A（跳过）
+  对于 script/library 类型的 project_type，deploy/service_list/health_check 均可为 N/A
+
+Phase 5 条件化（验收方式按 project_type 选择）：
+  backend-api / fullstack / frontend-only：浏览器（桌面+手机）验收 + Console 零错误
+  script：CLI 执行验证 + 错误输入测试
+  data-pipeline：批处理结果抽样验证 + 日志检查
+  library：import/require 验证 + 公共 API 调用验证
+  所有类型：始终需要用户输入 'verified'（人工确认），不受 N/A 影响
 ```
 
 ---

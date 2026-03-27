@@ -235,12 +235,13 @@ curl -X GET {API端点} \
 ### 输入
 - Phase 3 通过的验证结果
 
-### 执行（人工或自动）
+### 执行（按 project_type 条件化）
 
 > 以下变量在 plan 收集阶段定义（T5需额外收集：deploy_target, deploy_command, service_list, health_check_url）
 
+**Step 1: 提交代码（所有 project_type）**
+
 ```bash
-# 1. 提交代码
 git add {所有修改文件（明确列出，不用 git add -A）}
 git status  # 确认只有预期的文件
 git commit -m "$(cat <<'EOF'
@@ -249,34 +250,45 @@ feat({模块}): {功能描述}
 Co-Authored-By: AutoLoop <noreply@autoloop>
 EOF
 )"
-
-# 2. 推送
 git push origin main
+```
 
-# 3. 线上部署
+**Step 2: 线上部署（当 deploy_command ≠ N/A 时）**
+
+```bash
 {deploy_command}
-# deploy_command 示例（在 plan 中收集）：
-#   SIP 项目：gcloud compute ssh {deploy_target} --zone=... --command="cd /opt/sip && git pull && sudo bash deploy.sh"
-#   其他项目：ssh {deploy_target} "cd {project_path} && git pull && bash deploy.sh"
+```
 
-# 4. 服务健康检查
-# 检查 service_list 中每个服务全部 active（服务名称在 plan 中的 service_list 定义）
+- backend-api / fullstack / frontend-only / data-pipeline：通常需要远程部署
+- script：可选部署（本地脚本可能不需要远程部署）
+- library：发布（publish）替代部署（如 npm publish / twine upload）
+
+**Step 3: 服务健康检查（当 service_list ≠ N/A 时）**
+
+检查 service_list 中每个服务全部 active（服务名称在 plan 中的 service_list 定义）
+
+**Step 4: Health check（当 health_check_url ≠ N/A 时）**
+
+```bash
+curl {health_check_url}
+# 期望：HTTP 200
 ```
 
 ### 输出
 - git commit hash
-- 部署命令执行结果
-- 服务状态（{service_list} 中全部 active）
-- Health check 响应（{health_check_url}）
+- （当 deploy_command ≠ N/A 时）部署命令执行结果
+- （当 service_list ≠ N/A 时）服务状态（{service_list} 中全部 active）
+- （当 health_check_url ≠ N/A 时）Health check 响应
 
 ### 质量门禁
 - [ ] git push 成功
-- [ ] {deploy_command} 执行无报错
-- [ ] {service_list} 中所有服务全部 active（systemctl status）
-- [ ] Health check 返回 HTTP 200（{health_check_url}）
+- [ ] （当 deploy_command ≠ N/A 时）`{deploy_command}` 执行无报错
+- [ ] （当 service_list ≠ N/A 时）`{service_list}` 中所有服务全部 active（systemctl status）
+- [ ] （当 health_check_url ≠ N/A 时）Health check 返回 HTTP 200
 
 ### 阻塞条件
-服务未全部 active → 检查日志，修复后重部署
+（当 service_list ≠ N/A 时）服务未全部 active → 检查日志，修复后重部署
+（当 deploy_command = N/A 且 service_list = N/A 时）git push 成功即通过
 
 ---
 
@@ -284,21 +296,36 @@ git push origin main
 
 ### 输入
 - 验收标准（来自 autoloop-plan.md）
-- 线上环境 URL
+- （当 acceptance_url ≠ N/A 时）线上环境 URL
 
-### 执行
+### 执行（按 project_type 条件化）
 
-**自动验证（verifier subagent）**：
+**当 project_type ∈ {backend-api, fullstack, frontend-only} 且 acceptance_url ≠ N/A 时**：
 
-调用方式：`Agent(subagent_type="code-reviewer", prompt="你是线上验收测试员。使用浏览器工具验证以下功能...")`
-可选工具：Chrome DevTools MCP（如果已配置）
-
+自动验证（verifier subagent）：
+- 调用方式：`Agent(subagent_type="code-reviewer", prompt="你是线上验收测试员。使用浏览器工具验证以下功能...")`
+- 可选工具：Chrome DevTools MCP（如果已配置）
 - 访问相关页面，验证新功能是否可见
 - 执行功能操作，验证结果正确
 - 检查浏览器 Console 无错误
 - 检查相关 API 响应时间（< 500ms 为正常）
 
-**人工确认（阻塞）**：
+**当 project_type = script 时**：
+- CLI 执行验证：运行脚本并确认输出符合预期
+- 错误输入测试：传入无效参数确认有合理报错
+- 无需浏览器验收
+
+**当 project_type = data-pipeline 时**：
+- 批处理结果验证：抽样检查输出数据正确性
+- 日志检查：确认无异常错误
+- 无需浏览器验收
+
+**当 project_type = library 时**：
+- import/require 验证：确认发布后可正常导入
+- 公共 API 调用验证：关键接口返回正确结果
+- 无需浏览器验收
+
+**人工确认（阻塞，所有 project_type 均需要）**：
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -307,14 +334,24 @@ Phase 5 阻塞：需要人工验收
 
 自动验证结果：{通过/有问题}
 
-请在浏览器（桌面 + 手机）访问 {URL}：
+（当 project_type ∈ {backend-api, fullstack, frontend-only} 时）
+请在浏览器（桌面 + 手机）访问 {acceptance_url}：
+
+（当 project_type = script 时）
+请运行脚本并确认输出符合预期：
+
+（当 project_type = data-pipeline 时）
+请检查批处理结果和日志：
+
+（当 project_type = library 时）
+请验证 import 和公共 API 调用：
 
 验收清单：
 □ {验收标准 1}
 □ {验收标准 2}
 □ {验收标准 3}
 
-Console 无红色错误
+（当有浏览器验收时）Console 无红色错误
 现有功能无回归
 
 全部确认后输入 "verified" 完成任务。
@@ -322,15 +359,31 @@ Console 无红色错误
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-### 质量门禁
+### 质量门禁（按 project_type 条件化）
+
+**所有 project_type**：
 - [ ] 自动验证通过（或已解释例外）
+- [ ] 现有功能无回归
+
+**当 project_type ∈ {backend-api, fullstack, frontend-only} 且 acceptance_url ≠ N/A 时**：
 - [ ] 人工在浏览器（桌面）确认新功能正常
 - [ ] 人工在浏览器（手机）确认布局正常
 - [ ] Console 零红色错误
-- [ ] 现有功能无回归（核心路径手动测试）
+
+**当 project_type = script 时**：
+- [ ] CLI 执行输出符合预期
+- [ ] 错误输入有合理报错
+
+**当 project_type = data-pipeline 时**：
+- [ ] 批处理结果正确（抽样验证）
+- [ ] 日志无异常错误
+
+**当 project_type = library 时**：
+- [ ] import/require 验证通过
+- [ ] 公共 API 调用结果正确
 
 ### 阻塞条件
-人工未确认 → 任务不算完成
+人工未确认 → 任务不算完成（所有 project_type 均需人工输入 "verified"）
 
 ---
 
