@@ -237,7 +237,7 @@ curl -X GET {API端点} \
 
 ### 执行（按 project_type 条件化）
 
-> 以下变量在 plan 收集阶段定义（T5需额外收集：deploy_target, deploy_command, service_list, health_check_url）
+> 以下变量在 plan 收集阶段定义（T5 参数以 `protocols/loop-protocol.md` 统一参数词汇表和激活矩阵为准）
 
 **Step 1: 提交代码（所有 project_type）**
 

@@ -59,43 +59,14 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 ```
 你是 architecture-diagnostic subagent，负责全面的架构诊断。
 
+执行流程：
+1. 读取 protocols/enterprise-standard.md 架构维度获取完整诊断项和扣分规则
+2. 读取 protocols/enterprise-standard.md 架构维度检测命令章节获取检测方法
+3. 根据代码库结构，生成针对性架构诊断清单
+4. 按清单逐项诊断，运行检测命令
+5. 输出架构诊断报告，标注跨维度影响
+
 代码库路径：{绝对路径}
-
-诊断步骤：
-
-1. 分层分析
-   目标：识别是否有清晰的层次结构（路由层 → 服务层 → 数据层）
-
-   检查：
-   - 路由文件是否直接操作数据库（应该通过 service 层）
-   - 是否有 service 层？还是业务逻辑直接在路由中？
-   - 数据模型是否混杂了业务逻辑？
-
-   检测命令见 `protocols/enterprise-standard.md` 架构维度检测命令章节（按实际技术栈执行）。
-
-2. 耦合分析
-   检查：
-   - 模块 A 是否直接 import 了模块 B 的内部实现（非 public API）
-   - 是否有双向依赖（A import B，B import A）
-
-   工具：读取每个模块的 import 列表，绘制依赖图
-
-3. API 设计一致性
-   检查：
-   - 路由命名是否统一（RESTful vs RPC 混用）
-   - 响应格式是否统一（有的返回 {data:...}，有的直接返回 list）
-   - 错误响应格式是否统一
-   - 分页实现是否统一
-
-4. 配置管理
-   检查：
-   - 是否所有配置都通过 settings 获取
-   - 是否有硬编码的 URL / 数字 / 路径
-
-5. 代码复用
-   检查：
-   - 是否有相同功能在多处实现
-   - 是否有重复的 CRUD 代码可以抽象
 
 输出：
 ## 架构诊断报告
@@ -124,13 +95,14 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 ```
 你是 performance-diagnostic subagent，负责全面的性能诊断。
 
+执行流程：
+1. 读取 protocols/enterprise-standard.md 性能维度获取完整诊断项和扣分规则
+2. 读取 protocols/enterprise-standard.md 性能维度检测命令章节获取检测方法
+3. 根据代码库结构，生成针对性性能诊断清单
+4. 按清单逐项诊断，运行检测命令
+5. 输出性能诊断报告，标注最高收益修复项
+
 代码库路径：{绝对路径}
-
-诊断步骤：
-
-诊断项清单见 `protocols/enterprise-standard.md` 性能维度（覆盖：N+1查询、连接池、缓存覆盖、同步阻塞、查询效率、前端性能等）。
-
-检测命令见 `protocols/enterprise-standard.md` 性能维度检测命令章节（按实际技术栈执行）。
 
 输出：
 ## 性能诊断报告
@@ -156,11 +128,14 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 ```
 你是 stability-diagnostic subagent，负责全面的稳定性诊断。
 
+执行流程：
+1. 读取 protocols/enterprise-standard.md 稳定性维度获取完整诊断项和扣分规则
+2. 读取 protocols/enterprise-standard.md 稳定性维度检测命令章节获取检测方法
+3. 根据代码库结构，生成针对性稳定性诊断清单
+4. 按清单逐项诊断，运行检测命令
+5. 输出稳定性诊断报告
+
 代码库路径：{绝对路径}
-
-诊断项清单见 `protocols/enterprise-standard.md` 稳定性维度（覆盖：外部依赖降级、错误处理完整性、健康检查、超时配置、日志完整性、自动恢复等）。
-
-检测命令见 `protocols/enterprise-standard.md` 稳定性维度检测命令章节（按实际技术栈执行）。
 
 输出：
 ## 稳定性诊断报告
@@ -213,29 +188,25 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 ```
 你是 optimization-fix subagent，负责以下性能/架构/稳定性问题修复。
 
+执行流程：
+1. 读取 protocols/enterprise-standard.md 获取该问题类型的修复规范和检测方法
+2. 读取 protocols/quality-gates.md 获取验证通过标准
+3. 根据问题描述和修复建议，制定最小化修复方案
+4. 实施修复并运行语法验证
+5. 评估修复对三维度的影响
+
 问题 ID：{ID}
 类型：{架构/性能/稳定性}
 描述：{问题描述}
 影响文件：{绝对路径列表}
 修复建议：{具体建议}
+syntax_check_cmd：{从 autoloop-plan.md 读取}
+syntax_check_file_arg：{从 autoloop-plan.md 读取}
 
 约束（不可违反）：
 - 不改变 public API 签名（路由路径、请求/响应格式）
 - 不改变数据库 schema（除非方案中明确说明）
-- 修改后必须通过语法验证（使用 autoloop-plan.md 中的 {syntax_check_cmd}）
-
-### 语法验证命令（来自 autoloop-plan.md）
-使用 plan 阶段收集的 `syntax_check_cmd` 和 `syntax_check_file_arg`（变量名见 `protocols/loop-protocol.md` 统一参数词汇表）：
-- `syntax_check_file_arg=true`：`{syntax_check_cmd} {修改的文件}`
-- `syntax_check_file_arg=false`：`{syntax_check_cmd}`（不附加文件参数）
-- 不同技术栈对应的默认值由 plan 阶段收集，不在此处硬编码
-
-执行步骤：
-1. 读取相关文件（读全，不要猜）
-2. 分析影响范围（修改这个会影响哪些调用者）
-3. 实施最小化修复
-4. 运行 {syntax_check_cmd}（按 syntax_check_file_arg 决定是否附加文件参数）
-5. 报告修改内容
+- 修改后必须通过语法验证
 
 输出：
 - 修改文件列表

@@ -68,6 +68,31 @@ library        — 库/SDK（无服务、无部署、有发布）
 保持 | 避免 | 待验证
 ```
 
+**任务状态（Task Status）**：
+```
+准备开始 | 进行中 | 已完成
+```
+- 准备开始 — 计划已创建，尚未执行第一轮
+- 进行中 — 正在执行迭代轮次
+- 已完成 — 任何原因的终止（具体原因见终止原因枚举）
+
+**终止原因（Termination Reason）**：
+```
+达标终止 | 预算耗尽 | 用户中断 | 阻塞终止
+```
+- 达标终止 — 质量门禁全部通过
+- 预算耗尽 — 迭代轮次用完，未达标
+- 用户中断 — 用户主动终止
+- 阻塞终止 — 遇到无法解决的阻塞
+
+**严重级别（Severity Level）**：
+```
+P1 | P2 | P3
+```
+- P1 — 阻塞，必须修复才能继续
+- P2 — 应修复，按模板门禁决定是否阻塞
+- P3 — 建议修复，记录但不阻塞
+
 ---
 
 ## 统一输出文件命名规则（规范来源）
@@ -93,23 +118,34 @@ library        — 库/SDK（无服务、无部署、有发布）
 所有模板写入 `autoloop-results.tsv` 时必须使用以下统一列结构，不得在其他文件中重新定义。
 
 ```
-iteration	phase	status	metric_name	metric_value	delta	details
+iteration	phase	status	metric_name	metric_value	delta	dimension	details
 ```
 
 | 列 | 说明 | 示例 |
 |---|---|---|
-| iteration | 轮次编号（从 1 开始）；T4 用 unit_id 填入 | 1 |
+| iteration | 轮次编号（从 1 开始） | 1 |
 | phase | 阶段或子步骤标识 | scan / generate / compare |
 | status | 状态：pass / fail / pending / review | pass |
 | metric_name | 指标名称 | score / coverage / pass_rate |
 | metric_value | 指标值（数字或字符串） | 8.5 |
 | delta | 与上轮的变化（首轮填 — ） | +1.2 |
-| details | 备注（原因、来源、问题描述） | 重试1次后通过 |
+| dimension | 维度标识（可选，无则填 —） | security / reliability / option_A |
+| details | 备注，支持 key=value 结构化格式 | option=选项A;reason=价格最低 |
 
-**使用约定（各模板行粒度）**：
-- T1/T3/T5/T6/T7：每轮一行，`iteration` = 轮次号
-- T2 Compare：每选项每维度一行，`iteration` = 轮次号，`details` 包含选项名（如 `option=选项A`）
-- T4 Generate：每生成单元一行，`iteration` = unit_id，`metric_name` = `score`，`details` 包含单元状态摘要
+**各模板行粒度约定**：
+- T1 Research：每轮每维度一行，`dimension` = 搜索维度名
+- T2 Compare：每选项每维度一行，`dimension` = 选项名
+- T3 Iterate：每轮一行，`dimension` = —
+- T4 Generate：每生成单元一行，`iteration` = unit_id，`dimension` = —
+- T5 Deliver：每阶段一行，`dimension` = phase名
+- T6 Quality：每维度一行，`dimension` = security / reliability / maintainability
+- T7 Optimize：每维度一行，`dimension` = architecture / performance / stability
+
+**details 结构化格式**：
+details 列支持 `key=value;key=value` 格式，便于后续解析。各模板常用 key：
+- T2: `option={选项名};bias_score={偏见分}`
+- T4: `unit_id={单元ID};quality={通过/重生成}`
+- T6/T7: `p1_count={N};p2_count={N}`
 
 额外的原始数据（变量值、证据来源等）写入 `autoloop-findings.md`，不放在 results.tsv。
 
@@ -123,7 +159,7 @@ iteration	phase	status	metric_name	metric_value	delta	details
 1. autoloop-plan.md         （已由向导创建）
 2. autoloop-findings.md     （从 templates/findings-template.md 创建空白实例）
 3. autoloop-progress.md     （从 templates/progress-template.md 创建空白实例）
-4. autoloop-results.tsv     （写入表头行：iteration\tphase\tstatus\tmetric_name\tmetric_value\tdelta\tdetails）
+4. autoloop-results.tsv     （写入表头行：iteration\tphase\tstatus\tmetric_name\tmetric_value\tdelta\tdimension\tdetails）
 ```
 
 所有 4 个文件必须在第 1 轮 OBSERVE 开始前存在。创建后在 autoloop-plan.md 的"输出文件"表中将状态从"待创建"更新为"已创建"。
@@ -256,7 +292,7 @@ OBSERVE Summary（写入 progress.md 当前轮次区块）：
 | 同一维度连续 2 轮无进展（改善 < 当前分数的 3%，相对值）| 当前方法已到极限，需要换方向 |
 | 多个维度同时落后 | 先解决最高优先级的，不要分散 |
 | 发现计划外的重要维度 | 评估是否扩展范围（考虑预算） |
-| 发现 P0 问题（数据丢失/安全漏洞）| 立即提升，暂停其他工作 |
+| 发现紧急 P1 问题（数据丢失/安全漏洞）| 立即提升，暂停其他工作（见 evolution-rules.md 进化类型 4）|
 
 ### 输出
 ORIENT Summary：

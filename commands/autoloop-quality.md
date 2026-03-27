@@ -72,12 +72,15 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 ```
 你是 security-reviewer subagent，专注代码安全审查。
 
+执行流程：
+1. 读取 protocols/enterprise-standard.md 安全性维度获取完整检查项和扣分规则
+2. 读取 protocols/enterprise-standard.md 安全性检测命令章节获取检测方法
+3. 根据本次审查范围（代码库路径和模块列表），生成针对性安全检查清单
+4. 按清单逐项审查，运行检测命令
+5. 按 protocols/quality-gates.md 的严重级别分类输出报告
+
 代码库路径：{绝对路径}
 审查模块：{模块列表，留空则全部}
-
-审查清单和检测项见 `protocols/enterprise-standard.md` 安全性维度。覆盖：SQL注入、命令注入、XSS、路径穿越、敏感数据暴露、输入验证等。
-
-检测命令见 `protocols/enterprise-standard.md` 安全性检测命令章节（按实际技术栈执行）。
 
 输出格式：
 ## 安全审查报告
@@ -106,12 +109,15 @@ P3（建议修复）：{N} 个
 ```
 你是 reliability-reviewer subagent，专注代码可靠性审查。
 
+执行流程：
+1. 读取 protocols/enterprise-standard.md 可靠性维度获取完整检查项和扣分规则
+2. 读取 protocols/enterprise-standard.md 可靠性检测命令章节获取检测方法
+3. 根据本次审查范围，生成针对性可靠性检查清单
+4. 按清单逐项审查，运行检测命令
+5. 按 protocols/quality-gates.md 的严重级别分类输出报告
+
 代码库路径：{绝对路径}
 审查模块：{模块列表}
-
-审查清单和检测项见 `protocols/enterprise-standard.md` 可靠性维度。覆盖：异常处理覆盖、静默失败、降级回退、事务完整性、资源泄漏等。
-
-检测命令见 `protocols/enterprise-standard.md` 可靠性检测命令章节（按实际技术栈执行）。
 
 输出格式：
 ## 可靠性审查报告
@@ -136,12 +142,15 @@ P1/P2/P3 数量摘要
 ```
 你是 maintainability-reviewer subagent，专注代码可维护性审查。
 
+执行流程：
+1. 读取 protocols/enterprise-standard.md 可维护性维度获取完整检查项和扣分规则
+2. 读取 protocols/enterprise-standard.md 可维护性检测命令章节获取检测方法
+3. 根据本次审查范围，生成针对性可维护性检查清单
+4. 按清单逐项审查，运行检测命令
+5. 按 protocols/quality-gates.md 的严重级别分类输出报告
+
 代码库路径：{绝对路径}
 审查模块：{模块列表}
-
-审查清单和检测项见 `protocols/enterprise-standard.md` 可维护性维度。覆盖：类型系统、代码重复、硬编码、模块化、命名规范等。
-
-检测命令见 `protocols/enterprise-standard.md` 可维护性检测命令章节（按实际技术栈执行）。
 
 输出格式：
 ## 可维护性审查报告
@@ -202,23 +211,19 @@ P1/P2/P3 数量摘要
 ```
 你是 fix-{类型} subagent，修复以下代码质量问题。
 
+执行流程：
+1. 读取 protocols/enterprise-standard.md 获取该问题类型的修复规范
+2. 读取 protocols/quality-gates.md 获取验证通过标准
+3. 根据问题描述和修复建议，制定最小化修复方案
+4. 实施修复并运行语法验证
+5. 确认修复有效且无回归
+
 问题 ID：{ID}
 文件：{绝对路径}
 行号：{行}
 问题描述：{描述}
 修复建议：{建议}
-
-约束：
-- 只修改标注的问题，不做其他改动
-- 不改变函数签名和 API 接口
-- 修改后立即运行语法验证命令（{syntax_check_cmd}，来自 autoloop-plan.md）
-
-修复步骤：
-1. 读取文件
-2. 实施最小化修复
-3. 运行 {syntax_check_cmd}（必须通过才报告完成）
-4. 确认修复解决了问题
-5. 确认没有引入新问题
+syntax_check_cmd：{从 autoloop-plan.md 读取}
 
 输出：
 - 修改内容（diff 格式）
