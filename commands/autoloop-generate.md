@@ -91,7 +91,7 @@ description: >
 生成变量数据表（写入 `autoloop-results.tsv`，TSV schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节）：
 
 ```
-iteration    phase       status     metric_name    metric_value    delta    details
+（TSV 格式见 protocols/loop-protocol.md 统一 TSV Schema）
 001          generate    pending    score          —               —        变量: {variable_1}={值}, {variable_2}={值}
 002          generate    pending    score          —               —        变量: {variable_1}={值}, {variable_2}={值}
 ```
@@ -210,7 +210,7 @@ iteration    phase       status     metric_name    metric_value    delta    deta
 实时更新 `autoloop-results.tsv`（TSV schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节）：
 
 ```
-iteration    phase       status    metric_name    metric_value    delta    details
+（TSV 格式见 protocols/loop-protocol.md 统一 TSV Schema）
 001          generate    pass      score          8.5             —        重试0次
 002          generate    pass      score          7.2             —        重试1次: 第一次生成语调不对
 003          generate    review    score          6.0             —        重试2次仍未达标: 变量信息不足
@@ -232,7 +232,7 @@ iteration    phase       status    metric_name    metric_value    delta    detai
 
 ## 最终汇总
 
-所有单元完成后，生成汇总报告（文件名见 `commands/autoloop.md` 最终输出文件命名规则）：
+所有单元完成后，生成汇总报告（文件名见 `protocols/loop-protocol.md` 统一输出文件命名章节）：
 
 ```markdown
 ## 批量生成完成报告
@@ -284,7 +284,7 @@ iteration    phase       status    metric_name    metric_value    delta    detai
 写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `templates/findings-template.md`：
 
 - **问题登记**：记录本批发现的模板缺陷、变量数据问题、质量评分异常
-- **策略复盘**：生成策略/模板参数/质量标准的效果评估（保持/避免）
+- **策略复盘**：生成策略/模板参数/质量标准的效果评估（保持 | 避免 | 待验证）（策略评价枚举见 protocols/loop-protocol.md 统一状态枚举）
 - **模式识别**：哪类变量值容易导致低分、哪些质量标准是瓶颈
 - **经验教训**：模板优化/生成提示词/质量评估方法的有效性总结
 

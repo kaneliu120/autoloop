@@ -145,7 +145,7 @@ T6 Quality（单文件）：
 
 任务：
 1. 读取以下关键文件，理解现有架构：
-   - {entry_file}
+   - {main_entry_file}（来自 plan，见 loop-protocol.md 统一参数词汇表）
    - {相关模块文件路径}
 
 2. 制定实施方案
@@ -248,8 +248,7 @@ T6 Quality（单文件）：
 你是 db-migrator subagent，负责数据库迁移管理。
 
 代码库路径：{codebase_path}
-迁移目录：{migration_dir}
-迁移工具配置：{migration_config_file}
+迁移验证命令：{migration_check_cmd}（来自 plan，见 loop-protocol.md 统一参数词汇表；迁移目录和配置文件在 plan 中定义）
 
 需要的数据库变更：
 {具体变更描述，包含 DDL}
@@ -802,9 +801,8 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 |------|--------|
 | `{tech_stack}` | FastAPI + SQLAlchemy 2.0 async + PostgreSQL |
 | `{syntax_check_cmd}` | `python3 -m py_compile {文件路径}` |
-| `{entry_file}` | `{codebase_path}/backend/main.py` |
-| `{migration_dir}` | `{codebase_path}/backend/db/migrations/` |
-| `{migration_config_file}` | `{codebase_path}/alembic.ini` |
+| `{main_entry_file}` | `{codebase_path}/backend/main.py` |
+| `{migration_check_cmd}` | `python -m alembic current && python -m alembic check`（迁移目录和配置文件在 plan 中定义）|
 | `{tech_constraints}` | 所有路由函数使用 async def；数据库操作使用 SQLAlchemy 2.0 async session；配置从 settings 获取；新路由在 main.py 中注册 |
 
 **planner 输出示例（影响范围）**：
@@ -822,9 +820,8 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 |------|--------|
 | `{tech_stack}` | Node.js + Express/Fastify + TypeScript + PostgreSQL |
 | `{syntax_check_cmd}` | `npx tsc --noEmit` |
-| `{entry_file}` | `{codebase_path}/src/index.ts` 或 `app.ts` |
-| `{migration_dir}` | `{codebase_path}/migrations/` |
-| `{migration_config_file}` | `{codebase_path}/knexfile.ts` 或 `drizzle.config.ts` |
+| `{main_entry_file}` | `{codebase_path}/src/index.ts` 或 `app.ts` |
+| `{migration_check_cmd}` | `npx drizzle-kit check` 或 `npx knex migrate:status`（配置文件路径在 plan 中定义）|
 | `{tech_constraints}` | 使用 TypeScript，不使用 any；新路由在 index.ts/app.ts 中注册；异步操作使用 async/await |
 
 ### Next.js/前端技术栈
@@ -832,8 +829,8 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 | 变量 | 填充值 |
 |------|--------|
 | `{tech_stack}` | Next.js App Router + TypeScript + TanStack Query v5 + Tailwind CSS v4 |
-| `{syntax_check_cmd}` | `cd {前端目录} && npx tsc --noEmit` |
-| `{entry_file}` | `{codebase_path}/app/layout.tsx` |
+| `{syntax_check_cmd}` | `cd {frontend_dir} && npx tsc --noEmit`（`{frontend_dir}` 见 loop-protocol.md 统一参数词汇表）|
+| `{main_entry_file}` | `{codebase_path}/app/layout.tsx` |
 | `{tech_constraints}` | 使用 TypeScript，不使用 any；API 调用通过 /api/* 路由；状态管理使用 TanStack Query v5 的 useQuery/useMutation；样式使用 Tailwind CSS v4 |
 
 ### 通用/多语言技术栈
@@ -841,8 +838,7 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 | 变量 | 填充值（按实际情况替换） |
 |------|--------|
 | `{tech_stack}` | 从 plan.tech_stack 填入 |
-| `{syntax_check_cmd}` | 从 plan.syntax_check_cmd 填入（见 loop-protocol.md 参数词汇表） |
-| `{entry_file}` | 从 plan.entry_file 或 plan.main_entry_file 填入 |
-| `{migration_dir}` | 从 plan.migration_dir 填入，如无数据库则 N/A |
-| `{migration_config_file}` | 从 plan.migration_config_file 填入，如无则 N/A |
+| `{syntax_check_cmd}` | 从 plan.syntax_check_cmd 填入（见 loop-protocol.md 统一参数词汇表）|
+| `{main_entry_file}` | 从 plan.main_entry_file 填入（见 loop-protocol.md 统一参数词汇表）|
+| `{migration_check_cmd}` | 从 plan.migration_check_cmd 填入（见 loop-protocol.md 统一参数词汇表），如无数据库则 N/A |
 | `{tech_constraints}` | 从 plan.tech_stack 推导或由 planner subagent 在方案中定义 |

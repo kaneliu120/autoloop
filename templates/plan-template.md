@@ -150,7 +150,7 @@
 | autoloop-plan.md | {工作目录}/autoloop-plan.md | 任务计划（本文件）| 已创建 |
 | autoloop-progress.md | {工作目录}/autoloop-progress.md | 迭代进度 | 待创建 |
 | autoloop-findings.md | {工作目录}/autoloop-findings.md | 发现记录 | 待创建 |
-| autoloop-report-YYYYMMDD.md | {工作目录}/autoloop-report-YYYYMMDD.md | 最终报告（日期为实际生成日期）| 待创建 |
+| 最终报告 | {工作目录}/ | 最终报告（文件命名见 protocols/loop-protocol.md 统一输出文件命名章节）| 待创建 |
 | autoloop-results.tsv | {工作目录}/autoloop-results.tsv | 结构化迭代日志（所有模板通用）| 待创建 |
 
 ---

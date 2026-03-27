@@ -22,11 +22,7 @@ description: >
 
 在阶段 0 扫描前，先确认技术栈，选择对应的验证命令：
 
-| 技术栈 | 语法验证命令 | 模块导出检查 | 路由注册检查 |
-|--------|------------|------------|------------|
-| Python（FastAPI/Flask 等） | `python3 -m py_compile {file}` | 检查 `__init__.py` 导出 | 检查 `main.py` 或主入口的 router 注册 |
-| TypeScript/Node.js | `npx tsc --noEmit` | 检查 `index.ts` barrel export | 检查路由注册文件（如 `app.ts`） |
-| 其他 / 混合栈 | 使用 plan 阶段用户指定的 `syntax_check_cmd` | 用户在 plan 阶段指定 | 用户在 plan 阶段指定 |
+所有技术栈使用 plan 中定义的 `{syntax_check_cmd}`（见 `protocols/loop-protocol.md` 统一参数词汇表）进行语法验证，按 `syntax_check_file_arg` 决定是否附加文件参数。模块导出和路由注册检查方式由 plan 的 `main_entry_file` 决定。
 
 如果 plan 阶段未指定验证命令，在开始扫描前向用户确认：
 "检测到技术栈：{检测结果}。将使用 {验证命令} 进行语法验证，是否正确？"
@@ -44,7 +40,7 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
   读取 autoloop-findings.md 的反思章节（4层结构表）
   获取：
   - 问题清单：上轮遗留未修复的问题，哪些已修复但效果不佳
-  - 策略评估：上轮"保持"策略（本轮优先使用）、"避免"策略（本轮排除）
+  - 策略评估：上轮"保持"策略（本轮优先使用）、"避免"策略（本轮排除）、"待验证"策略（本轮谨慎使用并观察效果）
   - 模式识别：反复出现的问题类型（说明有架构级根因，优先处理）
   - 经验教训：哪类修复最有效、哪些验证步骤能发现最多问题
 
@@ -413,7 +409,7 @@ Checkpoint（已修复 {N} 个问题）
 写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `templates/findings-template.md`：
 
 - **问题登记**：记录本轮发现的代码问题、修复是否引入新问题、审查遗漏、未能修复的遗留项
-- **策略复盘**：修复策略/审查方法/验证命令的效果评估（保持/避免）
+- **策略复盘**：修复策略/审查方法/验证命令的效果评估（保持 | 避免 | 待验证）（策略评价枚举见 protocols/loop-protocol.md 统一状态枚举）
 - **模式识别**：反复出现的代码问题类型（说明有架构级根因）、修复→新问题的因果链、哪类问题集中在同一模块
 - **经验教训**：哪类修复最有效、哪些验证步骤能发现最多问题、安全/可靠/可维护性三维度的系统性教训
 
@@ -421,7 +417,7 @@ Checkpoint（已修复 {N} 个问题）
 
 ## 最终审计报告
 
-文件名遵循 `commands/autoloop.md` 最终输出文件命名规则（T6: `autoloop-audit-{date}.md`）。写入时使用 `templates/audit-template.md`：
+文件名遵循 `protocols/loop-protocol.md` 统一输出文件命名章节（T6: `autoloop-audit-{date}.md`）。写入时使用 `templates/audit-template.md`：
 
 ```markdown
 # 企业级质量审计报告

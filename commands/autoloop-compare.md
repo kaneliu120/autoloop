@@ -266,10 +266,10 @@ description: >
 
 ## 结果文件
 
-生成 `autoloop-results.tsv`（使用标准 schema，见 `commands/autoloop.md` 标准 TSV Schema）：
+生成 `autoloop-results.tsv`（TSV 格式见 `protocols/loop-protocol.md` 统一 TSV Schema 章节）：
 
 ```tsv
-iteration	phase	status	metric_name	metric_value	delta	details
+（TSV 格式见 protocols/loop-protocol.md 统一 TSV Schema）
 1	compare	pass	功能匹配度	8	—	选项A, 权重0.25, 证据3条
 1	compare	pass	技术成熟度	9	—	选项A, 权重0.20, 证据5条
 1	compare	pass	功能匹配度	7	—	选项B, 权重0.25, 证据2条
@@ -301,6 +301,6 @@ iteration	phase	status	metric_name	metric_value	delta	details
 写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `templates/findings-template.md`：
 
 - **问题登记**：记录本轮发现的信息空白、来源冲突、数据质量问题、选项分析缺陷
-- **策略复盘**：搜索策略/分析方法/偏见检查方式的效果评估（保持/避免）
+- **策略复盘**：搜索策略/分析方法/偏见检查方式的效果评估（保持 | 避免 | 待验证）（策略评价枚举见 protocols/loop-protocol.md 统一状态枚举）
 - **模式识别**：哪些维度反复缺少证据、哪些选项总是数据质量低
 - **经验教训**：选项分析/偏见检查/敏感性分析的有效性总结

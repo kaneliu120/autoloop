@@ -26,16 +26,7 @@
 - 功能需求描述（来自 autoloop-plan.md）
 - 代码库路径（绝对路径）
 - 技术栈信息
-- **T5 必须额外收集（在 plan 阶段）**：
-  - `deploy_target`：部署目标主机（例：`sip-server`、`prod-01`）
-  - `deploy_command`：完整部署执行命令（例：`gcloud compute ssh sip-server --zone=... --command="cd /opt/sip && git pull && sudo bash deploy.sh"`）
-  - `service_list`：需要检查的服务名称列表（例：`[sip-backend, sip-worker, sip-scheduler, sip-frontend]`）
-  - `health_check_url`：健康检查端点 URL（例：`https://example.com/api/health`）
-  - `acceptance_url`：线上验收 URL（例：`https://example.com`）
-  - `doc_output_path`：方案文档输出目录绝对路径
-  - `syntax_check_cmd`：语法检查命令（例：`python3 -m py_compile`）
-  - `new_router_name`：本次新增的 router 变量名（例：`comments_router`，无新路由填 N/A）
-  - `main_entry_file`：主入口文件绝对路径（例：`/opt/sip/backend/main.py`）
+- **T5 必须额外收集（在 plan 阶段）**：所有 T5 参数见 `protocols/loop-protocol.md` 统一参数词汇表（deploy_target、deploy_command、service_list、health_check_url、acceptance_url、doc_output_path、syntax_check_cmd、new_router_name、main_entry_file）
 
 ### 执行（并行）
 
