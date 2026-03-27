@@ -107,7 +107,7 @@
 
 ### 进化决策（EVOLVE）
 
-终止判断：继续 / 质量达标 / 预算耗尽 / 用户中断 / 阻塞终止（终止层级见 protocols/quality-gates.md 概述章节）
+终止判断：继续 / {终止原因枚举见 protocols/loop-protocol.md 统一状态枚举}（终止层级见 protocols/quality-gates.md 概述章节）
 
 如继续：
 - 下一轮重点：{维度}
@@ -207,7 +207,7 @@
 
 ### 进化决策（EVOLVE）
 
-终止判断：继续 / 质量达标 / 预算耗尽 / 用户中断 / 阻塞终止（终止层级见 protocols/quality-gates.md 概述章节）
+终止判断：继续 / {终止原因枚举见 protocols/loop-protocol.md 统一状态枚举}（终止层级见 protocols/quality-gates.md 概述章节）
 
 如继续：
 - 下一轮重点：{维度}
@@ -232,7 +232,7 @@
 ## 任务完成记录
 
 **完成时间**：{ISO 8601}
-**终止原因**：{质量达标 / 预算耗尽 / 用户中断 / 阻塞终止}
+**终止原因**：{终止原因枚举见 protocols/loop-protocol.md 生命周期状态章节}
 **总耗时**：{N} 分钟
 **总轮次**：{N}
 
