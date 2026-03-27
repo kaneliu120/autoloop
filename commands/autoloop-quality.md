@@ -61,10 +61,7 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 > 超时配置、重试逻辑、健康检查、测试覆盖、连接池配置等。
 > 不得仅依赖本文件中的简化列表，必须以 enterprise-standard.md 为准。
 
-**目标分数快速参考**（完整标准见 enterprise-standard.md）：
-- 安全性：≥ 9/10（零已知漏洞，核心路径输入验证，无敏感数据泄露）
-- 可靠性：≥ 8/10（所有外部调用有 try/except，无静默失败，有降级回退）
-- 可维护性：≥ 8/10（类型正确，无重复，命名清晰，路由和模块导出完整）
+**目标分数**：质量门禁阈值见 `protocols/quality-gates.md` T6 行（安全性、可靠性、可维护性各维度分数目标）。
 
 **达标条件（复合判定，见 protocols/quality-gates.md T6 复合判定规则）**：
 - 分数达标 AND 计数达标（P1=0，安全P2=0）两个条件必须同时满足
@@ -340,7 +337,7 @@ grep -n "include_router\|router\.\|app\.use\|app\.route" {main_entry_file}
 # Node.js/TS: node -e "require('{模块路径}')"  或  npx tsc --noEmit
 ```
 
-3. **更新问题清单状态**：将已修复的问题标记为 "✓ 已修复"。
+3. **更新问题清单状态**：将已修复的问题状态更新为 "已修复"（使用 loop-protocol.md 统一状态枚举）。
 
 ### 批量修复的并行规则
 

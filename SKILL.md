@@ -215,9 +215,9 @@ REFLECT（反思）
 |-------|------|----------|
 | **planner** | 任务分解、架构设计、方案制定 | 任务开始前，复杂功能规划时 |
 | **researcher** | 网络调研、竞品分析、数据收集 | T1/T2 全程，T5 阶段 0 |
-| **backend-dev** | Python/FastAPI 后端实现 | T5 阶段 1，T6/T7 修复时 |
-| **frontend-dev** | Next.js/TypeScript 前端实现 | T5 阶段 1，T6/T7 修复时 |
-| **db-migrator** | Alembic 迁移、SQL 操作 | T5 阶段 1（数据库变更时） |
+| **backend-dev** | 后端代码实现（技术栈由 plan 决定）| T5 阶段 1，T6/T7 修复时 |
+| **frontend-dev** | 前端代码实现（技术栈由 plan 决定）| T5 阶段 1，T6/T7 修复时 |
+| **db-migrator** | 数据库迁移、SQL 操作（工具由 plan 决定）| T5 阶段 1（数据库变更时） |
 | **code-reviewer** | 安全+质量审查 | T5 阶段 2，T6 每轮，T7 每 5 个修复后 |
 | **generator** | 批量内容生成 | T4 全程 |
 | **verifier** | 测试运行、线上验收 | T5 阶段 3+5，T6/T7 修复后 |
@@ -330,7 +330,7 @@ AutoLoop 是 CLAUDE.md Orchestrator-First 模式的具体实现：
 - **质量门禁 = CLAUDE.md 质量门禁**：标准完全一致
 - **T5 Deliver = CLAUDE.md 强制开发流程**：阶段完全对应
 
-当在 SIP 项目中使用 AutoLoop 时，所有工程决策遵循 CLAUDE.md 的代码约定（FastAPI 后端、Next.js 前端、SQLAlchemy 数据库、async/await 模式）。
+当结合 CLAUDE.md 使用 AutoLoop 时，所有工程决策遵循项目的 CLAUDE.md 代码约定（技术栈在 autoloop-plan.md 中收集，T5/T6/T7 执行时以 plan 中的参数为准）。
 
 ---
 

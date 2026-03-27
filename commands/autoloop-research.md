@@ -119,17 +119,12 @@ description: >
 
 ## 质量门禁评分
 
-质量门禁完整定义、计算方法和通过标准见 `protocols/quality-gates.md` 知识类任务门禁章节（T1 行）：
-
-- **覆盖率**：计算方法见 quality-gates.md 覆盖率章节，T1 通过标准 ≥ 85%
-- **可信度**：计算方法见 quality-gates.md 可信度章节，通过标准 ≥ 80%
-- **一致性**：计算方法见 quality-gates.md 一致性章节，通过标准 ≥ 90%
-- **完整性**：计算方法见 quality-gates.md 完整性章节，通过标准 ≥ 85%
+质量门禁阈值见 `protocols/quality-gates.md` 知识类任务门禁章节（T1 行）。
 
 计分示例（说明性，计算规则以 quality-gates.md 为准）：
-- 覆盖率 7/8 维度有内容 → 87.5%（达标）
+- 覆盖率 7/8 维度有内容 → 87.5%（达标，T1 阈值 ≥ 85%；若目标为 ≥ 90% 则未达标，以 quality-gates.md T1 行实际值为准）
 - 可信度 12/15 关键发现有多源印证 → 80%（刚好达标）
-- 一致性 1/8 维度有矛盾 → 87.5%（达标）
+- 一致性 1/8 维度有矛盾 → 87.5%（未达标，阈值 ≥ 90%）
 - 完整性 43/50 陈述有来源 → 86%（达标）
 
 ---
@@ -297,7 +292,7 @@ REFLECT：
 
 ## 进度追踪格式
 
-每轮在 `autoloop-progress.md` 中追加（格式见 `protocols/loop-protocol.md` 循环日志格式章节）：
+每轮在 `autoloop-progress.md` 中追加完整 8 阶段记录（OBSERVE/ORIENT/DECIDE/ACT/VERIFY/SYNTHESIZE/EVOLVE/REFLECT），格式见 `protocols/loop-protocol.md` 循环日志格式章节。以下为 T1 Research 的简化摘要示例（实际记录必须包含所有 8 个阶段）：
 
 ```markdown
 ## 第 {N} 轮 — {开始时间}

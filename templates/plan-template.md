@@ -6,7 +6,7 @@
 |------|-----|
 | 任务 ID | autoloop-{YYYYMMDD-HHMMSS} |
 | 模板 | T{N}: {名称} |
-| 状态 | 准备开始 / 进行中 / 完成 / 预算终止 / 已中断 |
+| 状态 | 准备开始 / 进行中 / 完成 / 预算耗尽 / 用户中断 |
 | 创建时间 | {ISO 8601} |
 | 最后更新 | {ISO 8601} |
 | 工作目录 | {绝对路径} |
@@ -77,9 +77,9 @@
 - 数据库变更：{是/否}，变更内容：{描述}
 - syntax_check_cmd：{语法检查命令，如 python3 -m py_compile {file}}
 - syntax_check_file_arg：{true/false，语法检查命令是否接受单文件参数；python3 -m py_compile → true，npx tsc --noEmit → false}
-- deploy_target：{部署目标主机/环境，如 sip-server}
+- deploy_target：{部署目标主机/环境，如 prod-server}
 - deploy_command：{完整部署执行命令，如 gcloud compute ssh ... --command="cd /opt/sip && git pull && sudo bash deploy.sh"}
-- service_list：{服务名称列表，如 [sip-backend, sip-worker, sip-scheduler, sip-frontend]；不适用则填 N/A}
+- service_list：{服务名称列表，如 [backend-api, worker, scheduler, frontend]；不适用则填 N/A}
 - service_count：{自动计算，= len(service_list)；service_list=N/A 时填 0}
 - health_check_url：{健康检查 URL，如 https://example.com/api/health；不适用则留空}
 - acceptance_url：{线上验收 URL，如 https://example.com}

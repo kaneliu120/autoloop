@@ -15,7 +15,7 @@ description: >
 - 内容类型（报告/邮件/代码/数据/文案等）
 - 变量列表（每个生成单元的变化项）
 - 数量
-- 质量标准（通过标准见 `protocols/quality-gates.md` T4 行，默认平均分 ≥ 7/10）
+- 质量标准（通过标准见 `protocols/quality-gates.md` T4 行）
 - 示例（至少 1 个用户认可的样本）
 - 输出位置（output_path，变量名见 `protocols/loop-protocol.md` 统一参数词汇表）
 - 文件命名规则（naming_pattern，变量名见 `protocols/loop-protocol.md` 统一参数词汇表）
@@ -67,17 +67,15 @@ description: >
 - {错误 2}：{如何避免}
 ```
 
-在开始批量生成前，将模板展示给用户确认：
+在开始批量生成前，将模板展示给用户并自动进入第二步：
 
 ```
-我提取了以下模板，确认后开始批量生成：
+我提取了以下模板，如需调整请现在说明；否则将自动进入变量数据准备阶段：
 
 {模板预览}
 
 变量：{变量列表}
 质量标准：{标准列表}
-
-确认？或需要调整？
 ```
 
 ---
@@ -90,7 +88,7 @@ description: >
 如果变量需要推断，使用规则生成。
 如果变量需要用户提供，列出清单请用户确认。
 
-生成变量数据表（写入 `autoloop-results.tsv`，使用标准 schema，见 `commands/autoloop.md` 标准 TSV Schema）：
+生成变量数据表（写入 `autoloop-results.tsv`，TSV schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节）：
 
 ```
 iteration    phase       status     metric_name    metric_value    delta    details
@@ -186,7 +184,7 @@ iteration    phase       status     metric_name    metric_value    delta    deta
 
 ## 重试机制
 
-重试上限见 `protocols/loop-protocol.md` 统一重试规则（默认 2 次）。对于评分 < 7/10 的单元，触发重试：
+重试上限见 `protocols/loop-protocol.md` 统一重试规则（默认 2 次）。对于评分低于 `protocols/quality-gates.md` T4 单元通过阈值的单元，触发重试：
 
 **第 1 次重试**：
 - 将 quality-checker 的问题反馈给 generator
@@ -203,13 +201,13 @@ iteration    phase       status     metric_name    metric_value    delta    deta
 **第 2 次重试（最后一次）**：
 - 换一个不同的生成策略
 - 完全重新生成，不参考之前的版本
-- 如果仍 < 7/10，标注为"需人工审查"，继续其他单元
+- 如果仍低于 `protocols/quality-gates.md` T4 单元通过阈值，标注为"需人工审查"，继续其他单元
 
 ---
 
 ## 批次进度追踪
 
-实时更新 `autoloop-results.tsv`（使用标准 schema，见 `commands/autoloop.md` 标准 TSV Schema）：
+实时更新 `autoloop-results.tsv`（TSV schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节）：
 
 ```
 iteration    phase       status    metric_name    metric_value    delta    details

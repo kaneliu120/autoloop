@@ -20,6 +20,8 @@
 | output_path | string | 输出目录绝对路径（默认 {工作目录}/autoloop-output/）| plan | T4 |
 | naming_pattern | string | 文件命名规则（如 {template_name}-{index}.md）| plan | T4 |
 | key_assumptions | list[{name, current_value, unit}] | T2 对比中的关键假设（结构化列表，每项含名称+当前值+单位，用于敏感性分析）| plan | T2 |
+| migration_check_cmd | string | 数据库迁移状态验证命令（如 python -m alembic current && python -m alembic check；无迁移填 N/A）| plan | T5 |
+| frontend_dir | string | 前端代码目录绝对路径（如 /project/frontend）| plan | T5 |
 
 ---
 
@@ -54,6 +56,33 @@
 | T7 Optimize | `autoloop-audit-{date}.md` | 同上 |
 
 其中 `{date}` = `YYYYMMDD`，`{topic}` / `{feature}` 从 plan 的一句话目标中提取（空格替换为 `-`，小写）。
+
+---
+
+## 统一 TSV Schema（规范来源）
+
+所有模板写入 `autoloop-results.tsv` 时必须使用以下统一列结构，不得在其他文件中重新定义。
+
+```
+iteration	phase	status	metric_name	metric_value	delta	details
+```
+
+| 列 | 说明 | 示例 |
+|---|---|---|
+| iteration | 轮次编号（从 1 开始）；T4 用 unit_id 填入 | 1 |
+| phase | 阶段或子步骤标识 | scan / generate / compare |
+| status | 状态：pass / fail / pending / review | pass |
+| metric_name | 指标名称 | score / coverage / pass_rate |
+| metric_value | 指标值（数字或字符串） | 8.5 |
+| delta | 与上轮的变化（首轮填 — ） | +1.2 |
+| details | 备注（原因、来源、问题描述） | 重试1次后通过 |
+
+**使用约定（各模板行粒度）**：
+- T1/T3/T5/T6/T7：每轮一行，`iteration` = 轮次号
+- T2 Compare：每选项每维度一行，`iteration` = 轮次号，`details` 包含选项名（如 `option=选项A`）
+- T4 Generate：每生成单元一行，`iteration` = unit_id，`metric_name` = `score`，`details` 包含单元状态摘要
+
+额外的原始数据（变量值、证据来源等）写入 `autoloop-findings.md`，不放在 results.tsv。
 
 ---
 

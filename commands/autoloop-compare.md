@@ -125,7 +125,7 @@ description: >
 
 偏见检查计算方法见 `protocols/quality-gates.md` T2偏见检查章节。
 
-简要流程：对每个选项比较两个 analyzer 的评分差，差异 ≥ 15% 则触发第3个独立 analyzer 重新评估该选项，以多数结论为准。完整计算方法和通过标准以 quality-gates.md 为准，不得在此重新定义。
+质量门禁阈值见 `protocols/quality-gates.md` T2 偏见检查章节（触发条件、通过标准）。简要流程：对每个选项比较两个 analyzer 的评分差，超过阈值则触发第3个独立 analyzer 重新评估该选项，以多数结论为准。
 
 ### 1.3 独立的中立审查
 

@@ -255,7 +255,7 @@ git stash pop
 
 ## 进度追踪
 
-每轮在 `autoloop-progress.md` 追加（格式见 `protocols/loop-protocol.md` 循环日志格式章节）：
+每轮在 `autoloop-progress.md` 追加完整 8 阶段记录（OBSERVE/ORIENT/DECIDE/ACT/VERIFY/SYNTHESIZE/EVOLVE/REFLECT），格式见 `protocols/loop-protocol.md` 循环日志格式章节。以下为 T3 Iterate 的简化摘要示例（实际记录必须包含所有 8 个阶段）：
 
 ```markdown
 ## 第 {N} 轮 — {时间}

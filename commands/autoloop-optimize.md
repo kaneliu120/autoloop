@@ -46,10 +46,7 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 > **评分标准和扣分规则完整定义见 `protocols/enterprise-standard.md`。**
 > T7 诊断和评分必须覆盖 enterprise-standard.md 中的所有检查项和扣分映射，不得自定义缩水版。
 
-**目标分数快速参考**（完整标准见 enterprise-standard.md）：
-- 架构（Architecture）：≥ 8/10（清晰三层分离、零循环依赖、API 设计一致、配置集中管理）
-- 性能（Performance）：≥ 8/10（零 N+1、连接池配置、热路径缓存、分页查询）
-- 稳定性（Stability）：≥ 8/10（外部依赖有超时+降级+重试、健康检查、结构化日志）
+**目标分数**：质量门禁阈值见 `protocols/quality-gates.md` T7 行（架构、性能、稳定性各维度分数目标）。
 
 ---
 
