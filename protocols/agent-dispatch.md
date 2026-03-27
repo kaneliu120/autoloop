@@ -81,7 +81,7 @@ T6 Quality（单文件）：
   （同一文件不能并行修复，防止冲突）
 
 数据库迁移（T5）：
-  db-migrator 先完成 → backend-dev 开始开发
+  db-migrator 先完成 → 实现层 subagent 开始开发
   （代码依赖新的数据库结构）
 ```
 
@@ -140,14 +140,13 @@ T6 Quality（单文件）：
 你是 planner subagent，负责技术方案设计。
 
 功能需求：{详细描述}
-代码库路径：{绝对路径}
-技术栈：FastAPI + SQLAlchemy 2.0 async + Next.js + PostgreSQL
+代码库路径：{codebase_path}
+技术栈：{tech_stack}
 
 任务：
 1. 读取以下关键文件，理解现有架构：
-   - {main.py 路径}
-   - {相关路由文件路径}
-   - {相关 model 文件路径}
+   - {entry_file}
+   - {相关模块文件路径}
 
 2. 制定实施方案
 
@@ -157,8 +156,8 @@ T6 Quality（单文件）：
 ### 影响范围
 - 修改文件：{绝对路径列表}
 - 新建文件：{绝对路径列表}
-- 数据库变更：{SQL 语句}
-- 新增路由：{路径 + 方法 + 认证方式}
+- 数据库变更：{变更说明，如无则"无"}
+- 新增端点/接口：{路径 + 方法 + 说明}
 
 ### 接口定义
 （关键函数签名）
@@ -175,7 +174,7 @@ T6 Quality（单文件）：
 
 ### backend-dev
 
-**职责**：Python/FastAPI 后端代码实现
+**职责**：后端/服务端代码实现
 
 **触发场景**：T5 阶段 1，T6/T7 修复时
 
@@ -192,29 +191,26 @@ T6 Quality（单文件）：
 - {文件}：{实现什么功能}
 
 接口约定（必须遵守）：
-- 所有路由函数使用 async def
-- 数据库操作使用 SQLAlchemy 2.0 async session（from backend.db.session import get_session）
-- 配置从 settings 获取（from backend.config.settings import settings）
-- 新路由在 {main.py 路径} 中注册
+{tech_constraints}
 
 约束：
 - {不可修改的接口}
 - {不可修改的文件}
 
 验证步骤（每个文件修改后立即执行）：
-python3 -m py_compile {文件路径}
+{syntax_check_cmd}
 
 输出：
 - 修改/新建的每个文件的具体内容
-- py_compile 验证结果（全部通过才算完成）
-- main.py 路由注册确认（如有新路由）
+- 语法验证结果（全部通过才算完成）
+- 入口文件注册确认（如有新路由/模块）
 ```
 
 ---
 
 ### frontend-dev
 
-**职责**：Next.js/TypeScript 前端实现
+**职责**：前端实现
 
 **触发场景**：T5 阶段 1，T6/T7 修复时（前端部分）
 
@@ -228,17 +224,14 @@ python3 -m py_compile {文件路径}
 {文件列表 + 改动说明}
 
 技术约定（必须遵守）：
-- 使用 TypeScript，不使用 any
-- API 调用通过 /api/* 路由（Next.js Rewrite 代理，不直接调用后端）
-- 状态管理使用 TanStack Query v5 的 useQuery/useMutation
-- 样式使用 Tailwind CSS v4
+{tech_constraints}
 
 验证步骤：
-cd {前端目录} && npx tsc --noEmit
+{syntax_check_cmd}
 
 输出：
 - 修改/新建文件的内容
-- tsc --noEmit 验证结果（必须通过）
+- 语法验证结果（必须通过）
 ```
 
 ---
@@ -254,15 +247,15 @@ cd {前端目录} && npx tsc --noEmit
 ```text
 你是 db-migrator subagent，负责数据库迁移管理。
 
-代码库路径：{绝对路径}
-迁移目录：{绝对路径}/backend/db/migrations/
-alembic.ini 路径：{绝对路径}/alembic.ini
+代码库路径：{codebase_path}
+迁移目录：{migration_dir}
+迁移工具配置：{migration_config_file}
 
 需要的数据库变更：
-{具体变更描述，包含 SQL}
+{具体变更描述，包含 DDL}
 
 任务：
-1. 创建新的 Alembic 迁移版本
+1. 创建新的迁移版本
 2. 实现 upgrade()（使用 IF NOT EXISTS 防止重复执行）
 3. 实现 downgrade()（必须实现，支持回滚）
 4. 验证迁移脚本语法正确
@@ -271,7 +264,7 @@ alembic.ini 路径：{绝对路径}/alembic.ini
 - 迁移文件路径
 - upgrade() 实现
 - downgrade() 实现
-- 验证结果（python3 -m py_compile {迁移文件}）
+- 验证结果（{syntax_check_cmd}）
 ```
 
 ---
@@ -357,13 +350,13 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 ### verifier
 
-**职责**：测试执行、线上验收（T5 Phase 5 统一使用此角色，替代 "browse subagent" 称谓）
+**职责**：语法验证、路由注册验证、线上验收（T5 Phase 5 统一使用此角色，不使用 "browse subagent" 旧称谓）
 
 **触发场景**：T5 阶段 3+5，T6/T7 每次修复后
 
 **调用方式**：`Agent(subagent_type="code-reviewer", prompt="你是 verifier subagent...")`
 
-T5 Phase 5 线上验收时可选用 Chrome DevTools MCP 工具（如已配置）
+注意：verifier 不是独立角色，是 code-reviewer 的角色化调用。T5 Phase 5 线上验收时可选用 Chrome DevTools MCP 工具（如已配置）。
 
 **标准指令模板**：
 
@@ -593,7 +586,7 @@ T5 Phase 5 线上验收时可选用 Chrome DevTools MCP 工具（如已配置）
 
 ### security-reviewer（安全审查专家）
 
-**职责**：专注安全维度的代码审查（SQL注入/命令注入/XSS/路径穿越/敏感数据暴露）
+**职责**：专注安全维度的代码审查（注入/XSS/路径穿越/敏感数据暴露）
 
 **触发场景**：T6 第一轮并行扫描（与 reliability-reviewer / maintainability-reviewer 并行）
 
@@ -621,7 +614,7 @@ T5 Phase 5 线上验收时可选用 Chrome DevTools MCP 工具（如已配置）
 
 ### maintainability-reviewer（可维护性审查专家）
 
-**职责**：专注可维护性维度（路由注册/模块导出/类型规范/代码重复）
+**职责**：专注可维护性维度（入口注册/模块导出/类型规范/代码重复）
 
 **触发场景**：T6 第一轮并行扫描
 
@@ -641,7 +634,7 @@ T5 Phase 5 线上验收时可选用 Chrome DevTools MCP 工具（如已配置）
 
 **调用方式**：`Agent(subagent_type="backend-dev" 或 "frontend-dev", prompt="你是 fix-{类型} subagent...")`
 
-Python/后端问题使用 `backend-dev`；TypeScript/前端问题使用 `frontend-dev`。
+后端/服务端问题使用 `backend-dev`；前端/客户端问题使用 `frontend-dev`。
 
 **适用模板**：T6
 
@@ -727,14 +720,14 @@ Python/后端问题使用 `backend-dev`；TypeScript/前端问题使用 `fronten
 
 **调用方式**：`Agent(subagent_type="backend-dev" 或 "frontend-dev", prompt="你是 optimization-fix subagent...")`
 
-后端/Python 修复使用 `backend-dev`；前端/TypeScript 修复使用 `frontend-dev`。
+后端/服务端修复使用 `backend-dev`；前端/客户端修复使用 `frontend-dev`。
 
 **适用模板**：T7
 
 **标准指令模板**：
 
 ```text
-你是 optimization-fix subagent，负责以下性能/架构/稳定性问题修复。
+你是 optimization-fix subagent，负责以下优化问题修复。
 
 问题 ID：{ID}
 类型：{架构/性能/稳定性}
@@ -747,13 +740,13 @@ Python/后端问题使用 `backend-dev`；TypeScript/前端问题使用 `fronten
 约束（不可违反）：
 - 不改变 public API 签名（路由路径、请求/响应格式）
 - 不改变数据库 schema（除非方案中明确说明）
-- 修改后必须通过 py_compile 验证
+- 修改后必须通过语法验证（{syntax_check_cmd}）
 
 执行步骤：
 1. 读取相关文件（读全，不要猜）
 2. 分析影响范围（修改这个会影响哪些调用者）
 3. 实施最小化修复
-4. 运行验证
+4. 运行 {syntax_check_cmd} 验证
 5. 报告修改内容
 
 输出：
@@ -796,3 +789,60 @@ Python/后端问题使用 `backend-dev`；TypeScript/前端问题使用 `fronten
 | Subagent 代码验证失败 | 返回详细错误给 subagent，要求修复（遵守统一重试上限 = 2 次，见 loop-protocol.md） |
 | Subagent 超时 | 标记为"部分完成"，记录进度，继续其他任务 |
 | 并行 subagents 产生冲突 | 以保守的（改动更小的）为准，记录两种方案 |
+
+---
+
+## 附录：技术栈示例
+
+本附录提供具体技术栈下的变量填充示例，供各模板参考。通用角色定义本身不依赖这些示例。
+
+### Python/FastAPI 技术栈
+
+| 变量 | 填充值 |
+|------|--------|
+| `{tech_stack}` | FastAPI + SQLAlchemy 2.0 async + PostgreSQL |
+| `{syntax_check_cmd}` | `python3 -m py_compile {文件路径}` |
+| `{entry_file}` | `{codebase_path}/backend/main.py` |
+| `{migration_dir}` | `{codebase_path}/backend/db/migrations/` |
+| `{migration_config_file}` | `{codebase_path}/alembic.ini` |
+| `{tech_constraints}` | 所有路由函数使用 async def；数据库操作使用 SQLAlchemy 2.0 async session；配置从 settings 获取；新路由在 main.py 中注册 |
+
+**planner 输出示例（影响范围）**：
+
+```text
+修改文件：/path/backend/api/items.py
+新建文件：/path/backend/models/item.py
+数据库变更：ALTER TABLE items ADD COLUMN tag VARCHAR(64)
+新增端点：POST /api/items/{id}/tag
+```
+
+### Node.js/TypeScript 技术栈
+
+| 变量 | 填充值 |
+|------|--------|
+| `{tech_stack}` | Node.js + Express/Fastify + TypeScript + PostgreSQL |
+| `{syntax_check_cmd}` | `npx tsc --noEmit` |
+| `{entry_file}` | `{codebase_path}/src/index.ts` 或 `app.ts` |
+| `{migration_dir}` | `{codebase_path}/migrations/` |
+| `{migration_config_file}` | `{codebase_path}/knexfile.ts` 或 `drizzle.config.ts` |
+| `{tech_constraints}` | 使用 TypeScript，不使用 any；新路由在 index.ts/app.ts 中注册；异步操作使用 async/await |
+
+### Next.js/前端技术栈
+
+| 变量 | 填充值 |
+|------|--------|
+| `{tech_stack}` | Next.js App Router + TypeScript + TanStack Query v5 + Tailwind CSS v4 |
+| `{syntax_check_cmd}` | `cd {前端目录} && npx tsc --noEmit` |
+| `{entry_file}` | `{codebase_path}/app/layout.tsx` |
+| `{tech_constraints}` | 使用 TypeScript，不使用 any；API 调用通过 /api/* 路由；状态管理使用 TanStack Query v5 的 useQuery/useMutation；样式使用 Tailwind CSS v4 |
+
+### 通用/多语言技术栈
+
+| 变量 | 填充值（按实际情况替换） |
+|------|--------|
+| `{tech_stack}` | 从 plan.tech_stack 填入 |
+| `{syntax_check_cmd}` | 从 plan.syntax_check_cmd 填入（见 loop-protocol.md 参数词汇表） |
+| `{entry_file}` | 从 plan.entry_file 或 plan.main_entry_file 填入 |
+| `{migration_dir}` | 从 plan.migration_dir 填入，如无数据库则 N/A |
+| `{migration_config_file}` | 从 plan.migration_config_file 填入，如无则 N/A |
+| `{tech_constraints}` | 从 plan.tech_stack 推导或由 planner subagent 在方案中定义 |

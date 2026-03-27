@@ -2,7 +2,7 @@
 name: autoloop-research
 description: >
   AutoLoop T1: 全景调研模板。多维度并行搜索 + 交叉验证 + 覆盖率驱动迭代。
-  持续迭代直到覆盖率≥85%、可信度≥80%、一致性≥90%、完整性≥85%。
+  质量门禁阈值见 protocols/quality-gates.md T1 行。
   触发：/autoloop:research 或任何需要系统性调研的任务。
 ---
 
@@ -11,6 +11,8 @@ description: >
 ## 执行前提
 
 读取 `autoloop-plan.md` 获取任务参数。如果文件不存在，先通过 `/autoloop:plan` 配置。
+
+**Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再扫描当前状态。详见 `protocols/loop-protocol.md` OBSERVE Step 0 章节。
 
 ---
 
@@ -61,15 +63,20 @@ description: >
 
 ## 第一轮：维度规划 + 初始搜索
 
+### OBSERVE（第1轮基线采集）
+
+第1轮无历史数据，执行基线采集：当前发现数 = 0，已覆盖维度 = 0，所有质量门禁得分 = 0。
+将此作为 iteration 0 基线写入 `autoloop-progress.md`。详见 `protocols/loop-protocol.md` 第1轮 Bootstrap 规则。
+
 ### 1.1 维度规划
 
 确定本次调研的维度列表（最多 8 个，少量精准好过多而泛）。
 
-将维度写入 autoloop-plan.md 的"调研维度"字段。
+将维度写入 `autoloop-plan.md` 的"调研维度"字段。
 
 ### 1.2 并行搜索
 
-为每个维度分配一个 researcher subagent，并行执行。每个 subagent 的指令：
+为每个维度分配一个 researcher subagent，并行执行（调度规范见 `protocols/agent-dispatch.md`）。每个 subagent 的指令：
 
 ```
 你是 researcher subagent，负责调研以下维度：
@@ -105,26 +112,21 @@ description: >
 
 所有 researcher subagent 完成后：
 1. 将所有发现追加到 `autoloop-findings.md`
-2. 计算初始覆盖率得分
+2. 计算初始覆盖率得分（计算方法见 `protocols/quality-gates.md` 覆盖率门禁章节）
 3. 识别信息缺口和矛盾
 
 ---
 
-## 覆盖率评分系统
+## 质量门禁评分
 
-```
-覆盖率 = 有实质内容的维度数 / 总维度数 × 100%
+质量门禁完整定义、计算方法和通过标准见 `protocols/quality-gates.md` 知识类任务门禁章节（T1 行）：
 
-可信度 = 有 ≥2 个独立来源支撑的关键发现数 / 总关键发现数 × 100%
+- **覆盖率**：计算方法见 quality-gates.md 覆盖率章节，T1 通过标准 ≥ 85%
+- **可信度**：计算方法见 quality-gates.md 可信度章节，通过标准 ≥ 80%
+- **一致性**：计算方法见 quality-gates.md 一致性章节，通过标准 ≥ 90%
+- **完整性**：计算方法见 quality-gates.md 完整性章节，通过标准 ≥ 85%
 
-一致性 = 无矛盾维度数 / 总维度数 × 100%
-（完整计算方法见 protocols/quality-gates.md 一致性门禁章节）
-
-完整性 = 有引用来源的关键陈述数 / 关键陈述总数 × 100%
-（完整计算方法见 protocols/quality-gates.md 完整性门禁章节）
-```
-
-计分示例：
+计分示例（说明性，计算规则以 quality-gates.md 为准）：
 - 覆盖率 7/8 维度有内容 → 87.5%（达标）
 - 可信度 12/15 关键发现有多源印证 → 80%（刚好达标）
 - 一致性 1/8 维度有矛盾 → 87.5%（达标）
@@ -134,36 +136,36 @@ description: >
 
 ## 轮间决策规则
 
-每轮结束后，根据得分决定下一步：
+每轮结束后，根据得分决定下一步（终止层级完整定义见 `protocols/quality-gates.md` 概述章节）：
 
 ### 场景 A：全部达标
 ```
-覆盖率 ≥ 85% AND 可信度 ≥ 80% AND 一致性 ≥ 90% AND 完整性 ≥ 85%
+覆盖率、可信度、一致性、完整性均达到 protocols/quality-gates.md T1 行规定的阈值
 → 终止迭代，进入结果整合
 ```
 
-### 场景 B：覆盖率不足（< 85%）
+### 场景 B：覆盖率不足
 ```
 → 对覆盖不足的维度分配新的 researcher subagent
 → 更换搜索策略（不同关键词、不同信息源）
 → 检查是否需要新增维度（来自 subagent 发现的"相关维度"）
 ```
 
-### 场景 C：可信度不足（< 80%）
+### 场景 C：可信度不足
 ```
 → 对只有单一来源的关键发现进行交叉验证
 → 优先搜索一手资料（官方文档、学术论文、原始数据）
 → 标注置信度，在报告中说明不确定性
 ```
 
-### 场景 D：一致性不足（< 90%）
+### 场景 D：一致性不足
 ```
 → 深入调查矛盾维度
 → 识别矛盾来源（时间不同、场景不同、观点不同）
 → 在报告中明确列出争议点，不强行统一
 ```
 
-### 场景 E：完整性不足（< 85%）
+### 场景 E：完整性不足
 ```
 → 对未标注来源的陈述逐一找来源
 → 无法找到来源的陈述改为"待验证"或删除
@@ -177,7 +179,8 @@ description: >
 OBSERVE：
   读取 autoloop-findings.md 的反思章节（上轮 REFLECT 记录）
   获取遗留问题、有效/无效策略、已识别模式、经验教训
-  计算当前各维度得分
+  （Step 0 规范见 protocols/loop-protocol.md OBSERVE Step 0 章节）
+  计算当前各维度得分（计算方法见 protocols/quality-gates.md 各门禁章节）
   识别最低分维度
 
 ORIENT：
@@ -187,33 +190,31 @@ ORIENT：
 
 DECIDE：
   分配 subagent（独立维度并行，关联维度串行）
+  并行/串行判断规则见 protocols/agent-dispatch.md
   优先使用上轮标记为"保持"的策略
 
 ACT：
   执行搜索，整合到 autoloop-findings.md
 
 VERIFY：
-  重新计算所有维度得分
+  重新计算所有维度得分（计算方法见 protocols/quality-gates.md）
   对比上轮得分，计算改进量
 
 EVOLVE：
-  如果某维度连续 2 轮改进 < 3%，切换策略
-  如果发现重要新维度，添加到范围
-  如果预算剩余 < 20%，聚焦到最高优先级维度
+  终止层级判断见 protocols/quality-gates.md 概述章节
+  如某维度连续 2 轮改进 < 3%（相对值），切换策略
+  如发现重要新维度，添加到范围
+  如预算剩余 < 20%，聚焦到最高优先级维度
 
-REFLECT:
-  - 问题登记: 记录本轮发现的信息空白、来源冲突、数据质量问题
-  - 策略复盘: 搜索策略/验证方法/整合方式的效果评估
-  - 模式识别: 哪些来源一直提供高质量信息、哪些维度反复出现空白
-  - 经验教训: 搜索关键词/数据源/分析方法的有效性总结
-  将反思结果写入 autoloop-findings.md 的反思章节
+REFLECT：
+  写入 autoloop-findings.md 的4层反思结构表（见下方 REFLECT 规范）
 ```
 
 ---
 
 ## 交叉验证机制
 
-在每轮结束时，运行交叉验证 subagent：
+在每轮结束时，运行 cross-verifier subagent（调度方式见 `protocols/agent-dispatch.md` cross-verifier 章节）：
 
 ```
 你是 cross-verifier subagent。
@@ -239,7 +240,8 @@ REFLECT:
 
 ## 信息来源优先级
 
-按可信度从高到低：
+可信度分级完整定义见 `protocols/quality-gates.md` 可信度门禁章节（信息来源可信度分级）：
+
 1. 官方文档、官方博客、官方 GitHub
 2. 经过同行评审的研究报告（Gartner、Forrester、IDC）
 3. 知名技术媒体（TechCrunch、HN、InfoQ）
@@ -252,7 +254,7 @@ REFLECT:
 
 ## 结果整合
 
-达到终止条件后，整合最终报告。
+达到终止条件后，整合最终报告（文件名见 `commands/autoloop.md` 最终输出文件命名规则）。
 
 ### findings.md 最终结构：
 
@@ -295,7 +297,7 @@ REFLECT:
 
 ## 进度追踪格式
 
-每轮在 `autoloop-progress.md` 中追加：
+每轮在 `autoloop-progress.md` 中追加（格式见 `protocols/loop-protocol.md` 循环日志格式章节）：
 
 ```markdown
 ## 第 {N} 轮 — {开始时间}
@@ -315,11 +317,18 @@ REFLECT:
 **决策**：{继续迭代/终止原因}
 **下一轮重点**：{具体计划}
 
-**反思（REFLECT）**：
-- 问题登记：{新发现 N 个，修复 M 个，遗留 K 个}
-- 策略复盘：{本轮策略} — {保持/避免}，原因：{说明}
-- 模式识别：{新模式 / 无新模式}
-- 经验教训：{本轮最重要的一条}
-
 ---
 ```
+
+---
+
+## 每轮 REFLECT 执行规范
+
+每轮（包括第一轮）结束后，在 EVOLVE/终止判断之后执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `protocols/loop-protocol.md` REFLECT 章节）：
+
+写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `templates/findings-template.md`：
+
+- **问题登记**：记录本轮发现的信息空白、来源冲突、数据质量问题
+- **策略复盘**：搜索策略/验证方法/整合方式的效果评估（保持/避免）
+- **模式识别**：哪些来源一直提供高质量信息、哪些维度反复出现空白
+- **经验教训**：搜索关键词/数据源/分析方法的有效性总结

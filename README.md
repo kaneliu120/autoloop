@@ -68,15 +68,15 @@ AutoLoop 会询问你想做什么，自动选择模板并开始执行。
 
 ## 7 个任务模板
 
-| 模板 | 命令 | 适用场景 | 质量门禁 |
+| 模板 | 命令 | 适用场景 | 质量门禁（阈值见 quality-gates.md）|
 |------|------|---------|---------|
-| **Research** | `/autoloop:research` | 系统性调研某个领域/技术 | 覆盖率≥85%, 可信度≥80% |
-| **Compare** | `/autoloop:compare` | 在多个选项中做决策 | 全维度覆盖, 偏见检查通过 |
+| **Research** | `/autoloop:research` | 系统性调研某个领域/技术 | 覆盖率、可信度、一致性、完整性 |
+| **Compare** | `/autoloop:compare` | 在多个选项中做决策 | 全维度覆盖、偏见检查、敏感性分析 |
 | **Iterate** | `/autoloop:iterate` | KPI 驱动反复改进 | KPI 达目标值 |
-| **Generate** | `/autoloop:generate` | 批量生成同类内容 | 通过率≥95%, 平均≥7/10 |
-| **Deliver** | `/autoloop:deliver` | 需求到生产全流程交付 | 7阶段全通过, 人工验收 |
-| **Quality** | `/autoloop:quality` | 代码提升到企业级质量 | 安全≥9, 可靠≥8, 维护≥8 |
-| **Optimize** | `/autoloop:optimize` | 系统架构/性能/稳定性优化 | 架构≥8, 性能≥8, 稳定≥8 |
+| **Generate** | `/autoloop:generate` | 批量生成同类内容 | 通过率、平均分 |
+| **Deliver** | `/autoloop:deliver` | 需求到生产全流程交付 | 7 阶段全通过、人工验收 |
+| **Quality** | `/autoloop:quality` | 代码提升到企业级质量 | 安全性、可靠性、可维护性（复合判定）|
+| **Optimize** | `/autoloop:optimize` | 系统架构/性能/稳定性优化 | 架构、性能、稳定性 |
 
 ---
 
@@ -184,9 +184,9 @@ OBSERVE → ORIENT → DECIDE → ACT → VERIFY → SYNTHESIZE → EVOLVE → R
 
 ### 质量门禁数字化
 
-所有门禁是数字，不是"感觉好了"：
-- 覆盖率 87.5%（未达标：T1 需要 ≥ 85%，但此处举例说明数字化而非主观描述；见 `protocols/quality-gates.md` 精确阈值）
-- 安全得分 9.2/10（不是"安全性良好"）
+所有门禁是数字，不是"感觉好了"（精确阈值见 `protocols/quality-gates.md`）：
+- 一致性 87.5%（未达标，阈值 ≥ 90%）
+- 安全得分 9.2/10（达标，不是"安全性良好"）
 
 ### 阻塞点设计
 

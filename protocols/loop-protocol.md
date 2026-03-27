@@ -13,18 +13,68 @@
 | health_check_url | string | 健康检查 URL（如 https://example.com/api/health）| plan | T5 |
 | acceptance_url | string | 线上验收 URL（如 https://example.com）| plan | T5 |
 | doc_output_path | string | 方案文档输出目录（绝对路径）| plan | T5 |
-| syntax_check_cmd | string | 语法检查命令（如 python3 -m py_compile {file}）| plan | T5/T6/T7 |
+| syntax_check_cmd | string | 语法检查命令（如 python3 -m py_compile {file} 或 npx tsc --noEmit）| plan | T5/T6/T7 |
 | syntax_check_file_arg | boolean | 语法检查命令是否接受单文件参数（python3 -m py_compile → true；npx tsc --noEmit → false）| plan | T5/T6/T7 |
-| new_router_name | string | 本次新增的 router 变量名（如 comments_router）| plan | T5 |
-| main_entry_file | string | 主入口文件绝对路径（如 /opt/sip/backend/main.py）| plan | T5/T6 |
+| new_router_name | string | 本次新增的 router 变量名（如 comments_router；无新路由填 N/A）| plan | T5 |
+| main_entry_file | string | 主入口文件绝对路径（如 /project/backend/main.py 或 /project/src/app.ts）| plan | T5/T6 |
 | output_path | string | 输出目录绝对路径（默认 {工作目录}/autoloop-output/）| plan | T4 |
 | naming_pattern | string | 文件命名规则（如 {template_name}-{index}.md）| plan | T4 |
+| key_assumptions | list[{name, current_value, unit}] | T2 对比中的关键假设（结构化列表，每项含名称+当前值+单位，用于敏感性分析）| plan | T2 |
+
+---
+
+## 统一状态枚举
+
+所有文件中涉及问题状态和策略评价时，必须使用下列枚举值，不得使用其他说法。
+
+**问题状态（Problem Status）**：
+```
+新发现 | 已修复 | 待处理 | 跨轮遗留
+```
+
+**策略评价（Strategy Rating）**：
+```
+保持 | 避免 | 待验证
+```
+
+---
+
+## 统一输出文件命名规则（规范来源）
+
+所有文件在引用最终报告文件名时，必须引用本表，不得在其他文件中重新定义。
+
+| 模板 | 最终报告文件名 | 过程文件 |
+|------|--------------|---------|
+| T1 Research | `autoloop-report-{topic}-{date}.md` | plan + findings + progress + results.tsv |
+| T2 Compare | `autoloop-report-{topic}-{date}.md` | 同上 |
+| T3 Iterate | `autoloop-report-{topic}-{date}.md` | 同上 |
+| T4 Generate | `{output_path}/{naming_pattern}` | 同上 |
+| T5 Deliver | `autoloop-delivery-{feature}-{date}.md` | 同上 |
+| T6 Quality | `autoloop-audit-{date}.md` | 同上 |
+| T7 Optimize | `autoloop-audit-{date}.md` | 同上 |
+
+其中 `{date}` = `YYYYMMDD`，`{topic}` / `{feature}` 从 plan 的一句话目标中提取（空格替换为 `-`，小写）。
+
+---
+
+## Bootstrap 规则（plan 完成后立即执行）
+
+**plan 向导完成后，立即创建以下文件（不等待第 1 轮 OBSERVE）：**
+
+```
+1. autoloop-plan.md         （已由向导创建）
+2. autoloop-findings.md     （从 templates/findings-template.md 创建空白实例）
+3. autoloop-progress.md     （从 templates/progress-template.md 创建空白实例）
+4. autoloop-results.tsv     （写入表头行：iteration\tphase\tstatus\tmetric_name\tmetric_value\tdelta\tdetails）
+```
+
+所有 4 个文件必须在第 1 轮 OBSERVE 开始前存在。创建后在 autoloop-plan.md 的"输出文件"表中将状态从"待创建"更新为"已创建"。
 
 ---
 
 ## 概述
 
-每次 AutoLoop 执行都遵循标准的 OODA 循环。本文档定义每个阶段的具体行为、输入输出规范和状态机转换规则。
+每次 AutoLoop 执行都遵循标准的 8 阶段 OODA 循环。本文档定义每个阶段的具体行为、输入输出规范和状态机转换规则。
 
 ---
 
@@ -32,9 +82,10 @@
 
 ```
 [INIT]
-  ↓ 创建 plan + progress 文件
+  ↓ Bootstrap：创建 plan + findings + progress + results.tsv
 [OBSERVE] ←─────────────────────────────────────────────┐
-  ↓ 扫描现状（Round 2+ 先读取上轮 REFLECT 记录）          │
+  ↓ Step 0（Round 2+）：读取 findings.md 反思章节           │
+  ↓ 扫描现状                                              │
 [ORIENT]                                                 │
   ↓ 分析差距，制定策略                                    │
 [DECIDE]                                                 │
@@ -48,7 +99,7 @@
 [EVOLVE]                                                 │
   ↓ 判断终止 or 进入下一轮                                │
 [REFLECT]                                                │
-  ↓ 反思沉淀，写入 findings.md ───── 继续 ────────────────┘
+  ↓ 写入 findings.md 4层结构表 ──── 继续 ─────────────────┘
     ↓ 终止
   [TERMINATE]
       ↓
@@ -76,23 +127,25 @@
 
 ### OBSERVE Step 0: 读取上轮反思（Round 2+ 必执行）
 
-在扫描当前状态之前，先读取 `autoloop-findings.md` 中的反思章节：
+在扫描当前状态之前，先读取 `autoloop-findings.md` 中的反思章节（**4 层结构表**）：
 
 1. **遗留问题** → 本轮优先处理（状态为"待处理"或"跨轮遗留"的问题）
-2. **有效策略** → 本轮 DECIDE 优先选用
-3. **无效策略** → 本轮 DECIDE 排除，不重复尝试
+2. **有效策略** → 本轮 DECIDE 优先选用（评价为"保持"的策略）
+3. **无效策略** → 本轮 DECIDE 排除，不重复尝试（评价为"避免"的策略）
 4. **已识别模式** → 如果有系统性根因，本轮需要改变方法论而非继续修补
 5. **瓶颈信息** → 如果某维度连续卡住，本轮尝试突破性策略
 6. **经验教训** → 调整本轮的方法和预期
 
 这确保每一轮都带着上轮的认知进入，而非从零开始。
 
+**T6/T7 的 OBSERVE Step 0 同样适用**：T6 和 T7 在 Round 2+ 执行 OBSERVE 时，必须首先读取 findings.md 的反思章节，获取遗留问题清单、无效修复模式和已识别的系统性根因，再制定本轮修复策略。
+
 ### 第1轮 Bootstrap 规则
 
 **第1轮 OBSERVE 没有上轮 VERIFY 的结果，必须执行基线采集（baseline collection）代替：**
 
 - **知识类任务（T1/T2/T3/T4）**：当前发现数 = 0，已覆盖维度 = 0，所有质量门禁得分 = 0。将此作为 iteration 0 基线写入 progress.md。
-- **工程类任务（T5/T6/T7）**：运行初始检测命令获取基线分数（py_compile 扫描所有文件、tsc --noEmit、code-reviewer 全量扫描），将检测结果作为 iteration 0 基线写入 progress.md。
+- **工程类任务（T5/T6/T7）**：运行初始检测命令获取基线分数（按 `syntax_check_cmd` 扫描所有文件、code-reviewer 全量扫描），将检测结果作为 iteration 0 基线写入 progress.md。
 
 基线写入格式：
 ```markdown
@@ -174,6 +227,8 @@ ORIENT Summary：
 **最小化范围**：每轮只做本轮最重要的事，不要一次性做所有事。
 
 **有 fallback**：每个行动必须有备用策略（如果 subagent 找不到信息，下一步怎么办）。
+
+**优先选用"保持"策略**：本轮 DECIDE 优先使用 findings.md 反思章节中标记为"保持"的策略；排除标记为"避免"的策略。
 
 ### 行动计划格式
 
@@ -258,7 +313,7 @@ subagent 失败时的处理流程：
 **必须量化**：不接受"好多了"，只接受"从 6.2 提升到 7.8"。
 
 **不信任 subagent 自评**：每个 subagent 对自己工作的评价需要独立验证：
-- 代码类：运行 py_compile / tsc --noEmit
+- 代码类：运行 `{syntax_check_cmd}`（按 `syntax_check_file_arg` 决定是否附加文件参数）
 - 调研类：检查信息来源数量和质量
 - 修复类：重新运行受影响的 reviewer
 
@@ -375,52 +430,53 @@ AutoLoop 有四种终止路径，按优先级排列：
 
 ### Phase 8: REFLECT（反思）
 
-> 每轮结束的认知沉淀。不是可选步骤，是强制环节。反思的价值在于被下一轮 OBSERVE 读取和使用。
+> 每轮结束的认知沉淀。不是可选步骤，是强制环节。反思的价值在于被下一轮 OBSERVE Step 0 读取和使用。
 
 **输入**: 本轮所有阶段的执行结果、VERIFY 的质量分数、EVOLVE 的决策
 
-**4 层反思：**
+**4 层反思（必须写入 findings.md 的 4 层结构表，不得只写 bullet points）：**
 
 #### 第 1 层：问题登记（Problem Registry）
 
-记录本轮发现的所有问题：
-- 问题描述（具体是什么）
-- 发现来源（哪个 subagent / 哪个验证步骤）
-- 严重度（P1/P2/P3）
-- 状态（新发现 / 已修复 / 待处理 / 跨轮遗留）
-- 根因分析（为什么会出现这个问题，不只是"是什么"）
+写入 findings.md 的"问题清单（REFLECT 第 1 层）"表：
+
+| 轮次 | 问题描述 | 来源 | 严重度 | 状态 | 根因分析 |
+|------|---------|------|--------|------|---------|
+| R{N} | {问题} | {subagent/验证步骤} | P1/P2/P3 | **新发现** / **已修复** / **待处理** / **跨轮遗留** | {为什么} |
+
+状态字段必须使用统一状态枚举（新发现 / 已修复 / 待处理 / 跨轮遗留）。
 
 #### 第 2 层：策略复盘（Strategy Review）
 
-评估本轮使用的策略：
-- 本轮策略是什么（并行搜索 / 深度分析 / 交叉验证 / 修复 / ...）
-- 实际效果（分数变化量、发现数量、质量提升幅度）
-- 有效的做法 → 标记为"保持"（下轮 DECIDE 优先选用）
-- 无效的做法 → 标记为"避免"（下轮 DECIDE 排除）
-- 意外发现（计划外但有价值的信息或方向）
+写入 findings.md 的"策略评估（REFLECT 第 2 层）"表：
+
+| 轮次 | 策略 | 效果评分(1-5) | 分数变化 | 保持/避免 | 原因 |
+|------|------|-------------|---------|----------|------|
+| R{N} | {策略描述} | {1-5} | {+/-分数} | **保持** / **避免** / **待验证** | {为什么有效/无效} |
+
+评价字段必须使用统一策略评价枚举（保持 / 避免 / 待验证）。
 
 #### 第 3 层：模式识别（Pattern Recognition）
 
-跨轮次的趋势分析：
-- 反复出现的问题类型（说明有系统性根因，需要改变方法而非反复修补）
-- 收益递减信号（连续轮次改善幅度下降，可能接近当前方法的天花板）
-- 跨维度关联（改 A 导致 B 变化，需要联合处理）
-- 瓶颈识别（哪个维度/领域一直卡住不动，需要突破性策略）
+写入 findings.md 的"模式识别（REFLECT 第 3 层）"部分：
+- 反复出现的问题类型（系统性根因分析）
+- 收益递减信号（连续轮次改善幅度下降趋势）
+- 跨维度关联（改 A 导致 B 变化）
+- 瓶颈识别（哪个维度/领域一直卡住）
 
 #### 第 4 层：经验沉淀（Lessons Learned）
 
-可复用的认知：
+写入 findings.md 的"经验教训（REFLECT 第 4 层）"部分：
 - 本轮验证了什么假设（成立 / 推翻）
 - 可泛化的方法论（下次类似任务可直接复用）
 - 对 AutoLoop 自身流程的改进建议
 
-**输出**: 写入 `autoloop-findings.md` 的反思章节（structured, append-only）
-
 **关键规则**:
-- REFLECT 必须写入文件，不能只在思考中完成
-- 每轮的反思记录是下一轮 OBSERVE 的必读输入
+- REFLECT 必须写入 `autoloop-findings.md` 的 4 层结构表，不能只在思考中完成
+- 每轮的反思记录是下一轮 OBSERVE Step 0 的必读输入
 - 问题清单是累积的（跨轮追踪状态变化）
 - 策略评估构建"策略效果知识库"供 DECIDE 使用
+- 状态和评价字段必须使用本文档定义的统一枚举值
 
 ---
 
@@ -430,7 +486,7 @@ AutoLoop 有四种终止路径，按优先级排列：
 
 **达标终止**：
 1. 更新 plan.md 状态为"完成"
-2. 生成最终报告
+2. 生成最终报告（文件名见本文档"统一输出文件命名规则"表）
 3. 清理临时文件（可选）
 
 **预算终止**：
@@ -486,10 +542,10 @@ AutoLoop 有四种终止路径，按优先级排列：
 {EVOLVE 输出}
 
 ### 反思（REFLECT）
-- **问题登记**: {本轮新发现 N 个，修复 M 个，遗留 K 个}
-- **策略复盘**: {本轮策略} — 效果评分 {1-5}/5，{保持/避免}
-- **模式识别**: {新发现的模式 / 无新模式}
-- **经验教训**: {本轮最重要的一条经验}
+- **问题登记**: {本轮新发现 N 个，修复 M 个，遗留 K 个} — 已写入 findings.md 第 1 层表
+- **策略复盘**: {本轮策略} — 效果评分 {1-5}/5，{保持/避免/待验证} — 已写入 findings.md 第 2 层表
+- **模式识别**: {新发现的模式 / 无新模式} — 已写入 findings.md 第 3 层
+- **经验教训**: {本轮最重要的一条经验} — 已写入 findings.md 第 4 层
 - **下轮指导**: {基于反思，下轮应该重点做什么、避免做什么}
 
 **结束时间**：{ISO 8601}

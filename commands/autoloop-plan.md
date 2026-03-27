@@ -44,15 +44,17 @@ description: >
 
 ## 模板默认参数参考表
 
-| 模板 | 默认轮次 | 默认预算 | 默认质量门禁 |
+质量门禁默认阈值以 `protocols/quality-gates.md` 门禁评估矩阵为准，下表仅为快速参考，不得用于覆盖协议定义的值：
+
+| 模板 | 默认轮次 | 默认预算 | 质量门禁（完整定义见 quality-gates.md） |
 |------|---------|---------|------------|
-| T1 Research | 3 | 无限制 | coverage ≥ 85%，credibility ≥ 80% |
-| T2 Compare | 2 | 无限制 | 覆盖率 100%，可信度 ≥ 80%，偏见检查（每选项评分差 < 15%），敏感性分析（±20% 推荐不变）|
-| T3 Iterate | 无上限 | 用户定义 | KPI 达到用户指定目标值 |
-| T4 Generate | items × 2 | 无限制 | pass_rate ≥ 95%，avg_score ≥ 7/10 |
-| T5 Deliver | 1（线性阶段制） | 无限制 | 全阶段门禁通过（含 2 个人工确认点） |
-| T6 Quality | 无上限 | 无限制 | security ≥ 9/10，reliability ≥ 8/10，maintainability ≥ 8/10 |
-| T7 Optimize | 无上限 | 无限制 | architecture ≥ 8/10，performance ≥ 8/10，stability ≥ 8/10 |
+| T1 Research | 3 | 无限制 | 覆盖率 ≥ 85%，可信度 ≥ 80%，一致性 ≥ 90%，完整性 ≥ 85% |
+| T2 Compare | 2 | 无限制 | 覆盖率 100%，可信度 ≥ 80%，偏见检查通过，敏感性分析完成 |
+| T3 Iterate | 无上限 | 用户定义 | KPI 达到用户指定目标值（见 quality-gates.md T3 章节） |
+| T4 Generate | items × 2 | 无限制 | 通过率 ≥ 95%，平均分 ≥ 7/10（见 quality-gates.md T4 章节） |
+| T5 Deliver | 1（线性阶段制） | 无限制 | 全阶段门禁通过，含2个人工确认点（见 quality-gates.md T5 行） |
+| T6 Quality | 无上限 | 无限制 | 安全 ≥ 9/10，可靠 ≥ 8/10，可维护 ≥ 8/10（见 quality-gates.md T6 行） |
+| T7 Optimize | 无上限 | 无限制 | 架构 ≥ 8/10，性能 ≥ 8/10，稳定性 ≥ 8/10（见 quality-gates.md T7 行） |
 
 向导在 Step 4/5 展示对应行的默认值，用户可调整。
 
@@ -124,11 +126,12 @@ description: >
    最重要：___  其次：___
 
 4. 关键假设（key_assumptions）：
-   列出评分中隐含的关键假设（用于后续敏感性分析，见 protocols/quality-gates.md 敏感性分析章节）：
-   - {假设 1，如：团队有足够的学习时间，实施周期 ≥ 3 个月}
-   - {假设 2，如：当前月度预算上限 = $X}
-   - {假设 3，如：用户规模增长率 = Y%/年}
-   留空则向导自动从评估维度中推断关键假设（成本/时间/规模类维度自动识别为假设来源）。
+   以结构化列表收集，每条格式为：假设名称 + 当前值 + 单位
+   用于后续敏感性分析（计算方法见 protocols/quality-gates.md T2敏感性分析章节）：
+   - 假设名称：{如 实施周期}，当前值：{如 3}，单位：{如 月}
+   - 假设名称：{如 月度预算上限}，当前值：{如 5000}，单位：{如 USD}
+   - 假设名称：{如 用户规模增长率}，当前值：{如 20}，单位：{如 %/年}
+   留空则向导从评估维度中自动识别成本/时间/规模类维度作为假设来源。
 ```
 
 ### T3 Iterate — 迭代目标
@@ -201,10 +204,12 @@ description: >
 
 5. 部署目标（deploy_target）：
    {部署目标主机/环境，如: sip-server 或 prod-01}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 6. 部署命令（deploy_command）：
    {完整的部署执行命令，如: gcloud compute ssh {host} --zone={zone} --command="cd {path} && git pull origin main && sudo bash deploy.sh"}
    如无远程部署：{本地命令，如 docker-compose up -d --build}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 7. 服务列表（service_list）：
    {部署后需要检查的服务名称列表，如: [sip-backend, sip-worker, sip-scheduler, sip-frontend]}
@@ -212,24 +217,36 @@ description: >
    注意：service_list 和 health_check_url 至少须提供其中一项，否则 plan 不合法。
    - 如果 service_list 为 N/A，Phase 4 服务检查门禁自动标记为 N/A（跳过）。
    - 如果 health_check_url 为空，Phase 4 健康检查门禁自动标记为 N/A（跳过）。
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 8. 文档输出路径（doc_output_path）：
-   {方案文档存放的目录绝对路径，来自 plan，见 protocols/loop-protocol.md doc_output_path 定义}
+   {方案文档存放的目录绝对路径}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 9. 健康检查 URL（health_check_url）：
    {如 https://example.com/api/health，或留空（此时 service_list 必须非空）}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 10. 线上验收 URL（acceptance_url）：
     {验收时打开的线上地址，如 https://example.com}
+    变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 11. 语法检查命令（syntax_check_cmd）：
     {语法检查命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
+    变量名见 protocols/loop-protocol.md 统一参数词汇表
 
-12. 主入口文件（main_entry_file）：
+12. 语法检查是否接受单文件参数（syntax_check_file_arg）：
+    {true = 如 python3 -m py_compile，接受单文件路径作为参数}
+    {false = 如 npx tsc --noEmit，项目级验证，不接受文件参数}
+    变量名见 protocols/loop-protocol.md 统一参数词汇表
+
+13. 主入口文件（main_entry_file）：
     {主入口文件绝对路径，如 /project/backend/main.py}
+    变量名见 protocols/loop-protocol.md 统一参数词汇表
 
-13. 新路由变量名（new_router_name）：
+14. 新路由变量名（new_router_name）：
     {本次新增的 router 变量名，如 comments_router，无新路由则填 N/A}
+    变量名见 protocols/loop-protocol.md 统一参数词汇表
 ```
 
 ### T6 Quality — 质量审查配置
@@ -252,12 +269,15 @@ description: >
 
 6. 语法检查命令（syntax_check_cmd）：
    {语法检查命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
-   注意：是否接受文件参数（syntax_check_file_arg）：{true/false}
-   - python3 -m py_compile → true（接受单文件参数）
-   - npx tsc --noEmit → false（项目级验证，不接受文件参数）
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
-7. 主入口文件（main_entry_file）：
+7. 语法检查是否接受单文件参数（syntax_check_file_arg）：
+   {true / false，规则见上方 T5 第12项说明}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
+
+8. 主入口文件（main_entry_file）：
    {主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
 ```
 
 ### T7 Optimize — 优化配置
@@ -279,6 +299,18 @@ description: >
 
 4. 不可改动的部分：
    {如：public API 接口不变 / 数据库 schema 不变}
+
+5. 语法检查命令（syntax_check_cmd）：
+   {语法检查命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
+
+6. 语法检查是否接受单文件参数（syntax_check_file_arg）：
+   {true / false，规则见上方 T5 第12项说明}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
+
+7. 主入口文件（main_entry_file）：
+   {主入口文件绝对路径，如 /project/backend/main.py}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
 ```
 
 ---
@@ -288,9 +320,9 @@ description: >
 展示该模板的质量门禁，询问是否需要调整：
 
 ```
-质量门禁（满足全部才算完成）：
+质量门禁（满足全部才算完成，完整定义见 protocols/quality-gates.md）：
 
-  {维度 1}: 目标 {N}/10（当前默认：{标准默认值}）
+  {维度 1}: 目标 {N}/10（默认值见上方参考表）
   {维度 2}: 目标 {N}/10
   {维度 3}: 目标 {N}/10
 
@@ -356,7 +388,16 @@ description: >
 
 ### 模板特定参数
 
-{按 templates/plan-template.md 中该模板的完整字段填写，不得省略任何字段，包括 T5 的 deploy_target / deploy_command / service_list / service_count / health_check_url / acceptance_url / doc_output_path / syntax_check_cmd / new_router_name / main_entry_file 等}
+{按 templates/plan-template.md 中该模板的完整字段填写，不得省略任何字段}
+
+T2 的 key_assumptions 必须以结构化列表记录，格式：
+  - 假设名称：{名称}，当前值：{数值}，单位：{单位}
+（敏感性分析计算方法见 protocols/quality-gates.md T2敏感性分析章节）
+
+T5/T6/T7 的所有规范变量名（deploy_target / deploy_command / service_list / service_count /
+health_check_url / acceptance_url / doc_output_path / syntax_check_cmd / syntax_check_file_arg /
+new_router_name / main_entry_file）均见 protocols/loop-protocol.md 统一参数词汇表，不得使用
+同义词或自造变量名。
 
 ---
 
@@ -376,13 +417,15 @@ description: >
 
 ## 质量门禁
 
-| 维度 | 目标分数 | 当前分数 | 目标阈值 | 状态 |
-|------|---------|---------|---------|------|
-| {维度 1} | — | — | ≥ {阈值} | 待启动 |
-| {维度 2} | — | — | ≥ {阈值} | 待启动 |
-| {维度 3} | — | — | ≥ {阈值} | 待启动 |
+质量门禁阈值见 `protocols/quality-gates.md` 门禁评估矩阵。
 
-**全部达标条件**：所有维度同时达到目标阈值
+| 维度 | 目标分数 | 当前分数 | 状态 |
+|------|---------|---------|------|
+| {维度 1} | — | — | 待启动 |
+| {维度 2} | — | — | 待启动 |
+| {维度 3} | — | — | 待启动 |
+
+**全部达标条件**：所有维度同时达到目标阈值（见 protocols/quality-gates.md）
 
 ---
 
@@ -399,13 +442,15 @@ description: >
 
 ## 输出文件
 
+输出文件命名见 `commands/autoloop.md` 最终输出文件命名规则。
+
 | 文件 | 路径 | 用途 | 状态 |
 |------|------|------|------|
 | autoloop-plan.md | {工作目录}/autoloop-plan.md | 任务计划（本文件）| 已创建 |
 | autoloop-progress.md | {工作目录}/autoloop-progress.md | 迭代进度 | 待创建 |
 | autoloop-findings.md | {工作目录}/autoloop-findings.md | 发现记录 | 待创建 |
-| autoloop-report-{date}.md | {工作目录}/autoloop-report-{date}.md | 最终报告 | 待创建 |
-| autoloop-results.tsv | {工作目录}/autoloop-results.tsv | 结构化迭代日志（所有模板）| 待创建 |
+| autoloop-results.tsv | {工作目录}/autoloop-results.tsv | 结构化迭代日志 | 待创建 |
+| {最终报告名} | {工作目录}/{最终报告名} | 最终报告 | 待创建 |
 
 ---
 
@@ -424,16 +469,17 @@ description: >
 | {创建时间} | 初始创建 | — | — | — |
 ```
 
-生成文件后，输出确认并自动进入执行：
+生成计划文件后，立即创建 Bootstrap 文件（`autoloop-findings.md`、`autoloop-progress.md`、`autoloop-results.tsv`），然后输出确认并自动进入执行：
 
 ```
 计划文件已创建：{工作目录}/autoloop-plan.md
+Bootstrap 文件已创建：findings.md / progress.md / results.tsv
 
 摘要：
   模板：T{N} {名称}
   目标：{一句话}
   轮次预算：{N} 轮
-  质量门禁：{维度数} 个维度
+  质量门禁：{维度数} 个维度（完整定义见 protocols/quality-gates.md）
 
 如有需要修改计划参数，请现在说明；否则将在 5 秒后自动进入 Round 1。
 ```

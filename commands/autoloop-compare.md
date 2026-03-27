@@ -3,6 +3,7 @@ name: autoloop-compare
 description: >
   AutoLoop T2: 多方案对比模板。多维度评分 + 证据支撑 + 置信度声明 + 明确推荐。
   每个选项独立分析，统一评分维度，敏感性检验，输出决策矩阵。
+  质量门禁阈值见 protocols/quality-gates.md T2 行。
   触发：/autoloop:compare 或任何需要在多个选项中做决策的场景。
 ---
 
@@ -14,6 +15,9 @@ description: >
 - 要比较的选项列表（必须 ≥ 2 个）
 - 评估维度列表（可自动生成）
 - 权重配置（如果用户指定了优先级）
+- key_assumptions（结构化列表，格式：假设名称 + 当前值 + 单位）
+
+**Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再扫描当前状态。详见 `protocols/loop-protocol.md` OBSERVE Step 0 章节。
 
 ---
 
@@ -22,6 +26,7 @@ description: >
 如果用户没有指定维度，根据选项类型自动生成：
 
 ### 技术栈/工具选型
+
 | 维度 | 权重 | 评分说明 |
 |------|------|---------|
 | 功能匹配度 | 25% | 与需求的匹配程度 |
@@ -32,6 +37,7 @@ description: >
 | 长期风险 | 10% | 维护风险、厂商锁定 |
 
 ### 架构方案对比
+
 | 维度 | 权重 | 评分说明 |
 |------|------|---------|
 | 解耦程度 | 20% | 模块独立性 |
@@ -42,6 +48,7 @@ description: >
 | 迁移风险 | 10% | 从现有架构迁移的风险 |
 
 ### 商业方案对比
+
 | 维度 | 权重 | 评分说明 |
 |------|------|---------|
 | ROI 预期 | 25% | 投资回报 |
@@ -54,9 +61,16 @@ description: >
 
 ## 第一轮：并行选项分析
 
+### OBSERVE（第1轮基线采集）
+
+第1轮无历史数据，执行基线采集：当前发现数 = 0，所有质量门禁得分 = 0。
+将此作为 iteration 0 基线写入 `autoloop-progress.md`。详见 `protocols/loop-protocol.md` 第1轮 Bootstrap 规则。
+
 ### 1.1 为每个选项分配独立 subagent
 
-每个候选方案分配 2 个独立 analyzer subagent 并行分析（使用不同的分析角度 prompt），确保偏见检查门禁可达。偏见检查要求每选项 ≥ 2 个独立 subagent 评估且评分差 < 15%，详见 protocols/quality-gates.md 偏见检查章节。
+每个候选方案分配 **2 个独立 option-analyzer subagent 并行分析**（使用不同的分析角度 prompt）。
+
+这确保偏见检查门禁可达：每选项 ≥ 2 个独立 subagent 评估。偏见检查计算方法见 `protocols/quality-gates.md` T2偏见检查章节。subagent 调度规范见 `protocols/agent-dispatch.md` option-analyzer 章节。
 
 每个 analyzer subagent 的指令：
 
@@ -66,6 +80,7 @@ description: >
 选项名称：{选项 A}
 对比主题：{主题}
 评估维度：{维度列表}
+分析角度：{正向分析 / 批判性分析}（同一选项的两个 subagent 使用不同角度）
 
 任务：对这个选项在每个评估维度上进行深度分析。
 
@@ -106,31 +121,15 @@ description: >
 总分：{X}/10，置信度：{高/中/低}（基于 {N} 个信息来源）
 ```
 
-### 1.2 偏见分数计算（所有 analyzer 返回后立即执行）
+### 1.2 偏见检查（所有 analyzer 返回后立即执行）
 
-所有选项的 analyzer subagent 返回后，计算偏见分数：
+偏见检查计算方法见 `protocols/quality-gates.md` T2偏见检查章节。
 
-```
-对每个选项：
-  各 analyzer 评分的标准差 = stdev(analyzer_1_total, analyzer_2_total, ...)
-  偏见分数 = 标准差 / 该选项加权总分
-  判断：偏见分数 < 15% → 通过；≥ 15% → 触发第 3 个独立 analyzer 重新评估该选项
-
-计算示例：
-  选项 A：analyzer_1 = 7.5，analyzer_2 = 8.2
-  stdev = 0.35，加权总分 = 7.85
-  偏见分数 = 0.35 / 7.85 = 4.5% → 通过
-
-  选项 B：analyzer_1 = 6.0，analyzer_2 = 8.5
-  stdev = 1.25，加权总分 = 7.25
-  偏见分数 = 1.25 / 7.25 = 17.2% → 触发第 3 个独立 analyzer
-```
-
-完整标准见 `protocols/quality-gates.md` 偏见检查章节。
+简要流程：对每个选项比较两个 analyzer 的评分差，差异 ≥ 15% 则触发第3个独立 analyzer 重新评估该选项，以多数结论为准。完整计算方法和通过标准以 quality-gates.md 为准，不得在此重新定义。
 
 ### 1.3 独立的中立审查
 
-所有选项分析完成后，运行一个 neutral-reviewer subagent：
+所有选项分析完成后，运行一个 neutral-reviewer subagent（调度方式见 `protocols/agent-dispatch.md` neutral-reviewer 章节）：
 
 ```
 你是 neutral-reviewer，负责检查以下分析是否存在偏见。
@@ -163,26 +162,22 @@ description: >
 
 ### 2.2 敏感性分析
 
-敏感性分析从 `autoloop-plan.md` 的 `key_assumptions` 字段读取关键假设列表（plan 中未提供则自动从评估维度中识别成本/时间/规模类维度作为假设来源）。对每个假设分别调整 ±20%，检查推荐排名是否改变。通过标准见 `protocols/quality-gates.md` 敏感性分析章节。
+敏感性分析从 `autoloop-plan.md` 的 `key_assumptions` 字段读取关键假设列表（结构化格式：假设名称 + 当前值 + 单位）。plan 中未提供则自动从评估维度中识别成本/时间/规模类维度作为假设来源。
+
+计算方法见 `protocols/quality-gates.md` T2敏感性分析章节。通过标准：任意单一假设 ±20% 变动后推荐排名第1位不变。完整计算规则以 quality-gates.md 为准，不在此重新定义。
 
 ```
 敏感性测试（假设来自 plan.key_assumptions）：
 
-对每个关键假设 H（从 plan.key_assumptions 读取）：
+对每个关键假设 H（从 plan.key_assumptions 读取结构化列表）：
   场景 H+：H × 1.2 → 重新推导排名 → 与原排名对比
   场景 H-：H × 0.8 → 重新推导排名 → 与原排名对比
 
 示例输出：
-场景 1（{假设 1} ×1.2）：
+场景 1（{假设名称} ×1.2）：
   排名：{选项} 第一，分差 {X} 分
 
-场景 2（{假设 1} ×0.8）：
-  排名：{选项} 第一，分差 {X} 分
-
-场景 3（{假设 2} ×1.2）：
-  排名：{选项} 第一，分差 {X} 分
-
-场景 4（{假设 2} ×0.8）：
+场景 2（{假设名称} ×0.8）：
   排名：{选项} 第一，分差 {X} 分
 
 （对 key_assumptions 中的所有假设重复上述 ±20% 测试）
@@ -210,7 +205,7 @@ description: >
 | 成本 (15%) | 4/10 | 7/10 ✓ | 9/10 |
 | 长期风险 (10%) | 8/10 ✓ | 7/10 | 6/10 |
 | **加权总分** | **7.5** | **7.3** | **6.7** |
-| **排名** | **🥇 第 1** | **🥈 第 2** | **🥉 第 3** |
+| **排名** | **第 1** | **第 2** | **第 3** |
 
 注：✓ 表示该维度最佳选项
 ```
@@ -271,7 +266,7 @@ description: >
 
 ## 结果文件
 
-生成 `autoloop-results.tsv`（使用标准 schema，见 autoloop.md）：
+生成 `autoloop-results.tsv`（使用标准 schema，见 `commands/autoloop.md` 标准 TSV Schema）：
 
 ```tsv
 iteration	phase	status	metric_name	metric_value	delta	details
@@ -280,17 +275,18 @@ iteration	phase	status	metric_name	metric_value	delta	details
 1	compare	pass	功能匹配度	7	—	选项B, 权重0.25, 证据2条
 ```
 
-证据来源 URL 和详细分析记录到 autoloop-findings.md，不放在 results.tsv。
+证据来源 URL 和详细分析记录到 `autoloop-findings.md`，不放在 results.tsv。
 
 ---
 
 ## 质量门禁检查
 
-在输出最终推荐前，验证：
-- [ ] 每个选项在每个维度都有至少 1 个具体证据
-- [ ] 关键维度有至少 2 个独立来源
-- [ ] 偏见审查已通过（neutral-reviewer 结论）
-- [ ] 敏感性分析已完成
+完整门禁定义和通过标准见 `protocols/quality-gates.md` T2 行。在输出最终推荐前，验证：
+
+- [ ] 每个选项在每个维度都有至少 1 个具体证据（覆盖率 100%，见 quality-gates.md）
+- [ ] 关键维度有至少 2 个独立来源（可信度 ≥ 80%，见 quality-gates.md）
+- [ ] 偏见检查已通过（计算方法见 quality-gates.md T2偏见检查章节）
+- [ ] 敏感性分析已完成（计算方法见 quality-gates.md T2敏感性分析章节）
 - [ ] 置信度已明确声明
 - [ ] 信息缺口已列出
 
@@ -300,13 +296,11 @@ iteration	phase	status	metric_name	metric_value	delta	details
 
 ## 每轮 REFLECT 执行规范
 
-每轮（包括第一轮）结束后，在 EVOLVE/终止判断之后执行：
+每轮（包括第一轮）结束后，在 EVOLVE/终止判断之后执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `protocols/loop-protocol.md` REFLECT 章节）：
 
-```
-REFLECT:
-- 问题登记: 记录本轮发现的信息空白、来源冲突、数据质量问题、选项分析缺陷
-- 策略复盘: 搜索策略/分析方法/偏见检查方式的效果评估（保持/避免）
-- 模式识别: 哪些维度反复缺少证据、哪些选项总是数据质量低
-- 经验教训: 选项分析/偏见检查/敏感性分析的有效性总结
-将反思结果写入 autoloop-findings.md 的反思章节
-```
+写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `templates/findings-template.md`：
+
+- **问题登记**：记录本轮发现的信息空白、来源冲突、数据质量问题、选项分析缺陷
+- **策略复盘**：搜索策略/分析方法/偏见检查方式的效果评估（保持/避免）
+- **模式识别**：哪些维度反复缺少证据、哪些选项总是数据质量低
+- **经验教训**：选项分析/偏见检查/敏感性分析的有效性总结

@@ -46,10 +46,13 @@
 - 选项 B：{描述}
 - 评估维度：{维度 1}（权重 {X}%）、{维度 2}（权重 {Y}%）...
 - 决策标准：{最重要的因素}
-- key_assumptions：
-  - {关键假设 1，如：市场增长率 = X%}
-  - {关键假设 2，如：实施周期 = N 个月}
-  - {关键假设 3，如：团队规模 = N 人}
+- key_assumptions（关键假设表，用于敏感性分析）：
+
+| 假设名称 | 当前值 | 单位 | 敏感性区间（±20% 范围）|
+|---------|--------|------|----------------------|
+| {假设 1，如市场增长率} | {当前值，如 15} | {单位，如 %/年} | {低值} ~ {高值} |
+| {假设 2，如实施周期} | {当前值，如 6} | {单位，如 月} | {低值} ~ {高值} |
+| {假设 3，如团队规模} | {当前值，如 5} | {单位，如 人} | {低值} ~ {高值} |
 
 **T3 Iterate**：
 - KPI：{指标名} = {目标值}
@@ -147,8 +150,8 @@
 | autoloop-plan.md | {工作目录}/autoloop-plan.md | 任务计划（本文件）| 已创建 |
 | autoloop-progress.md | {工作目录}/autoloop-progress.md | 迭代进度 | 待创建 |
 | autoloop-findings.md | {工作目录}/autoloop-findings.md | 发现记录 | 待创建 |
-| autoloop-report-{date}.md | {工作目录}/autoloop-report-{date}.md | 最终报告 | 待创建 |
-| autoloop-results.tsv | {工作目录}/autoloop-results.tsv | 结构化迭代日志（所有模板）| 待创建 |
+| autoloop-report-YYYYMMDD.md | {工作目录}/autoloop-report-YYYYMMDD.md | 最终报告（日期为实际生成日期）| 待创建 |
+| autoloop-results.tsv | {工作目录}/autoloop-results.tsv | 结构化迭代日志（所有模板通用）| 待创建 |
 
 ---
 
