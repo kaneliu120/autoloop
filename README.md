@@ -234,7 +234,14 @@ AutoLoop 是 CLAUDE.md Orchestrator-First 模式的具体实现：
 
 结合项目 CLAUDE.md 使用 AutoLoop 时，所有工程决策遵循该项目的代码约定（技术栈在 `autoloop-plan.md` 中收集，T5/T6/T7 执行时以 plan 中的参数为准）。
 
-> 示例（以实际项目为准）：如项目使用 FastAPI + SQLAlchemy，则 T5 的 syntax_check_cmd 填 `python3 -m py_compile`，main_entry_file 填实际主入口路径。
+### project_type 驱动的条件化流程
+
+T5/T6/T7 在 plan 阶段首先收集 `project_type`（枚举值见 `protocols/loop-protocol.md`），后续所有变量的必填/可选、阶段门禁的执行/跳过、验收方式的选择均由 `project_type` 激活矩阵驱动。例如：
+- `script` / `library` 类型无常驻服务，service_list 和 health_check_url 可为 N/A
+- Phase 4 部署和 Phase 5 验收按 project_type 选择对应的验证方式（浏览器/CLI/批处理/import）
+- 详见 `protocols/loop-protocol.md` 项目类型与变量激活矩阵
+
+> 示例（以实际项目为准）：如项目使用 FastAPI + SQLAlchemy，则 T5 的 syntax_check_cmd 填 `python3 -m py_compile`（裸命令，不含文件参数占位符），main_entry_file 填实际主入口路径。最终报告文件命名见 `protocols/loop-protocol.md` 统一输出文件命名章节。
 
 ---
 

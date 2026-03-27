@@ -800,7 +800,7 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 | 变量 | 填充值 |
 |------|--------|
 | `{tech_stack}` | FastAPI + SQLAlchemy 2.0 async + PostgreSQL |
-| `{syntax_check_cmd}` | `python3 -m py_compile {文件路径}` |
+| `{syntax_check_cmd}` | `python3 -m py_compile`（裸命令，不含文件参数占位符；文件参数由 syntax_check_file_arg 控制是否追加）|
 | `{main_entry_file}` | `{codebase_path}/backend/main.py` |
 | `{migration_check_cmd}` | `python -m alembic current && python -m alembic check`（迁移目录和配置文件在 plan 中定义）|
 | `{tech_constraints}` | 所有路由函数使用 async def；数据库操作使用 SQLAlchemy 2.0 async session；配置从 settings 获取；新路由在 main.py 中注册 |

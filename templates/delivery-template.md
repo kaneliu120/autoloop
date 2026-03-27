@@ -235,7 +235,8 @@ python -m alembic current && python -m alembic check
 
 **语法检查命令**：
 ```bash
-python3 -m py_compile {文件路径}
+python3 -m py_compile
+# 裸命令，不含文件参数占位符；文件参数由 syntax_check_file_arg 控制是否追加
 ```
 
 ---
