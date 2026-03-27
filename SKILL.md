@@ -88,7 +88,7 @@ REFLECT（反思）
 - 敏感性分析（不同权重下推荐是否变化）
 
 **质量门禁**（完整定义和具体计算方法见 `protocols/quality-gates.md`）：
-- 覆盖率 100%（所有选项的所有维度都必须有内容）
+- 覆盖率（阈值见 protocols/quality-gates.md 门禁评估矩阵 T2 行）
 - 可信度（见 protocols/quality-gates.md 门禁评估矩阵 T2 行）
 - 偏见检查（见 protocols/quality-gates.md T2 专属门禁 — 偏见检查，含通过标准和计算方法）
 - 敏感性分析（见 protocols/quality-gates.md T2 专属门禁 — 敏感性分析，含通过标准）
