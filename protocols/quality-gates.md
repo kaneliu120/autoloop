@@ -366,11 +366,8 @@ Phase 4 条件化：
   如果 health_check_url 为空：Phase 4 健康检查标记为 N/A（跳过）
   对于 script/library 类型的 project_type，deploy/service_list/health_check 均可为 N/A
 
-Phase 5 条件化（验收方式按 project_type 选择）：
-  backend-api / fullstack / frontend-only：浏览器（桌面+手机）验收 + Console 零错误
-  script：CLI 执行验证 + 错误输入测试
-  data-pipeline：批处理结果抽样验证 + 日志检查
-  library：import/require 验证 + 公共 API 调用验证
+Phase 5 条件化：
+  验收方式详见 `protocols/delivery-phases.md` Phase 5 章节（按 project_type 和 acceptance_url 分流）。
   所有类型：始终需要用户输入 'verified'（人工确认），不受 N/A 影响
 ```
 
