@@ -164,26 +164,23 @@ description: >
 
 敏感性分析从 `autoloop-plan.md` 的 `key_assumptions` 字段读取关键假设列表（结构化格式：假设名称 + 当前值 + 单位）。plan 中未提供则自动从评估维度中识别成本/时间/规模类维度作为假设来源。
 
-计算方法见 `protocols/quality-gates.md` T2敏感性分析章节。通过标准：任意单一假设 ±20% 变动后推荐排名第1位不变。完整计算规则以 quality-gates.md 为准，不在此重新定义。
+敏感性分析从 `autoloop-plan.md` 的 `key_assumptions` 字段读取关键假设列表（结构化格式：假设名称 + 当前值 + 单位）。plan 中未提供则自动从评估维度中识别成本/时间/规模类维度作为假设来源。完整计算方法和通过标准见 `protocols/quality-gates.md` T2敏感性分析章节。
 
 ```
-敏感性测试（假设来自 plan.key_assumptions）：
+敏感性测试（假设来自 plan.key_assumptions，计算规则见 protocols/quality-gates.md T2敏感性分析章节）：
 
 对每个关键假设 H（从 plan.key_assumptions 读取结构化列表）：
-  场景 H+：H × 1.2 → 重新推导排名 → 与原排名对比
-  场景 H-：H × 0.8 → 重新推导排名 → 与原排名对比
+  按 quality-gates.md 规定的变动幅度正反向测试 → 重新推导排名 → 与原排名对比
 
 示例输出：
-场景 1（{假设名称} ×1.2）：
+场景 1（{假设名称} 正向变动）：
   排名：{选项} 第一，分差 {X} 分
 
-场景 2（{假设名称} ×0.8）：
+场景 2（{假设名称} 反向变动）：
   排名：{选项} 第一，分差 {X} 分
-
-（对 key_assumptions 中的所有假设重复上述 ±20% 测试）
 
 结论：
-- 推荐稳健性：{高（所有 ±20% 场景推荐同一选项）/ 中 / 低}
+- 推荐稳健性：{高（所有场景推荐同一选项）/ 中 / 低}
 - 临界假设：{对结果影响最大的假设}
 ```
 
@@ -283,10 +280,10 @@ description: >
 
 完整门禁定义和通过标准见 `protocols/quality-gates.md` T2 行。在输出最终推荐前，验证：
 
-- [ ] 每个选项在每个维度都有至少 1 个具体证据（覆盖率 100%，见 quality-gates.md）
-- [ ] 关键维度有至少 2 个独立来源（可信度 ≥ 80%，见 quality-gates.md）
-- [ ] 偏见检查已通过（计算方法见 quality-gates.md T2偏见检查章节）
-- [ ] 敏感性分析已完成（计算方法见 quality-gates.md T2敏感性分析章节）
+- [ ] 覆盖率达标（见 protocols/quality-gates.md T2 覆盖率门禁）
+- [ ] 可信度达标（见 protocols/quality-gates.md T2 可信度门禁）
+- [ ] 偏见检查已通过（计算方法见 protocols/quality-gates.md T2偏见检查章节）
+- [ ] 敏感性分析已完成（计算方法见 protocols/quality-gates.md T2敏感性分析章节）
 - [ ] 置信度已明确声明
 - [ ] 信息缺口已列出
 

@@ -3,7 +3,7 @@ name: autoloop-optimize
 description: >
   AutoLoop T7: 架构/性能/稳定性优化模板。三维度并行全面诊断，
   跨维度协同修复（一个修复改善多个维度），每 5 个修复 checkpoint 重新评分。
-  目标：架构≥8/10、性能≥8/10、稳定性≥8/10。
+  目标阈值见 protocols/quality-gates.md T7 行。
   触发：/autoloop:optimize 或任何需要系统级优化的任务。
 ---
 
@@ -71,10 +71,7 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
    - 是否有 service 层？还是业务逻辑直接在路由中？
    - 数据模型是否混杂了业务逻辑？
 
-   ### 技术栈适配（分层检查命令）
-   - Python/FastAPI: grep -rn "from.*db\|session.execute" {路由目录，如 backend/api/}
-   - Node.js: grep -rn "prisma\.\|sequelize\.\|mongoose\." {路由目录，如 src/routes/}
-   - 其他: 根据项目结构，在路由目录中搜索直接数据库调用
+   检测命令见 `protocols/enterprise-standard.md` 架构维度检测命令章节（按实际技术栈执行）。
 
 2. 耦合分析
    检查：
@@ -131,41 +128,9 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 
 诊断步骤：
 
-1. N+1 查询检测
-   查找：在循环中执行数据库查询
-   工具：
-   grep -rn "for.*in.*:" backend/  # 找循环
-   然后检查循环体内是否有 session.execute / session.get 等
+诊断项清单见 `protocols/enterprise-standard.md` 性能维度（覆盖：N+1查询、连接池、缓存覆盖、同步阻塞、查询效率、前端性能等）。
 
-2. 连接池检查
-   查找：数据库/Redis 连接配置
-   检查：
-   - SQLAlchemy pool_size 是否配置（默认 5，生产应更大）
-   - Redis 连接是否复用（ConnectionPool）
-   - 是否每次请求都新建连接
-
-3. 缓存覆盖分析
-   识别：哪些数据是热读（频繁查询、变化少）
-   检查：这些数据是否有 Redis 缓存
-   工具：grep -rn "redis\|cache" backend/
-
-4. 同步阻塞检测
-   查找：在 async 函数中调用同步 I/O
-   工具：
-   grep -rn "def " backend/  # 找 sync def（非 async）
-   检查是否在 async 路由中被直接调用（应用 asyncio.run_in_executor）
-   查找：time.sleep() 在 async 函数中
-
-5. 查询效率
-   查找：SELECT * 没有 LIMIT 的查询
-   查找：在列表 API 中返回所有数据（应该分页）
-   查找：缺少索引的高频查询字段
-
-6. 前端性能（如有）
-   检查：
-   - next.config.js 是否有图片优化配置
-   - 是否有代码分割（dynamic import）
-   - Bundle 大小是否合理
+检测命令见 `protocols/enterprise-standard.md` 性能维度检测命令章节（按实际技术栈执行）。
 
 输出：
 ## 性能诊断报告
@@ -193,38 +158,9 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 
 代码库路径：{绝对路径}
 
-诊断步骤：
+诊断项清单见 `protocols/enterprise-standard.md` 稳定性维度（覆盖：外部依赖降级、错误处理完整性、健康检查、超时配置、日志完整性、自动恢复等）。
 
-1. 外部依赖降级检查
-   识别所有外部依赖：Redis / 第三方 API / 邮件服务 / 文件存储
-   对每个依赖检查：
-   - 超时是否配置
-   - 失败是否有降级（返回降级数据 vs 崩溃）
-   - 是否有重试逻辑
-
-2. 错误处理完整性
-   查找：只有 except Exception as e: 但没有 logger.error(e, exc_info=True)
-   查找：捕获了异常但返回了不准确的状态码（200 但实际失败）
-   工具：grep -rn "except" backend/ | grep -v "logger"
-
-3. 健康检查
-   检查：是否有 /health 端点
-   检查：健康检查是否验证关键依赖（DB 连通性、Redis 连通性）
-   检查：是否有 /ready（就绪检查）区别于 /health（存活检查）
-
-4. 超时配置
-   查找：httpx / requests / aiohttp 调用是否有 timeout
-   查找：Redis 操作是否有 socket_timeout
-   查找：数据库查询是否有 statement_timeout（PostgreSQL 参数）
-
-5. 日志完整性
-   检查：关键操作是否有 info 日志（请求开始/完成）
-   检查：错误是否有足够的上下文（请求 ID、相关数据）
-   检查：是否有结构化日志（JSON 格式，便于搜索）
-
-6. 自动恢复
-   检查：worker 进程崩溃是否会自动重启（systemd / supervisor）
-   检查：数据库连接断开是否会自动重连（SQLAlchemy pool_pre_ping）
+检测命令见 `protocols/enterprise-standard.md` 稳定性维度检测命令章节（按实际技术栈执行）。
 
 输出：
 ## 稳定性诊断报告
@@ -377,51 +313,9 @@ async def list_companies_route(session: AsyncSession = Depends(get_session)):
 
 每个 Checkpoint 必须重新运行对应维度的验证命令，不允许仅凭代码审查更新分数。
 
-### 架构维度验证（架构相关修复后必须执行）
+### 三维度验证命令
 
-```bash
-# 依赖分析（如工具可用）
-import-linter --config .importlinter   # 或 dep-tree src/
-# 备选：手动 grep 循环依赖
-python3 -c "
-import sys, importlib
-# 尝试导入关键模块，捕获循环 import 错误
-try: import {主模块}; print('OK')
-except ImportError as e: print('循环依赖:', e)
-"
-# 跨层访问检测
-grep -rn "from.*db\|session.execute" {路由层目录} | grep -v "Depends\|get_session"
-```
-
-### 性能维度验证（性能相关修复后必须执行）
-
-```bash
-# 关键查询 EXPLAIN ANALYZE（如有数据库）
-# psql -c "EXPLAIN ANALYZE {关键查询语句}"
-
-# API 响应时间采样（如服务在运行）
-for i in 1 2 3 4 5; do
-  curl -o /dev/null -s -w "%{time_total}s\n" {health_url 或关键 API endpoint}
-done
-
-# 前端 bundle 分析（如有前端，且工具可用）
-# npx next build --profile 2>&1 | grep "First Load JS"
-```
-
-### 稳定性维度验证（稳定性相关修复后必须执行）
-
-```bash
-# error handling 覆盖率统计
-TOTAL=$(grep -rn "def \|async def " {代码目录} | wc -l)
-WITH_TRY=$(grep -rn -A5 "def \|async def " {代码目录} | grep -c "try:")
-echo "函数总数: $TOTAL，有 try/except 的: $WITH_TRY"
-
-# 静默失败检测
-grep -rn "except.*pass\|except:$" {代码目录}
-
-# 服务状态检查（如有容器部署）
-# docker ps --format "table {{.Names}}\t{{.Status}}"
-```
+各维度验证命令见 `protocols/enterprise-standard.md` 对应维度的检测命令章节（架构/性能/稳定性），按实际技术栈执行。每个 Checkpoint 必须基于实际运行的命令输出更新分数。
 
 ```
 Checkpoint（已完成 {N} 个修复）
@@ -451,12 +345,13 @@ Checkpoint（已完成 {N} 个修复）
 达标判定见 `protocols/quality-gates.md` T7 行。
 
 ```
-全部达标（目标值以 quality-gates.md T7 行为准）：
-  架构 {N}/10 ≥ 目标 ✓
-  性能 {N}/10 ≥ 目标 ✓
-  稳定性 {N}/10 ≥ 目标 ✓
+全部达标（目标阈值见 protocols/quality-gates.md T7 行）：
+  架构 {N}/10  ✓/✗
+  性能 {N}/10  ✓/✗
+  稳定性 {N}/10  ✓/✗
 
-→ 终止，生成优化报告
+全部 ✓ → 终止，生成优化报告
+任一 ✗ → 继续修复轮次
 ```
 
 ---
@@ -483,9 +378,9 @@ Checkpoint（已完成 {N} 个修复）
 
 | 维度 | 优化前 | 优化后 | 目标 | 状态 |
 |------|--------|--------|------|------|
-| 架构 | {N}/10 | {N}/10 | ≥8/10 | 达标 |
-| 性能 | {N}/10 | {N}/10 | ≥8/10 | 达标 |
-| 稳定性 | {N}/10 | {N}/10 | ≥8/10 | 达标 |
+| 架构 | {N}/10 | {N}/10 | {阈值见 quality-gates.md T7 行} | 达标 |
+| 性能 | {N}/10 | {N}/10 | {阈值见 quality-gates.md T7 行} | 达标 |
+| 稳定性 | {N}/10 | {N}/10 | {阈值见 quality-gates.md T7 行} | 达标 |
 
 ## 关键改进
 

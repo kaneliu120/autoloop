@@ -59,8 +59,7 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 
 **目标分数**：质量门禁阈值见 `protocols/quality-gates.md` T6 行（安全性、可靠性、可维护性各维度分数目标）。
 
-**达标条件（复合判定，见 protocols/quality-gates.md T6 复合判定规则）**：
-- 分数达标 AND 计数达标（P1=0，安全P2=0）两个条件必须同时满足
+**达标条件**：复合判定规则见 `protocols/quality-gates.md` T6 复合判定规则（分数条件 + 计数条件必须同时满足）。
 
 ---
 
@@ -76,43 +75,9 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 代码库路径：{绝对路径}
 审查模块：{模块列表，留空则全部}
 
-审查清单：
-1. SQL 注入
-   - 查找：f-string 或 % 格式化直接拼接 SQL
-   - 查找：原始字符串传入 execute()
-   - 查找：ORM 的 text() 函数使用未参数化的用户输入
+审查清单和检测项见 `protocols/enterprise-standard.md` 安全性维度。覆盖：SQL注入、命令注入、XSS、路径穿越、敏感数据暴露、输入验证等。
 
-2. 命令注入
-   - 查找：subprocess.run/call/Popen 中包含用户输入
-   - 查找：os.system() / os.popen()
-   - 查找：eval() / exec() 包含用户输入
-
-3. XSS（如有前端）
-   - 查找：dangerouslySetInnerHTML
-   - 查找：innerHTML 赋值用户输入
-
-4. 路径穿越
-   - 查找：os.path.join() / open() 使用未校验的用户输入
-   - 查找：../../../ 类的路径构建
-
-5. 敏感数据暴露
-   - 查找：密码/密钥在 logger.info/debug/print 中
-   - 查找：密码/密钥在 API 响应的 dict 中
-   - 查找：.env 文件中的值被 response 返回
-
-6. 输入验证
-### 技术栈适配（输入验证检查）
-根据实际技术栈检查对应的输入验证机制：
-- Python/FastAPI: 路由参数有无 Pydantic 模型；接受文件上传的路由有无类型和大小检查
-- Node.js/Express: 有无 express-validator / zod / joi 验证中间件
-- 其他框架: 检查等效的请求验证机制，有无任意用户输入直接传入数据库/命令
-
-搜索命令参考（在代码库中执行 grep）：
-grep -rn "execute(f" {路径}
-grep -rn "subprocess" {路径}
-grep -rn "os.system" {路径}
-grep -rn "dangerouslySetInnerHTML" {路径}
-grep -rn "# type: ignore" {路径}
+检测命令见 `protocols/enterprise-standard.md` 安全性检测命令章节（按实际技术栈执行）。
 
 输出格式：
 ## 安全审查报告
@@ -144,35 +109,9 @@ P3（建议修复）：{N} 个
 代码库路径：{绝对路径}
 审查模块：{模块列表}
 
-审查清单：
-1. 异常处理覆盖
-   - 查找：HTTP 客户端调用（httpx/aiohttp/requests）无 try/except
-   - 查找：Redis 操作无 try/except
-   - 查找：数据库操作无 try/except
-   - 查找：文件操作无 try/except
+审查清单和检测项见 `protocols/enterprise-standard.md` 可靠性维度。覆盖：异常处理覆盖、静默失败、降级回退、事务完整性、资源泄漏等。
 
-2. 静默失败
-   - 查找：except: pass
-   - 查找：except Exception: logger.debug（关键路径不够）
-   - 查找：空的 finally 块
-
-3. 降级回退
-   - 查找：Redis 缓存读取失败时有无降级到数据库
-   - 查找：外部 API 超时时有无重试或降级
-   - 查找：数据库连接失败时有无适当的错误响应
-
-4. 事务完整性
-   - 查找：多个数据库写操作是否在同一事务中
-   - 查找：写操作后是否有 await session.commit()
-
-5. 资源泄漏
-   - 查找：打开的连接/文件是否在 finally 或 async with 中关闭
-   - 查找：异步生成器是否有 return 语句
-
-搜索命令参考：
-grep -rn "except.*pass" {路径}
-grep -rn "except:" {路径}
-grep -rn "redis" {路径}  # 然后检查是否有 try/except
+检测命令见 `protocols/enterprise-standard.md` 可靠性检测命令章节（按实际技术栈执行）。
 
 输出格式：
 ## 可靠性审查报告
@@ -200,37 +139,9 @@ P1/P2/P3 数量摘要
 代码库路径：{绝对路径}
 审查模块：{模块列表}
 
-审查清单：
-1. 类型系统
-   - 查找：any 类型（Python: Any / TypeScript: any）
-   - 查找：# type: ignore
-   - 查找：缺少返回类型标注的函数
+审查清单和检测项见 `protocols/enterprise-standard.md` 可维护性维度。覆盖：类型系统、代码重复、硬编码、模块化、命名规范等。
 
-2. 代码重复
-   - 识别：超过 10 行的重复代码块
-   - 识别：同样的功能在多处实现
-
-3. 硬编码
-   - 查找：URL / 端口 / 超时时间 硬编码（非配置文件）
-   - 查找：魔法数字（如 3600 而不是 CACHE_TTL）
-
-4. 模块化
-### 技术栈适配（模块化检查）
-根据实际技术栈检查对应的模块导出和路由注册：
-- Python: 新文件是否在 __init__.py 中导出；如果修改了路由相关文件，验证路由注册未被破坏
-- Node.js/TypeScript: 新文件是否在 index.ts barrel export 中声明；如果修改了路由相关文件，验证路由注册未被破坏
-- 其他框架: 按项目规范检查等效的模块导出和路由注册机制
-- 通用: 函数单一职责（超过 50 行的函数是否需要分解）
-
-5. 命名规范
-   - 查找：缩写变量名（如 d, tmp, x）
-   - 查找：不符合项目规范的命名风格（如 Python 中用 camelCase）
-
-搜索命令参考：
-grep -rn "Any" {路径}
-grep -rn ": any" {路径}
-grep -rn "# type: ignore" {路径}
-grep -rn "http://\|https://" {路径}  # 硬编码 URL
+检测命令见 `protocols/enterprise-standard.md` 可维护性检测命令章节（按实际技术栈执行）。
 
 输出格式：
 ## 可维护性审查报告
@@ -382,14 +293,14 @@ Checkpoint（已修复 {N} 个问题）
 终止条件为复合判定，完整规则见 `protocols/quality-gates.md` T6 复合判定规则。
 
 ```
-检查两个条件是否同时满足（具体阈值见 protocols/quality-gates.md）：
+终止条件为复合判定（具体阈值和判定规则见 protocols/quality-gates.md T6 复合判定规则）：
 
-条件一：分数达标
+条件一：分数达标（各维度达到 quality-gates.md T6 行规定的阈值）
   安全性 {N}/10  ✓/✗
   可靠性 {N}/10  ✓/✗
   可维护性 {N}/10  ✓/✗
 
-条件二：计数达标
+条件二：计数达标（各类别 P 计数满足 quality-gates.md T6 计数要求）
   P1 问题数  ✓/✗
   安全 P2 问题数  ✓/✗
   可靠性 P2 问题数  ✓/✗
@@ -428,9 +339,9 @@ Checkpoint（已修复 {N} 个问题）
 
 | 维度 | 初始 | 最终 | 目标 | 状态 |
 |------|------|------|------|------|
-| 安全性 | {初始}/10 | {最终}/10 | ≥9/10 | 达标/未达标 |
-| 可靠性 | {初始}/10 | {最终}/10 | ≥8/10 | 达标/未达标 |
-| 可维护性 | {初始}/10 | {最终}/10 | ≥8/10 | 达标/未达标 |
+| 安全性 | {初始}/10 | {最终}/10 | {阈值见 quality-gates.md T6 行} | 达标/未达标 |
+| 可靠性 | {初始}/10 | {最终}/10 | {阈值见 quality-gates.md T6 行} | 达标/未达标 |
+| 可维护性 | {初始}/10 | {最终}/10 | {阈值见 quality-gates.md T6 行} | 达标/未达标 |
 
 **迭代轮次**：{N}
 **修复问题数**：{N}（P1:{N} P2:{N} P3:{N}）

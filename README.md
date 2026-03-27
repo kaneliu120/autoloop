@@ -89,7 +89,7 @@ AutoLoop 将：
 2. 并行调度 8 个 researcher subagents
 3. 交叉验证矛盾信息
 4. 计算覆盖率/可信度/一致性/完整性
-5. 迭代 2-3 轮直到全部 ≥ 85%
+5. 迭代 2-3 轮直到全部达标（阈值见 protocols/quality-gates.md T1 行）
 6. 输出带证据的推荐报告
 
 ---
@@ -177,7 +177,7 @@ OBSERVE → ORIENT → DECIDE → ACT → VERIFY → SYNTHESIZE → EVOLVE → R
 ### 质量门禁数字化
 
 所有门禁是数字，不是"感觉好了"（精确阈值见 `protocols/quality-gates.md`）：
-- 一致性 87.5%（未达标，阈值 ≥ 90%）
+- 一致性 87.5%（非规范性示例，具体阈值见 protocols/quality-gates.md）
 - 安全得分 9.2/10（达标，不是"安全性良好"）
 
 ### 阻塞点设计
