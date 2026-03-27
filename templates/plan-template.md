@@ -69,35 +69,36 @@
 - naming_pattern：{文件命名规则，如 {template_name}-{index}.md}
 
 **T5 Deliver**：
+- project_type：{backend-api / fullstack / frontend-only / script / data-pipeline / library}（枚举值和激活矩阵见 protocols/loop-protocol.md）
 - 功能描述：{详细需求}
 - 代码库路径：{绝对路径}
 - 新增路由：{是/否}，路由前缀：{前缀}
 - new_router_name：{本次新增的 router 变量名，如 comments_router}
 - main_entry_file：{主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
 - 数据库变更：{是/否}，变更内容：{描述}
-- syntax_check_cmd：{语法检查命令，如 python3 -m py_compile {file}}
+- syntax_check_cmd：{语法检查裸命令，如 python3 -m py_compile 或 npx tsc --noEmit，不含文件参数占位符；文件参数由 syntax_check_file_arg 控制}
 - syntax_check_file_arg：{true/false，语法检查命令是否接受单文件参数；python3 -m py_compile → true，npx tsc --noEmit → false}
 - deploy_target：{部署目标主机/环境，如 prod-server}
 - deploy_command：{完整部署执行命令，如 gcloud compute ssh ... --command="cd /opt/sip && git pull && sudo bash deploy.sh"}
 - service_list：{服务名称列表，如 [backend-api, worker, scheduler, frontend]；不适用则填 N/A}
-- service_count：{自动计算，= len(service_list)；service_list=N/A 时填 0}
+- service_count：{自动计算，= len(service_list)；service_list = N/A 时此项也 N/A}（与 protocols/loop-protocol.md 统一参数词汇表一致）
 - health_check_url：{健康检查 URL，如 https://example.com/api/health；不适用则留空}
 - acceptance_url：{线上验收 URL，如 https://example.com}
 - doc_output_path：{方案文档输出目录绝对路径}
 
 **T6 Quality**：
+- project_type：{backend-api / fullstack / frontend-only / script / data-pipeline / library}（枚举值和激活矩阵见 protocols/loop-protocol.md）
 - 代码库路径：{绝对路径}
-- main_entry_file：{主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
 - 审查模块：{模块列表 / 全量}
-- syntax_check_cmd：{语法检查命令，如 python3 -m py_compile {file}}
+- syntax_check_cmd：{语法检查裸命令，如 python3 -m py_compile 或 npx tsc --noEmit，不含文件参数占位符；文件参数由 syntax_check_file_arg 控制}
 - syntax_check_file_arg：{true/false，语法检查命令是否接受单文件参数}
 - 已知问题：{描述 / 无}
 - 特殊约束：{约束 / 无}
 
 **T7 Optimize**：
+- project_type：{backend-api / fullstack / frontend-only / script / data-pipeline / library}（枚举值和激活矩阵见 protocols/loop-protocol.md）
 - 系统路径：{绝对路径}
-- main_entry_file：{主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
-- syntax_check_cmd：{语法检查命令，如 python3 -m py_compile {file}}
+- syntax_check_cmd：{语法检查裸命令，如 python3 -m py_compile 或 npx tsc --noEmit，不含文件参数占位符；文件参数由 syntax_check_file_arg 控制}
 - syntax_check_file_arg：{true/false，语法检查命令是否接受单文件参数}
 - 当前性能：{指标：值}
 - 优先方向：{全部 / 架构 / 性能 / 稳定性}

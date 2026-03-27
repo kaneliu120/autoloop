@@ -184,6 +184,12 @@ description: >
 ```
 交付配置：
 
+0. 项目类型（project_type）：
+   {backend-api / fullstack / frontend-only / script / data-pipeline / library}
+   枚举值见 protocols/loop-protocol.md project_type 枚举。
+   此项决定后续哪些变量为必填、哪些可填 N/A（见激活矩阵）。
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
+
 1. 功能需求（详细描述）：
    {用户输入}
 
@@ -261,6 +267,12 @@ description: >
 ```
 质量审查配置：
 
+0. 项目类型（project_type）：
+   {backend-api / fullstack / frontend-only / script / data-pipeline / library}
+   枚举值见 protocols/loop-protocol.md project_type 枚举。
+   此项决定后续哪些变量为必填、哪些可填 N/A（见激活矩阵）。
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
+
 1. 代码库路径：{绝对路径}
 
 2. 重点审查模块（留空则全部审查）：
@@ -291,6 +303,12 @@ description: >
 ### T7 Optimize — 优化配置
 ```
 优化配置：
+
+0. 项目类型（project_type）：
+   {backend-api / fullstack / frontend-only / script / data-pipeline / library}
+   枚举值见 protocols/loop-protocol.md project_type 枚举。
+   此项决定后续哪些变量为必填、哪些可填 N/A（见激活矩阵）。
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 1. 系统路径：{绝对路径}
 
@@ -402,7 +420,10 @@ T2 的 key_assumptions 必须以结构化列表记录，格式：
   - 假设名称：{名称}，当前值：{数值}，单位：{单位}
 （敏感性分析计算方法见 protocols/quality-gates.md T2敏感性分析章节）
 
-T5/T6/T7 的所有规范变量名（deploy_target / deploy_command / service_list / service_count /
+T5/T6/T7 必须首先填写 project_type（枚举值见 protocols/loop-protocol.md），
+后续变量的必填/可选由 project_type 激活矩阵决定。
+
+T5/T6/T7 的所有规范变量名（project_type / deploy_target / deploy_command / service_list / service_count /
 health_check_url / acceptance_url / doc_output_path / syntax_check_cmd / syntax_check_file_arg /
 new_router_name / main_entry_file）均见 protocols/loop-protocol.md 统一参数词汇表，不得使用
 同义词或自造变量名。

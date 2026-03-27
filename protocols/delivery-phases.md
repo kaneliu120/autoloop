@@ -130,7 +130,7 @@
 
 ### 质量门禁
 - [ ] 所有修改文件语法验证通过（`{syntax_check_cmd}`，零错误）
-- [ ] 新路由已在主入口文件注册（`grep -n "{new_router_name}" {main_entry_file}`）
+- [ ] [L1] 新路由已在主入口文件注册（`grep -n "{new_router_name}" {main_entry_file}`）（L1 近似检查，已知局限见 protocols/quality-gates.md 验证层级章节）
 - [ ] 新文件已在模块导出文件声明
 - [ ] 迁移脚本有 downgrade 实现
 - [ ] 无静默失败（空 catch/except）/ 无类型逃逸（`any` / `# type: ignore`）滥用
@@ -196,7 +196,8 @@ P1: {N}，P2: {N}，P3: {N}
 {syntax_check_cmd} {每个文件}        # syntax_check_file_arg=true 时附加文件参数
 # 或：{syntax_check_cmd}             # syntax_check_file_arg=false 时在项目根目录运行
 
-# 2. 路由注册验证（{new_router_name} = 本次新增的路由/模块名，在 plan 中收集）
+# 2. [L1] 路由注册验证（{new_router_name} = 本次新增的路由/模块名，在 plan 中收集）
+#    L1 近似检查，已知局限见 protocols/quality-gates.md 验证层级章节
 grep -n "{new_router_name}" {main_entry_file}
 
 # 3. 迁移状态检查（如有数据库迁移）
@@ -220,7 +221,7 @@ curl -X GET {API端点} \
 
 ### 质量门禁
 - [ ] 语法验证：全部文件通过，零错误（`{syntax_check_cmd}`）
-- [ ] 路由注册：grep 找到 `{new_router_name}` 注册语句（无新路由则 N/A）
+- [ ] [L1] 路由注册：grep 找到 `{new_router_name}` 注册语句（无新路由则 N/A）（L1 近似检查，已知局限见 protocols/quality-gates.md 验证层级章节）
 - [ ] 迁移状态检查：无冲突（无迁移则 N/A）
 - [ ] API 冒烟测试（如可执行）：HTTP 2xx
 

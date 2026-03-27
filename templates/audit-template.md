@@ -75,7 +75,7 @@
 | ID | 文件 | 问题 | 严重级别 | 修复方案 |
 |----|------|------|---------|---------|
 | M001 | {路径} | `any` 类型滥用 | P2 | 替换为具体类型 |
-| M002 | {路径} | 新路由未注册 | P1 | 在 {main_entry_file} 注册路由（按技术栈规范）|
+| M002 | {路径} | 模块导出/注册不完整 | P1 | 在主入口文件补齐导出/注册（按技术栈规范，当 project_type ∈ {backend-api, fullstack} 时）|
 
 ### 代码质量指标（修复后）
 
@@ -137,9 +137,10 @@
 # 可靠性验证（按 enterprise-standard.md 可靠性检测命令执行，针对实际技术栈）
 # 可维护性验证（按 enterprise-standard.md 可维护性检测命令执行，针对实际技术栈）
 
-# 路由注册验证（如有新路由，使用 autoloop-plan.md 中的 new_router_name 和 main_entry_file）
-grep -n "include_router.*{new_router_name}" {main_entry_file}
-# 其他框架按 delivery-phases.md Phase 3 中的路由注册验证规则执行
+# 模块导出/注册完整性验证 [L1]（当 project_type ∈ {backend-api, fullstack} 且 main_entry_file ≠ N/A 时）
+# T6 检查已有注册是否被修复破坏（通用检查），不使用 new_router_name（T5 专属）
+# 示例：grep -n "include_router\|app.use\|router" {main_entry_file}
+# 验证层级说明见 protocols/quality-gates.md 验证层级章节
 ```
 
 ---

@@ -22,7 +22,7 @@ description: >
 
 在阶段 0 扫描前，先确认技术栈，选择对应的验证命令：
 
-所有技术栈使用 plan 中定义的 `{syntax_check_cmd}`（见 `protocols/loop-protocol.md` 统一参数词汇表）进行语法验证，按 `syntax_check_file_arg` 决定是否附加文件参数。模块导出和路由注册检查方式由 plan 的 `main_entry_file` 决定。
+所有技术栈使用 plan 中定义的 `{syntax_check_cmd}`（见 `protocols/loop-protocol.md` 统一参数词汇表）进行语法验证，按 `syntax_check_file_arg` 决定是否附加文件参数。（当 project_type ∈ {backend-api, fullstack} 且 main_entry_file ≠ N/A 时）模块导出和路由注册完整性检查基于 `main_entry_file`。
 
 如果 plan 阶段未指定验证命令，在开始扫描前向用户确认：
 "检测到技术栈：{检测结果}。将使用 {验证命令} 进行语法验证，是否正确？"
@@ -323,9 +323,10 @@ grep -rn "http://\|https://" {路径}  # 硬编码 URL
 # - syntax_check_file_arg=true：  {syntax_check_cmd} {修改的文件}
 # - syntax_check_file_arg=false： {syntax_check_cmd}（不附加文件参数）
 
-# 如果修改了路由相关文件，验证路由注册未被破坏（使用 L1 近似检查）
-# 注意：T6 自身不收集 new_router_name/main_entry_file，此检查仅当项目使用 T5 deliver
-# 且 plan 中 new_router_name ≠ N/A 时适用
+# 如果修改了路由相关文件，验证模块导出完整性（使用 [L1] 近似检查）
+# （当 project_type ∈ {backend-api, fullstack} 且 main_entry_file ≠ N/A 时）
+# 检查主入口文件中的路由/模块注册是否完整（grep 已有路由是否仍存在）
+# 注意：T6 不使用 new_router_name（T5 专属），而是通用检查已有注册是否被破坏
 
 # 语法验证（{syntax_check_cmd}）
 # 注意：语法检查 ≠ 循环依赖检测。如需检测循环依赖，使用项目特定工具。
