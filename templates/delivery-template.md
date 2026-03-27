@@ -29,19 +29,21 @@
 | {路径} | 修改 | {改什么} |
 | {路径} | 新建 | {实现什么} |
 
-### 数据库变更（当 migration_check_cmd ≠ N/A 时填写，否则删除本节）
+### 数据库变更
 
-{数据库变更SQL — 根据实际技术栈编写。如有新增表、新增列、新增索引，在此写出完整 DDL 语句（包含幂等保护，如 IF NOT EXISTS）。}
+{数据库变更内容，无则标注"不涉及"}
 
-使用 `{migration_check_cmd}` 验证迁移状态。
+### API 变更
 
-### API 变更（当 new_router_name ≠ N/A 时填写，否则删除本节）
+{API 变更内容，无则标注"不涉及"}
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | {方法} | {路径} | {说明} |
 
-### 前端变更（当 frontend_dir ≠ N/A 时填写，否则删除本节）
+### 前端变更
+
+{前端变更内容，无则标注"不涉及"}
 
 | 页面/组件 | 路径 | 改动说明 |
 |---------|------|---------|
@@ -53,25 +55,19 @@
 
 ### 核心实现
 
-{描述主要的实现方案。根据 project_type 组织内容：
-- backend-api/fullstack：数据模型 → API路由 → 业务逻辑
-- frontend-only：组件结构 → 状态管理 → API调用
-- script：入口 → 核心逻辑 → 输出处理
-- data-pipeline：数据源 → 转换逻辑 → 目标写入
-- library：公共API → 内部实现 → 导出}
+{实现方案描述}
 
-### 数据库迁移（当 migration_check_cmd ≠ N/A 时）
+### 数据库迁移
 
-{迁移方案：新表/列/索引，迁移文件组织，回滚支持。}
-使用 `{migration_check_cmd}` 验证迁移状态。
+{迁移方案描述，无则标注"不涉及"}
 
-### 路由注册（当 new_router_name ≠ N/A 时）
+### 路由注册
 
-在 `{main_entry_file}` 注册 `{new_router_name}`。
+{路由注册描述，无则标注"不涉及"}
 
-### 前端实现（当 frontend_dir ≠ N/A 时）
+### 前端实现
 
-{组件结构、状态管理、API调用方式。}
+{前端实现描述，无则标注"不涉及"}
 
 ---
 
@@ -79,24 +75,21 @@
 
 **Step 0**：读取现有相关代码，确认理解现有架构
 
-**Step 1**（当 migration_check_cmd ≠ N/A 时）：创建数据库迁移脚本
-- 迁移文件包含 upgrade 和 downgrade 实现
-- 使用幂等操作防止重复执行报错
+**Step 1**：{数据库迁移，不涉及则标注"跳过"}
 
-**Step 2**：实现核心功能模块
-{根据 project_type 描述主要实现，不预设固定步骤序列}
+**Step 2**：{核心功能实现}
 
-**Step 3**（当 new_router_name ≠ N/A 时）：在 `{main_entry_file}` 注册 `{new_router_name}`
+**Step 3**：{路由注册，不涉及则标注"跳过"}
 
-**Step 4**（当 frontend_dir ≠ N/A 时）：实现前端组件（可与 Step 2 并行）
+**Step 4**：{前端实现，不涉及则标注"跳过"}
 
 **Step 5**：对所有修改文件运行语法检查（`{syntax_check_cmd}`）
 
 **Step 6**：代码审查（安全 / 可靠性 / 接口一致性），P1/P2 = 0 才可继续
 
-**Step 7**（当 deploy_command ≠ N/A 时）：提交代码并部署
+**Step 7**：{提交代码并部署，不涉及则标注"跳过"}
 
-**Step 8**：人工验收。所有 project_type 均执行人工验收。验收方式按 project_type 分流（见 `protocols/delivery-phases.md` Phase 5）。（当 acceptance_url ≠ N/A 时）包含浏览器访问线上环境。
+**Step 8**：人工验收（验收方式见 `protocols/delivery-phases.md` Phase 5）
 
 ---
 
@@ -119,34 +112,17 @@
 
 **技术验收**：
 - [ ] 所有修改文件通过语法检查（`{syntax_check_cmd}`）
-- [ ] （当 new_router_name ≠ N/A 时）[L1] 路由注册验证通过（L1 近似检查：grep 匹配，已知局限见 protocols/quality-gates.md 验证层级章节）
-- [ ] （当 migration_check_cmd ≠ N/A 时）数据库迁移状态正确
+- [ ] 路由注册验证通过（不涉及则标注 N/A）
+- [ ] 数据库迁移状态正确（不涉及则标注 N/A）
 - [ ] 代码审查 P1/P2 = 0
-- [ ] （当 health_check_url ≠ N/A 时）Health check 返回 200
-- [ ] （当 service_list ≠ N/A 时）所有服务全部 active
+- [ ] Health check 返回 200（不涉及则标注 N/A）
+- [ ] 所有服务全部 active（不涉及则标注 N/A）
 
-**线上验收**（根据 project_type 选择对应验收方式）：
-
-（当 project_type ∈ {backend-api, fullstack, frontend-only} 时）：
-- [ ] 浏览器（桌面）功能正常
-- [ ] 浏览器（手机）布局正常
-- [ ] Console 零红色错误
+**线上验收**（验收方式由 command 根据 project_type 填充，规则见 `protocols/delivery-phases.md` Phase 5）：
+- [ ] {验收项 1}
+- [ ] {验收项 2}
+- [ ] {验收项 3}
 - [ ] 现有功能无回归
-
-（当 project_type = script 时）：
-- [ ] CLI 执行输出符合预期
-- [ ] 错误输入有合理报错
-- [ ] 现有功能无回归
-
-（当 project_type = data-pipeline 时）：
-- [ ] 批处理结果正确（抽样验证）
-- [ ] 日志无异常错误
-- [ ] 现有管线无回归
-
-（当 project_type = library 时）：
-- [ ] import/require 验证通过
-- [ ] 公共 API 调用结果正确
-- [ ] 现有导出无回归
 
 ---
 
@@ -154,33 +130,18 @@
 
 **触发条件**：部署后发现严重 Bug，影响生产
 
-**回滚步骤**（根据 project_type 选择对应方案）：
+**回滚步骤**：
 
-（当 project_type ∈ {backend-api, fullstack, frontend-only, data-pipeline} 且 deploy_command ≠ N/A 时）：
 ```bash
 # 1. Git 回滚
 git revert {commit_hash}
 git push origin main
 
-# 2. 线上重新部署（deploy_command 来自 autoloop-plan.md）
+# 2. 重新部署（不涉及则跳过）
 {deploy_command}
 
-# 3. 数据库回滚（如有迁移，使用项目实际的迁移工具执行 downgrade）
-# 具体命令参见附录技术栈示例
-```
-
-（当 project_type = script 时）：
-```bash
-# 1. Git 回滚
-git revert {commit_hash}
-# 无需重新部署，脚本下次运行自动使用新版本
-```
-
-（当 project_type = library 时）：
-```bash
-# 1. Git 回滚
-git revert {commit_hash}
-# 2. 如已发布：撤回发布版本（npm unpublish / pypi yank）或发布修复版本
+# 3. 数据库回滚（不涉及则跳过）
+{数据库回滚命令}
 ```
 
 **回滚预计耗时**：{N} 分钟
