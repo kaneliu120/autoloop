@@ -274,7 +274,7 @@ REFLECT（反思）
 | `autoloop-plan.md` | 任务计划：目标、类型、范围、质量门禁、预算 | 任务开始时创建，范围变更时更新 |
 | `autoloop-progress.md` | 进度追踪：每轮开始/结束记录，得分变化 | 每轮开始和结束各更新一次 |
 | `autoloop-findings.md` | 发现记录：调研结果、问题清单、修复记录 | 每个 subagent 返回后追加 |
-| `autoloop-results.tsv` | 结构化迭代日志：所有模板每轮写入一行，格式见 `protocols/loop-protocol.md` 统一 TSV Schema 章节 | 所有模板，任务开始后创建 |
+| `autoloop-results.tsv` | 结构化迭代日志：按模板粒度写入，见 `protocols/loop-protocol.md` 统一 TSV Schema 章节 | 所有模板，任务开始后创建 |
 
 ---
 

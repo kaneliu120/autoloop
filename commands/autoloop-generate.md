@@ -92,11 +92,11 @@ description: >
 
 ```tsv
 （TSV 格式见 protocols/loop-protocol.md 统一 TSV Schema）
-001	generate	pending	score	—	—	—	待生成
-002	generate	pending	score	—	—	—	待生成
+001	generate	pending	score	—	—	—	unit_id=001;quality=待生成
+002	generate	pending	score	—	—	—	unit_id=002;quality=待生成
 ```
 
-变量数据写入 `autoloop-findings.md`，不进 TSV。TSV 的 details 列仅记录状态摘要（如"重试1次后通过"），不记录变量键值对。
+变量数据写入 `autoloop-findings.md`，不进 TSV。TSV 的 details 列使用 `key=value;key=value` 格式（如 `unit_id=001;quality=通过` 或 `unit_id=002;quality=重生成;retry=1`），不记录变量键值对。
 
 ---
 

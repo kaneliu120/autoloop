@@ -209,7 +209,7 @@ grep -rn "from typing import.*Any\|: Any\b" {路径}
 # type: ignore 检测
 grep -rn "# type: ignore" {路径}
 
-# [L1] 入口注册检测（main.py）（L1 近似检查，已知局限见 quality-gates.md 验证层级章节）
+# [L1] 入口注册检测（main.py）（L1 近似检查，已知局限见 protocols/quality-gates.md 验证层级章节）
 grep -n "include_router" {main.py路径}
 
 # __init__.py 导出检测
@@ -231,7 +231,7 @@ grep -rn ": any\b\|<any>\|as any" {路径}
 # ts-ignore 检测
 grep -rn "@ts-ignore\|@ts-expect-error" {路径}
 
-# [L1] 入口注册检测（L1 近似检查，已知局限见 quality-gates.md 验证层级章节）
+# [L1] 入口注册检测（L1 近似检查，已知局限见 protocols/quality-gates.md 验证层级章节）
 grep -n "import\|require" {main_entry_file}
 
 # 硬编码 URL 检测
