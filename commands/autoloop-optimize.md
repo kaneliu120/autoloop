@@ -16,6 +16,28 @@ description: >
 - 当前性能指标（如果有）
 - 优先优化方向（全部/指定方向）
 - 不可修改的部分（API 接口、数据库 schema 等）
+- 验证命令（`syntax_check_cmd`、`syntax_check_file_arg`，变量名见 `protocols/loop-protocol.md` 统一参数词汇表）
+
+**Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再制定本轮优化计划。详见 `protocols/loop-protocol.md` OBSERVE Step 0 章节。
+
+---
+
+## 每轮 OBSERVE 执行规范（Round 2+ 强制）
+
+每轮优化开始前，在执行任何诊断或修复行动之前，必须先完成 OBSERVE Step 0：
+
+```
+OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
+  读取 autoloop-findings.md 的反思章节（4层结构表）
+  获取：
+  - 问题清单：上轮遗留未修复的问题，哪些已修复但效果不佳
+  - 策略评估：上轮"保持"策略（本轮优先使用）、"避免"策略（本轮排除）
+  - 模式识别：反复出现的问题类型（架构级根因，优先处理）
+  - 经验教训：哪类优化最有效、哪些验证步骤能发现最多问题
+
+  完成后再扫描当前系统状态并制定本轮优化策略
+  （完整规范见 protocols/loop-protocol.md OBSERVE Step 0 章节）
+```
 
 ---
 
@@ -269,11 +291,11 @@ description: >
 - 不改变数据库 schema（除非方案中明确说明）
 - 修改后必须通过语法验证（使用 autoloop-plan.md 中的 {syntax_check_cmd}）
 
-### 技术栈适配（验证命令）
-根据实际技术栈选择对应的验证：
-- Python/FastAPI: python3 -m py_compile {file}（单文件，syntax_check_file_arg=true）
-- TypeScript/Node.js: npx tsc --noEmit（项目级，syntax_check_file_arg=false，不附加文件参数）
-- 其他: {syntax_check_cmd}，按 syntax_check_file_arg 决定是否附加文件名
+### 语法验证命令（来自 autoloop-plan.md）
+使用 plan 阶段收集的 `syntax_check_cmd` 和 `syntax_check_file_arg`（变量名见 `protocols/loop-protocol.md` 统一参数词汇表）：
+- `syntax_check_file_arg=true`：`{syntax_check_cmd} {修改的文件}`
+- `syntax_check_file_arg=false`：`{syntax_check_cmd}`（不附加文件参数）
+- 不同技术栈对应的默认值由 plan 阶段收集，不在此处硬编码
 
 执行步骤：
 1. 读取相关文件（读全，不要猜）
@@ -429,11 +451,13 @@ Checkpoint（已完成 {N} 个修复）
 
 ## 终止条件
 
+达标判定见 `protocols/quality-gates.md` T7 行。
+
 ```
-全部达标：
-  架构 {N}/10 ≥ 8 ✓
-  性能 {N}/10 ≥ 8 ✓
-  稳定性 {N}/10 ≥ 8 ✓
+全部达标（目标值以 quality-gates.md T7 行为准）：
+  架构 {N}/10 ≥ 目标 ✓
+  性能 {N}/10 ≥ 目标 ✓
+  稳定性 {N}/10 ≥ 目标 ✓
 
 → 终止，生成优化报告
 ```
@@ -442,16 +466,14 @@ Checkpoint（已完成 {N} 个修复）
 
 ## 每轮 REFLECT 执行规范
 
-每个 checkpoint（5 个修复后）完成后，在 EVOLVE 判断之后执行：
+每个 checkpoint（5 个修复后）完成后，在 EVOLVE 判断之后执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `protocols/loop-protocol.md` REFLECT 章节）：
 
-```
-REFLECT:
-- 问题登记: 记录本轮发现的代码问题、修复是否引入新问题、审查遗漏
-- 策略复盘: 修复策略/审查方法/验证命令的效果评估（保持/避免）
-- 模式识别: 反复出现的代码问题类型（说明有架构级根因）、修复→新问题的因果链
-- 经验教训: 哪类修复最有效、哪些验证步骤能发现最多问题
-将反思结果写入 autoloop-findings.md 的反思章节
-```
+写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `templates/findings-template.md`：
+
+- **问题登记**：记录本轮发现的架构/性能/稳定性问题、修复是否引入新问题、诊断遗漏、未能修复的遗留项
+- **策略复盘**：修复策略/优化方法/验证命令的效果评估（保持/避免），实际改进量 vs 预期改进量
+- **模式识别**：反复出现的问题类型（说明有架构级根因）、修复→新问题的因果链、哪些问题有跨维度联动效应
+- **经验教训**：哪类优化最有效、哪些验证步骤能发现最多问题、架构/性能/稳定性三维度的系统性教训
 
 ---
 

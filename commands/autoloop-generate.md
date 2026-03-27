@@ -2,7 +2,8 @@
 name: autoloop-generate
 description: >
   AutoLoop T4: 批量内容生成模板。模板驱动 + 并行生成 + 逐项质量检查 + 自动重试。
-  每个生成单元独立评分，低分自动重生成（最多 2 次，遵循统一重试规则），批次整体通过率 ≥ 95%。
+  每个生成单元独立评分，低分自动重生成，重试上限见 protocols/loop-protocol.md 统一重试规则（默认2次）。
+  质量门禁阈值见 protocols/quality-gates.md T4 行。
   触发：/autoloop:generate 或任何需要批量生成同类内容的任务。
 ---
 
@@ -14,10 +15,12 @@ description: >
 - 内容类型（报告/邮件/代码/数据/文案等）
 - 变量列表（每个生成单元的变化项）
 - 数量
-- 质量标准（7/10 是最低要求，可调整）
+- 质量标准（通过标准见 `protocols/quality-gates.md` T4 行，默认平均分 ≥ 7/10）
 - 示例（至少 1 个用户认可的样本）
-- 输出位置（output_path，默认: {工作目录}/autoloop-output/）
-- 文件命名规则（naming_pattern，默认: {template_name}-{index}.md）
+- 输出位置（output_path，变量名见 `protocols/loop-protocol.md` 统一参数词汇表）
+- 文件命名规则（naming_pattern，变量名见 `protocols/loop-protocol.md` 统一参数词汇表）
+
+**Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再扫描当前状态。详见 `protocols/loop-protocol.md` OBSERVE Step 0 章节。
 
 ---
 
@@ -25,7 +28,7 @@ description: >
 
 从用户提供的示例中提取模板结构。
 
-运行 template-extractor subagent：
+运行 template-extractor subagent（调度方式见 `protocols/agent-dispatch.md` template-extractor 章节）：
 
 ```
 你是 template-extractor subagent。
@@ -44,9 +47,7 @@ description: >
 输出：
 ## 模板结构
 
-```
 {提取的模板，变量用 {{name}} 标记}
-```
 
 ## 变量定义
 
@@ -89,21 +90,21 @@ description: >
 如果变量需要推断，使用规则生成。
 如果变量需要用户提供，列出清单请用户确认。
 
-生成变量数据表（写入 autoloop-results.tsv，使用标准 schema，见 autoloop.md）：
+生成变量数据表（写入 `autoloop-results.tsv`，使用标准 schema，见 `commands/autoloop.md` 标准 TSV Schema）：
 
-```tsv
-iteration	phase	status	metric_name	metric_value	delta	details
-001	generate	pending	score	—	—	变量: {variable_1}={值}, {variable_2}={值}
-002	generate	pending	score	—	—	变量: {variable_1}={值}, {variable_2}={值}
+```
+iteration    phase       status     metric_name    metric_value    delta    details
+001          generate    pending    score          —               —        变量: {variable_1}={值}, {variable_2}={值}
+002          generate    pending    score          —               —        变量: {variable_1}={值}, {variable_2}={值}
 ```
 
-变量的完整取值记录到 autoloop-findings.md，不放在 results.tsv。
+变量的完整取值记录到 `autoloop-findings.md`，不放在 results.tsv。
 
 ---
 
 ## 第三步：并行批量生成
 
-将所有生成单元分配给 generator subagents，并行执行。
+将所有生成单元分配给 generator subagents，并行执行（调度规范见 `protocols/agent-dispatch.md`）。
 
 每批并行数量：最多 5 个（防止输出质量因并行过多下降）。
 
@@ -152,7 +153,7 @@ iteration	phase	status	metric_name	metric_value	delta	details
 
 ## 第四步：逐项质量评分
 
-每个单元生成完成后，运行独立的 quality-checker subagent：
+每个单元生成完成后，运行独立的 quality-checker subagent（调度方式见 `protocols/agent-dispatch.md` quality-checker 章节）：
 
 ```
 你是 quality-checker subagent，对以下生成内容进行独立质量评分。
@@ -185,9 +186,7 @@ iteration	phase	status	metric_name	metric_value	delta	details
 
 ## 重试机制
 
-重试上限遵循 protocols/loop-protocol.md 统一重试规则（默认 2 次）。对于评分 < 7/10 的单元，触发重试：
-
-**重试策略**：
+重试上限见 `protocols/loop-protocol.md` 统一重试规则（默认 2 次）。对于评分 < 7/10 的单元，触发重试：
 
 **第 1 次重试**：
 - 将 quality-checker 的问题反馈给 generator
@@ -210,14 +209,14 @@ iteration	phase	status	metric_name	metric_value	delta	details
 
 ## 批次进度追踪
 
-实时更新 autoloop-results.tsv（使用标准 schema，见 autoloop.md）：
+实时更新 `autoloop-results.tsv`（使用标准 schema，见 `commands/autoloop.md` 标准 TSV Schema）：
 
-```tsv
-iteration	phase	status	metric_name	metric_value	delta	details
-001	generate	pass	score	8.5	—	重试0次
-002	generate	pass	score	7.2	—	重试1次: 第一次生成语调不对
-003	generate	review	score	6.0	—	重试2次仍未达标: 变量信息不足
-004	generate	pending	score	—	—	生成中
+```
+iteration    phase       status    metric_name    metric_value    delta    details
+001          generate    pass      score          8.5             —        重试0次
+002          generate    pass      score          7.2             —        重试1次: 第一次生成语调不对
+003          generate    review    score          6.0             —        重试2次仍未达标: 变量信息不足
+004          generate    pending   score          —               —        生成中
 ```
 
 每完成 10% 输出进度：
@@ -235,7 +234,7 @@ iteration	phase	status	metric_name	metric_value	delta	details
 
 ## 最终汇总
 
-所有单元完成后，生成汇总报告：
+所有单元完成后，生成汇总报告（文件名见 `commands/autoloop.md` 最终输出文件命名规则）：
 
 ```markdown
 ## 批量生成完成报告
@@ -249,8 +248,8 @@ iteration	phase	status	metric_name	metric_value	delta	details
 | 需人工审查 | {N} | {%} |
 | **总计** | {总N} | 100% |
 
-通过率：{X}%（目标：95%）
-平均得分：{X}/10
+通过率：{X}%（目标阈值见 protocols/quality-gates.md T4 通过率章节）
+平均得分：{X}/10（目标阈值见 protocols/quality-gates.md T4 平均分章节）
 
 ### 质量分布
 
@@ -275,23 +274,21 @@ iteration	phase	status	metric_name	metric_value	delta	details
 
 ### 输出文件
 
-所有通过的内容已写入：{输出文件路径}
+所有通过的内容已写入：{output_path}（来自 autoloop-plan.md，变量名见 protocols/loop-protocol.md）
 ```
 
 ---
 
 ## 每轮 REFLECT 执行规范
 
-每批生成完成（或每完成 25% 进度）后执行：
+每批生成完成（或每完成 25% 进度）后执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `protocols/loop-protocol.md` REFLECT 章节）：
 
-```
-REFLECT:
-- 问题登记: 记录本批发现的模板缺陷、变量数据问题、质量评分异常
-- 策略复盘: 生成策略/模板参数/质量标准的效果评估（保持/避免）
-- 模式识别: 哪类变量值容易导致低分、哪些质量标准是瓶颈
-- 经验教训: 模板优化/生成提示词/质量评估方法的有效性总结
-将反思结果写入 autoloop-findings.md 的反思章节
-```
+写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `templates/findings-template.md`：
+
+- **问题登记**：记录本批发现的模板缺陷、变量数据问题、质量评分异常
+- **策略复盘**：生成策略/模板参数/质量标准的效果评估（保持/避免）
+- **模式识别**：哪类变量值容易导致低分、哪些质量标准是瓶颈
+- **经验教训**：模板优化/生成提示词/质量评估方法的有效性总结
 
 ---
 
@@ -304,4 +301,4 @@ REFLECT:
 - **结构化数据**：TSV 或 JSON
 - **邮件**：每封邮件独立 Markdown，包含 Subject / Body / Variables
 
-所有输出文件写入 `{output_path}`（来自 `autoloop-plan.md` 的 `output_path` 字段，默认：`{工作目录}/autoloop-output/`）。不使用 `./output/` 相对路径。
+所有输出文件写入 `{output_path}`（来自 `autoloop-plan.md` 的 `output_path` 字段，变量名见 `protocols/loop-protocol.md` 统一参数词汇表）。不使用 `./output/` 相对路径。

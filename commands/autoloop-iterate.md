@@ -3,6 +3,7 @@ name: autoloop-iterate
 description: >
   AutoLoop T3: 目标驱动迭代模板。定义 KPI 和基线，每轮改进后重新测量，
   直到 KPI 达标或达到最大轮次。支持人工反馈介入。
+  质量门禁阈值见 protocols/quality-gates.md T3 行。
   触发：/autoloop:iterate 或任何需要反复改进直到达标的任务。
 ---
 
@@ -18,6 +19,8 @@ description: >
 - 最大轮次
 
 如果 KPI 定义不清晰（"质量更好"而不是"错误率 < 0.5%"），先帮用户将其量化。
+
+**Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再扫描当前状态。详见 `protocols/loop-protocol.md` OBSERVE Step 0 章节。
 
 ---
 
@@ -37,7 +40,7 @@ description: >
 
 ## 第 0 步：基线测量（只执行一次）
 
-在任何改动之前，测量当前状态：
+在任何改动之前，测量当前状态，写入 `autoloop-progress.md` 的"基线"部分（格式见 `protocols/loop-protocol.md` 第1轮 Bootstrap 规则）：
 
 ```
 基线测量报告：
@@ -50,8 +53,6 @@ KPI 指标：{指标名}
 达标难度估计：{低/中/高}（基于差距和已知改进空间）
 ```
 
-写入 autoloop-progress.md 的"基线"部分。
-
 ---
 
 ## 每轮执行流程
@@ -59,6 +60,10 @@ KPI 指标：{指标名}
 ### OBSERVE：差距分析
 
 ```
+读取 autoloop-findings.md 的反思章节（Round 2+ 必执行）
+获取遗留问题、有效/无效策略、已识别模式、经验教训
+（Step 0 规范见 protocols/loop-protocol.md OBSERVE Step 0 章节）
+
 当前 KPI：{值} / 目标：{值} / 差距：{量}
 已消耗轮次：{N} / {最大}
 本轮可用预算：充裕 / 有限 / 告急
@@ -106,9 +111,11 @@ KPI 指标：{指标名}
 - 如果否，执行顺序：{1 先 / 2 先}
 ```
 
+并行/串行判断规则见 `protocols/agent-dispatch.md`。
+
 ### ACT：执行改进
 
-分配 subagent 执行改进。每个 subagent 必须收到：
+分配 subagent 执行改进（调度规范见 `protocols/agent-dispatch.md`）。每个 subagent 必须收到：
 
 ```
 你是 {类型} subagent，负责以下改进任务：
@@ -140,7 +147,7 @@ KPI 指标：{指标名}
 
 ### VERIFY：重新测量
 
-所有 subagent 完成后，重新运行测量：
+KPI 门禁定义见 `protocols/quality-gates.md` T3 KPI Target 章节。
 
 ```
 改进后 KPI 测量：
@@ -162,9 +169,10 @@ KPI 指标：{指标名}
 
 ## 人工反馈介入点
 
-在以下情况主动暂停，请求用户反馈：
+在以下情况主动暂停，请求用户反馈（状态机进入 AWAIT_USER，见 `protocols/loop-protocol.md` 状态机章节）：
 
 **情况 1：KPI 改进但体验变差**
+
 ```
 检测到潜在问题：
   KPI {指标} 从 {X} 改善到 {Y}（↑）
@@ -174,6 +182,7 @@ KPI 指标：{指标名}
 ```
 
 **情况 2：发现根本性问题**
+
 ```
 发现根本性问题，需要决策：
 
@@ -189,6 +198,7 @@ KPI 指标：{指标名}
 ```
 
 **情况 3：连续无进展**
+
 ```
 连续 {N} 轮改进幅度 < 5%：
 
@@ -228,7 +238,7 @@ git status
 # 步骤 2：如有脏文件，先暂存
 git stash  # 仅在 git status 显示非预期文件时执行
 
-# 步骤 3：用 git revert 回滚（保留完整历史，不使用 git checkout）
+# 步骤 3：用 git revert 回滚（保留完整历史）
 git revert {commit_hash}
 
 # 步骤 4：恢复暂存的工作（如步骤 2 执行了 stash）
@@ -245,7 +255,7 @@ git stash pop
 
 ## 进度追踪
 
-每轮在 `autoloop-progress.md` 追加：
+每轮在 `autoloop-progress.md` 追加（格式见 `protocols/loop-protocol.md` 循环日志格式章节）：
 
 ```markdown
 ## 第 {N} 轮 — {时间}
@@ -268,22 +278,20 @@ git stash pop
 
 ## 每轮 REFLECT 执行规范
 
-每轮 EVOLVE 判断之后，在进入下一轮 OBSERVE 之前执行：
+每轮 EVOLVE 判断之后，在进入下一轮 OBSERVE 之前执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `protocols/loop-protocol.md` REFLECT 章节）：
 
-```
-REFLECT:
-- 问题登记: 记录本轮发现的 KPI 偏差、改进副作用、测量误差
-- 策略复盘: 本轮改进策略的效果评估 — 实际改进量 vs 预期，保持/避免
-- 模式识别: KPI 改进轨迹趋势（线性/指数/收益递减）、哪类改进最有效
-- 经验教训: 本轮对目标系统的新认知、哪些假设被验证或推翻
-将反思结果写入 autoloop-findings.md 的反思章节，下轮 OBSERVE 首先读取
-```
+写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `templates/findings-template.md`：
+
+- **问题登记**：记录本轮发现的 KPI 偏差、改进副作用、测量误差
+- **策略复盘**：本轮改进策略的效果评估 — 实际改进量 vs 预期，保持/避免
+- **模式识别**：KPI 改进轨迹趋势（线性/指数/收益递减）、哪类改进最有效
+- **经验教训**：本轮对目标系统的新认知、哪些假设被验证或推翻
 
 ---
 
 ## 最终报告
 
-达到 KPI 或最大轮次后，输出：
+达到 KPI 或最大轮次后，输出（文件名见 `commands/autoloop.md` 最终输出文件命名规则）：
 
 ```markdown
 # AutoLoop Iterate — 迭代结果

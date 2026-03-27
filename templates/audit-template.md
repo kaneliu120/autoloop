@@ -28,7 +28,7 @@
 
 | ID | 文件 | 问题 | 严重级别 | 修复方案 | 验证 |
 |----|------|------|---------|---------|------|
-| S001 | {绝对路径} | {问题描述} | P1 | {修复方案} | py_compile 通过 |
+| S001 | {绝对路径} | {问题描述} | P1 | {修复方案} | 语法验证通过（{syntax_check_cmd}）|
 | S002 | {路径} | {问题} | P1 | {修复} | 通过 |
 
 ### 扣分项（最终状态）
@@ -75,7 +75,7 @@
 | ID | 文件 | 问题 | 严重级别 | 修复方案 |
 |----|------|------|---------|---------|
 | M001 | {路径} | `any` 类型滥用 | P2 | 替换为具体类型 |
-| M002 | {路径} | 新路由未注册 | P1 | 在 main.py 添加 include_router |
+| M002 | {路径} | 新路由未注册 | P1 | 在 {main_entry_file} 注册路由（按技术栈规范）|
 
 ### 代码质量指标（修复后）
 
@@ -122,30 +122,24 @@
 
 ---
 
-## 检测命令参考（以实际技术栈为准）
+## 检测命令参考
 
-以下命令可用于验证最终状态，按实际技术栈选择对应命令：
+根据技术栈执行对应检测命令（见 `protocols/enterprise-standard.md` 中各维度的"检测命令"章节）。
+
+以下为通用结构，具体命令以 `autoloop-plan.md` 中收集的参数为准：
 
 ```bash
-# 安全性验证
-grep -rn "execute(f\|execute(\".*{" {路径}  # Python/SQL 注入检查，应该无结果
-grep -rn "subprocess\|os.system" {路径}  # 命令注入检查
-grep -rn "except.*pass" {路径}  # 静默失败检查，应该无结果
-
-# 可靠性验证
-grep -rn "except:" {路径}  # 检查 bare except（Python）
-grep -rn "httpx\|aiohttp\|requests\." {路径}  # Python HTTP 调用覆盖检查
-grep -rn "fetch\|axios\|got\b" {路径}  # Node.js HTTP 调用覆盖检查
-
-# 可维护性验证（按技术栈选择）
-grep -rn ": any\b\|<any>" {路径}          # TypeScript any
-grep -rn "from typing import.*Any\|: Any\b" {路径}  # Python Any
-grep -n "include_router" {main_entry_file}  # Python/FastAPI 路由注册
-grep -rn "app\.use\|app\.route\|router\." {main_entry_file}  # Node.js 路由注册
-
 # 语法验证（使用 autoloop-plan.md 中的 syntax_check_cmd）
 # syntax_check_file_arg=true:  {syntax_check_cmd} {每个修改文件}
 # syntax_check_file_arg=false: {syntax_check_cmd}（项目级，不附加文件名）
+
+# 安全性验证（按 enterprise-standard.md 安全性检测命令执行，针对实际技术栈）
+# 可靠性验证（按 enterprise-standard.md 可靠性检测命令执行，针对实际技术栈）
+# 可维护性验证（按 enterprise-standard.md 可维护性检测命令执行，针对实际技术栈）
+
+# 路由注册验证（如有新路由，使用 autoloop-plan.md 中的 new_router_name 和 main_entry_file）
+grep -n "include_router.*{new_router_name}" {main_entry_file}
+# 其他框架按 delivery-phases.md Phase 3 中的路由注册验证规则执行
 ```
 
 ---

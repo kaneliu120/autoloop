@@ -116,22 +116,21 @@
 
 **1a. 数据库迁移（最先，其他开发依赖）**：
 - db-migrator subagent
-- 创建 Alembic 迁移脚本
-- upgrade() + downgrade() 都实现
-- 验证脚本语法（py_compile）
+- 创建迁移脚本（upgrade + downgrade 都实现）
+- 验证脚本语法（`{syntax_check_cmd}`）
 
 **1b. 后端开发（数据库迁移完成后）**：
 - backend-dev subagent
 - 按方案逐一实现后端功能
-- 每个文件修改后立即运行 `{syntax_check_cmd}`（按 `syntax_check_file_arg` 决定是否附加文件参数）验证
-- 新路由在 `{main_entry_file}` 注册（Python: `include_router`；TypeScript: 按框架规范；其他: 按项目规范）
-- 新文件在模块导出文件中声明（Python: `__init__.py`；TypeScript: `index.ts` barrel export；其他: 按项目规范）
+- 每个文件修改后立即运行 `{syntax_check_cmd}` 验证（按 `syntax_check_file_arg` 决定是否附加文件参数）
+- 新路由在 `{main_entry_file}` 注册（按项目技术栈规范）
+- 新文件在模块导出文件中声明（按项目技术栈规范）
 
 **1c. 前端开发（可与 1b 并行，如果不依赖后端接口变化）**：
 - frontend-dev subagent
-- TypeScript 类型正确
-- API 调用通过 /api/* 代理
-- 每个文件修改后 tsc --noEmit 验证
+- 类型标注正确，无 `any` 滥用
+- API 调用通过代理层（不直接暴露后端地址）
+- 每个文件修改后立即运行前端语法验证（`{syntax_check_cmd}`）
 
 ### 输出
 - 所有修改/新建的文件（绝对路径列表）
@@ -139,15 +138,14 @@
 - `{main_entry_file}` 路由注册状态
 
 ### 质量门禁
-- [ ] 所有 Python 文件 py_compile 通过（零错误）
-- [ ] 所有 TypeScript 文件 tsc --noEmit 通过（零错误）
-- [ ] 新路由已在主入口注册（`grep -n "include_router.*{new_router_name}" {main_entry_file}`）
-- [ ] 新文件已在 __init__.py 导出
-- [ ] Alembic 迁移有 downgrade() 实现
-- [ ] 无 `except: pass` / `# type: ignore` / `any` 滥用
+- [ ] 所有修改文件语法验证通过（`{syntax_check_cmd}`，零错误）
+- [ ] 新路由已在主入口文件注册（`grep -n "{new_router_name}" {main_entry_file}`）
+- [ ] 新文件已在模块导出文件声明
+- [ ] 迁移脚本有 downgrade 实现
+- [ ] 无静默失败（空 catch/except）/ 无类型逃逸（`any` / `# type: ignore`）滥用
 
 ### 阻塞条件
-任何文件 py_compile / tsc 失败 → 修复后重验证，不进入 Phase 2
+任何文件语法验证失败 → 修复后重验证，不进入 Phase 2
 
 ---
 
@@ -203,17 +201,16 @@ P1: {N}，P2: {N}，P3: {N}
 **必须执行的验证**：
 
 ```bash
-# 1. Python 语法检查（所有修改文件）
-python3 -m py_compile {每个文件}
+# 1. 语法检查（所有修改文件）
+{syntax_check_cmd} {每个文件}        # syntax_check_file_arg=true 时附加文件参数
+# 或：{syntax_check_cmd}             # syntax_check_file_arg=false 时在项目根目录运行
 
-# 2. TypeScript 类型检查（如有前端修改）
-cd {前端目录} && npx tsc --noEmit
+# 2. 路由注册验证（{new_router_name} = 本次新增的路由/模块名，在 plan 中收集）
+grep -n "{new_router_name}" {main_entry_file}
 
-# 3. 路由注册验证（{new_router_name} = 本次新增的 router 变量名，在 plan 中收集）
-grep -n "include_router.*{new_router_name}" {main_entry_file}
-
-# 4. Alembic 状态检查（如有数据库迁移）
-cd {项目根目录} && python -m alembic check
+# 3. 迁移状态检查（如有数据库迁移）
+{migration_check_cmd}
+# 示例：python -m alembic check（Python）；npx drizzle-kit check（Node.js）
 ```
 
 **按条件执行**：
@@ -221,7 +218,7 @@ cd {项目根目录} && python -m alembic check
 ```bash
 # 如果后端服务正在运行，执行 API 冒烟测试
 curl -X GET {API端点} \
-  -H "X-API-Key: {测试Key}" \
+  -H "{auth_header}: {测试Key}" \
   -H "Content-Type: application/json"
 
 # 期望：HTTP 200，响应格式与设计一致
@@ -231,10 +228,9 @@ curl -X GET {API端点} \
 每步验证结果（命令 + 输出 + 状态）
 
 ### 质量门禁
-- [ ] py_compile：全部文件通过，零错误
-- [ ] tsc --noEmit：通过，零错误
-- [ ] 路由注册：grep 找到注册语句
-- [ ] Alembic check：无冲突
+- [ ] 语法验证：全部文件通过，零错误（`{syntax_check_cmd}`）
+- [ ] 路由注册：grep 找到 `{new_router_name}` 注册语句（无新路由则 N/A）
+- [ ] 迁移状态检查：无冲突（无迁移则 N/A）
 - [ ] API 冒烟测试（如可执行）：HTTP 2xx
 
 ### 阻塞条件

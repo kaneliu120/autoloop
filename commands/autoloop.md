@@ -85,9 +85,15 @@ T7 Optimize: 系统/代码库路径（必须）、优先方向（可选）
 
 向导输出符合 `templates/plan-template.md` 规范的完整 `autoloop-plan.md` 后，自动进入 Step 5。
 
-### Step 5: 启动迭代循环
+### Step 5: Bootstrap — 创建迭代文件
 
-`/autoloop:plan` 确认计划后，**自动进入第一轮执行，不等待用户额外确认**。如果用户在计划摘要阶段提出修改，更新计划文件后再启动。
+`/autoloop:plan` 确认计划后，立即创建以下三个文件（Bootstrap 规则见 `protocols/loop-protocol.md` 第1轮 Bootstrap 规则章节）：
+
+- `autoloop-findings.md`（使用 `templates/findings-template.md`）
+- `autoloop-progress.md`（使用 `templates/progress-template.md`）
+- `autoloop-results.tsv`（使用本文件统一 TSV Schema，写入表头行）
+
+Bootstrap 完成后**自动进入第一轮执行，不等待用户额外确认**。如果用户在计划摘要阶段提出修改，更新计划文件后再启动。
 
 ---
 
@@ -103,7 +109,7 @@ T7 Optimize: 系统/代码库路径（必须）、优先方向（可选）
 - T6: `/autoloop:quality` 第一轮：三维度并行扫描
 - T7: `/autoloop:optimize` 第一轮：全面诊断
 
-每轮结束后，**必须执行 REFLECT**（所有模板通用）：写入 `autoloop-findings.md` 的反思章节，下一轮 OBSERVE 首先读取。详见 `protocols/loop-protocol.md` Phase 8。
+每轮结束后，**必须执行 REFLECT**（所有模板通用）：写入 `autoloop-findings.md` 的4层反思结构表，格式见 `templates/findings-template.md`。详见 `protocols/loop-protocol.md` REFLECT 章节。
 
 ---
 
@@ -168,7 +174,7 @@ AutoLoop 第 {N} 轮完成
 
 ---
 
-## 标准 TSV Schema（所有模板统一格式）
+## 标准 TSV Schema（所有模板统一格式，所有模板必须引用此处，不得自行重定义）
 
 所有模板写入 `autoloop-results.tsv` 时必须使用以下统一列结构：
 
@@ -195,10 +201,10 @@ iteration	phase	status	metric_name	metric_value	delta	details
 
 ## 错误处理
 
-**subagent 失败**：记录失败原因，用备用策略重试（最多 2 次），仍失败则标记该维度为"部分完成"，继续其他维度。
+**subagent 失败**：记录失败原因，用备用策略重试（重试上限见 `protocols/loop-protocol.md` 统一重试规则），仍失败则标记该维度为"部分完成"，继续其他维度。
 
 **无法获取信息**：在 findings 中注明"信息不可用"及原因，不要停止整个循环。
 
 **矛盾发现**：记录矛盾，标注置信度，向用户报告，等待人工判断。
 
-**超出预算**：不继续迭代，输出当前最优结果，告知用户哪些目标未达成。
+**超出预算**：不继续迭代，输出当前最优结果，告知用户哪些目标未达成。终止层级完整定义见 `protocols/quality-gates.md` 概述章节。
