@@ -14,7 +14,7 @@
 | health_check_url | string | 健康检查 URL（如 https://example.com/api/health）| plan | T5 | 可选 | 仅当有 HTTP 服务时 |
 | acceptance_url | string | 线上验收 URL（如 https://example.com）| plan | T5 | 可选 | 仅当有用户界面时 |
 | doc_output_path | string | 方案文档输出目录（绝对路径）| plan | T5 | 必填 | 所有 project_type |
-| syntax_check_cmd | string | 语法检查命令（如 python3 -m py_compile {file} 或 npx tsc --noEmit）| plan | T5/T6/T7 | 必填 | 所有 project_type |
+| syntax_check_cmd | string | 语法检查裸命令（如 python3 -m py_compile 或 npx tsc --noEmit），不含文件参数占位符；文件参数由 syntax_check_file_arg 控制是否追加 | plan | T5/T6/T7 | 必填 | 所有 project_type |
 | syntax_check_file_arg | boolean | 语法检查命令是否接受单文件参数（python3 -m py_compile → true；npx tsc --noEmit → false）| plan | T5/T6/T7 | 必填 | 所有 project_type |
 | new_router_name | string | 本次新增的 router 变量名（如 comments_router；无新路由填 N/A）| plan | T5 | 条件必填 | 仅当 project_type ∈ {backend-api, fullstack} 且有新路由时；否则填 N/A |
 | main_entry_file | string | 主入口文件绝对路径（如 /project/backend/main.py 或 /project/src/app.ts）| plan | T5/T6 | 条件必填 | 仅当 project_type ∈ {backend-api, fullstack} 时；其他类型可填项目主文件或 N/A |

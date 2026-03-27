@@ -119,17 +119,34 @@
 
 **技术验收**：
 - [ ] 所有修改文件通过语法检查（`{syntax_check_cmd}`）
-- [ ] （当 new_router_name ≠ N/A 时）路由注册验证通过 — 见下方验证说明
+- [ ] （当 new_router_name ≠ N/A 时）[L1] 路由注册验证通过（L1 近似检查：grep 匹配，已知局限见 protocols/quality-gates.md 验证层级章节）
 - [ ] （当 migration_check_cmd ≠ N/A 时）数据库迁移状态正确
 - [ ] 代码审查 P1/P2 = 0
 - [ ] （当 health_check_url ≠ N/A 时）Health check 返回 200
 - [ ] （当 service_list ≠ N/A 时）所有服务全部 active
 
-**线上验收**：
+**线上验收**（根据 project_type 选择对应验收方式）：
+
+（当 project_type ∈ {backend-api, fullstack, frontend-only} 时）：
 - [ ] 浏览器（桌面）功能正常
 - [ ] 浏览器（手机）布局正常
 - [ ] Console 零红色错误
 - [ ] 现有功能无回归
+
+（当 project_type = script 时）：
+- [ ] CLI 执行输出符合预期
+- [ ] 错误输入有合理报错
+- [ ] 现有功能无回归
+
+（当 project_type = data-pipeline 时）：
+- [ ] 批处理结果正确（抽样验证）
+- [ ] 日志无异常错误
+- [ ] 现有管线无回归
+
+（当 project_type = library 时）：
+- [ ] import/require 验证通过
+- [ ] 公共 API 调用结果正确
+- [ ] 现有导出无回归
 
 ---
 
@@ -137,8 +154,9 @@
 
 **触发条件**：部署后发现严重 Bug，影响生产
 
-**回滚步骤**：
+**回滚步骤**（根据 project_type 选择对应方案）：
 
+（当 project_type ∈ {backend-api, fullstack, frontend-only, data-pipeline} 且 deploy_command ≠ N/A 时）：
 ```bash
 # 1. Git 回滚
 git revert {commit_hash}
@@ -149,6 +167,20 @@ git push origin main
 
 # 3. 数据库回滚（如有迁移，使用项目实际的迁移工具执行 downgrade）
 # 具体命令参见附录技术栈示例
+```
+
+（当 project_type = script 时）：
+```bash
+# 1. Git 回滚
+git revert {commit_hash}
+# 无需重新部署，脚本下次运行自动使用新版本
+```
+
+（当 project_type = library 时）：
+```bash
+# 1. Git 回滚
+git revert {commit_hash}
+# 2. 如已发布：撤回发布版本（npm unpublish / pypi yank）或发布修复版本
 ```
 
 **回滚预计耗时**：{N} 分钟

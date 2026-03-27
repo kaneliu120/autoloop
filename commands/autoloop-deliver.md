@@ -234,7 +234,7 @@ new_router_name：{从 autoloop-plan.md 读取}
 - 修改/新建的文件列表（绝对路径）
 - 每个文件的关键变更摘要
 - 语法验证结果（全部通过）
--（当 new_router_name ≠ N/A 时）主入口文件注册确认：grep -n '{new_router_name}' {main_entry_file}
+-（当 new_router_name ≠ N/A 时）[L1] 主入口文件注册确认：grep -n '{new_router_name}' {main_entry_file}（L1 近似检查，已知局限见 protocols/quality-gates.md 验证层级章节）
 ```
 
 **1c. 前端开发（仅当 frontend_dir ≠ N/A 时执行）** — 可与核心开发并行
@@ -362,8 +362,8 @@ migration_check_cmd：{从 autoloop-plan.md 读取}
    - syntax_check_file_arg=false：{syntax_check_cmd}（项目级，不附加文件参数）
 
 2. 路由注册检查（仅当 new_router_name ≠ N/A 时执行）
-   grep -n '{new_router_name}' {main_entry_file}
-   期望：找到该 router 的具体注册语句
+   [L1] grep -n '{new_router_name}' {main_entry_file}
+   期望：找到该 router 的具体注册语句（L1 近似检查，已知局限见 protocols/quality-gates.md 验证层级章节）
 
 3. 数据库迁移验证（仅当 migration_check_cmd ≠ N/A 时执行）
    使用 {migration_check_cmd} 验证迁移状态
@@ -381,7 +381,7 @@ migration_check_cmd：{从 autoloop-plan.md 读取}
 Phase 3 门禁见 `protocols/quality-gates.md` T5 行：
 
 - [ ] 语法验证通过（按 `syntax_check_file_arg` 决定是否附加文件参数）
-- [ ] 路由注册：`grep -n '{new_router_name}' {main_entry_file}` 找到注册语句（无新路由则 N/A）
+- [ ] [L1] 路由注册：`grep -n '{new_router_name}' {main_entry_file}` 找到注册语句（无新路由则 N/A）（L1 近似检查，已知局限见 protocols/quality-gates.md 验证层级章节）
 - [ ] 数据库迁移状态正确：`{migration_check_cmd}`（无迁移则 N/A）
 
 ---

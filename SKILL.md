@@ -143,7 +143,9 @@ REFLECT（反思）
 - 每个阶段有明确的输入/输出/质量门禁
 - 部署前所有门禁必须全绿
 
-**质量门禁**：见 `protocols/delivery-phases.md`
+**质量门禁**：见 `protocols/quality-gates.md` T5 行 及 `protocols/delivery-phases.md`
+
+**关键参数**：plan 阶段必须首先收集 `project_type`（枚举值见 `protocols/loop-protocol.md`），后续变量的必填/可选由激活矩阵决定
 
 **最大迭代**：每个阶段内部可迭代，阶段顺序不可跳过
 
@@ -165,6 +167,8 @@ REFLECT（反思）
 - 可靠性
 - 可维护性
 
+**关键参数**：plan 阶段必须首先收集 `project_type`（枚举值见 `protocols/loop-protocol.md`），决定哪些检查适用
+
 **最大迭代**：默认 5 轮，直到全部达标
 
 ---
@@ -184,6 +188,8 @@ REFLECT（反思）
 - 架构分
 - 性能分
 - 稳定性分
+
+**关键参数**：plan 阶段必须首先收集 `project_type`（枚举值见 `protocols/loop-protocol.md`），决定哪些优化维度适用
 
 **最大迭代**：默认无上限，直到全部达标
 
