@@ -91,7 +91,7 @@ T7 Optimize: 系统/代码库路径（必须）、优先方向（可选）
 
 - `autoloop-findings.md`（使用 `templates/findings-template.md`）
 - `autoloop-progress.md`（使用 `templates/progress-template.md`）
-- `autoloop-results.tsv`（使用本文件统一 TSV Schema，写入表头行）
+- `autoloop-results.tsv`（TSV Schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节，写入表头行）
 
 Bootstrap 完成后**自动进入第一轮执行，不等待用户额外确认**。如果用户在计划摘要阶段提出修改，更新计划文件后再启动。
 
@@ -158,44 +158,15 @@ AutoLoop 第 {N} 轮完成
 
 ---
 
-## 最终输出文件命名规则（规范来源，所有其他文件必须引用此处，不得自行定义）
+## 最终输出文件命名规则
 
-| 模板 | 输出文件名 |
-|------|----------|
-| T1 Research | `autoloop-report-{topic}-{date}.md` |
-| T2 Compare | `autoloop-report-{topic}-{date}.md` |
-| T3 Iterate | `autoloop-report-{topic}-{date}.md` |
-| T4 Generate | 输出到 `{output_path}/{naming_pattern}`（变量来自 plan） |
-| T5 Deliver | `autoloop-delivery-{feature}-{date}.md` |
-| T6 Quality | `autoloop-audit-{date}.md` |
-| T7 Optimize | `autoloop-audit-{date}.md` |
-
-其中 `{date}` = `YYYYMMDD`，`{topic}` / `{feature}` 从 plan 的一句话目标中提取（空格替换为 `-`，小写）。
+最终输出文件命名规则见 `protocols/loop-protocol.md` 统一输出文件命名章节。
 
 ---
 
-## 标准 TSV Schema（所有模板统一格式，所有模板必须引用此处，不得自行重定义）
+## TSV Schema
 
-所有模板写入 `autoloop-results.tsv` 时必须使用以下统一列结构：
-
-```
-iteration	phase	status	metric_name	metric_value	delta	details
-```
-
-| 列 | 说明 | 示例 |
-|---|---|---|
-| iteration | 轮次编号（从 1 开始，T4 用 unit_id 填入） | 1 |
-| phase | 阶段或子步骤标识 | scan / generate / compare |
-| status | 状态：pass / fail / pending / review | pass |
-| metric_name | 指标名称 | score / coverage / pass_rate |
-| metric_value | 指标值（数字或字符串） | 8.5 |
-| delta | 与上轮的变化（首轮填 — ） | +1.2 |
-| details | 备注（原因、来源、问题描述） | 重试1次后通过 |
-
-**规则**：
-- T2 Compare：每个选项的每个维度各写一行（metric_name = 维度名，iteration = 轮次）
-- T4 Generate：每个生成单元写一行（iteration = unit_id，metric_name = score）
-- 额外的原始数据（变量值、证据来源等）写入 autoloop-findings.md，不放在 results.tsv
+TSV schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节。
 
 ---
 

@@ -27,14 +27,6 @@ ln -s ~/Projects/autoloop ~/.claude/skills/autoloop
 
 在 Claude Code 中输入 `/autoloop`，如果技能被识别则安装成功。
 
-### 方法三：直接引用
-
-在任何对话中，告诉 Claude：
-
-```
-读取 {autoloop 克隆路径}/SKILL.md，然后按照 AutoLoop 规范执行以下任务：{你的任务}
-```
-
 ---
 
 ## 快速上手
@@ -240,11 +232,9 @@ AutoLoop 是 CLAUDE.md Orchestrator-First 模式的具体实现：
 - **Subagents = 执行者**：backend-dev、frontend-dev、researcher 等
 - **T5 Deliver = CLAUDE.md 强制开发流程**：7 阶段完全对应
 
-在 SIP 项目中使用 AutoLoop 时，所有工程决策遵循 CLAUDE.md 的代码约定：
-- FastAPI + async/await
-- SQLAlchemy 2.0 async session
-- 新路由在 main.py 注册
-- 新文件在 __init__.py 导出
+结合项目 CLAUDE.md 使用 AutoLoop 时，所有工程决策遵循该项目的代码约定（技术栈在 `autoloop-plan.md` 中收集，T5/T6/T7 执行时以 plan 中的参数为准）。
+
+> 示例（以实际项目为准）：如项目使用 FastAPI + SQLAlchemy，则 T5 的 syntax_check_cmd 填 `python3 -m py_compile`，main_entry_file 填实际主入口路径。
 
 ---
 

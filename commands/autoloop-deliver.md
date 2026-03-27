@@ -428,7 +428,7 @@ code-reviewer subagent（调度方式见 `protocols/agent-dispatch.md` code-revi
 
 - [ ] P1 问题 = 0（安全漏洞、数据丢失风险）
 - [ ] P2 问题 = 0（功能缺陷、错误处理缺失）
-- [ ] P3 问题 ≤ 3 个（必须记录，不强制修复）
+- [ ] P3 问题已记录（不强制修复，见完整定义 `protocols/quality-gates.md` T5 行）
 
 P1/P2 问题必须修复后重审（返回阶段 1 针对性修复）。重试上限见 `protocols/loop-protocol.md` 统一重试规则（T5 Phase 2 审查-修复循环最多 3 轮）。
 
@@ -454,19 +454,18 @@ new_router_name：{从 autoloop-plan.md 读取}
    - syntax_check_file_arg=true：{syntax_check_cmd} {每个修改文件}
    - syntax_check_file_arg=false：{syntax_check_cmd}（项目级，不附加文件参数）
 
-2. 路由注册检查
+2. 路由注册检查（仅当 new_router_name ≠ N/A 时执行）
    根据技术栈执行对应命令：
    - Python: grep -n "include_router.*{new_router_name}" {main_entry_file}
-   - Node.js: grep -n "use\|route" {main_entry_file}
-   - 其他: 按项目规范检查主入口的路由注册
+   - Node.js/TS: grep -n "{new_router_name}" {main_entry_file}
+   - 其他: 按项目规范检查主入口是否包含 {new_router_name}
 
 3. 新路由功能验证（如果服务器在运行）
    curl -X {方法} {URL} -H "X-API-Key: {key}" {-d "{body}"}
    期望：HTTP 2xx，响应格式正确
 
-4. 数据库迁移验证（如有）
-   python -m alembic current
-   python -m alembic check
+4. 数据库迁移验证（如有，使用 {migration_check_cmd}）
+   migration_check_cmd 来自 autoloop-plan.md；不适用则跳过此步骤
 
 输出：
 每步验证结果（通过/失败+错误信息）
