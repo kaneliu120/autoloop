@@ -311,7 +311,7 @@ grep -rn "http://\|https://" {路径}  # 硬编码 URL
 
 输出：
 - 修改内容（diff 格式）
-- py_compile 结果（必须通过）
+- {syntax_check_cmd} 验证结果（必须通过）
 - 是否引入新问题（是/否，如是则描述）
 ```
 
@@ -319,18 +319,15 @@ grep -rn "http://\|https://" {路径}  # 硬编码 URL
 
 ```bash
 # 语法验证（使用 autoloop-plan.md 中的 syntax_check_cmd）
-# 注意：某些命令（如 tsc --noEmit）是项目级验证，不接受单文件参数；
-# 某些命令（如 python3 -m py_compile）接受文件参数。
 # plan 阶段应明确 syntax_check_file_arg: true/false。
 # - syntax_check_file_arg=true：  {syntax_check_cmd} {修改的文件}
 # - syntax_check_file_arg=false： {syntax_check_cmd}（不附加文件参数）
 
-# 如果路由文件被修改，检查主入口注册
-grep -n "include_router\|router\.\|app\.use\|app\.route" {main_entry_file}
+# 如果路由文件被修改，检查主入口注册（按技术栈规范检查 {main_entry_file}）
+grep -n "{new_router_name}" {main_entry_file}
 
-# 如果修改了关键 import，检查循环依赖（按技术栈执行）
-# Python: python3 -c "import {模块名}"
-# Node.js/TS: node -e "require('{模块路径}')"  或  npx tsc --noEmit
+# 如果修改了关键 import，检查循环依赖（按技术栈执行对应工具）
+{syntax_check_cmd}
 ```
 
 3. **更新问题清单状态**：将已修复的问题状态更新为 "已修复"（使用 loop-protocol.md 统一状态枚举）。

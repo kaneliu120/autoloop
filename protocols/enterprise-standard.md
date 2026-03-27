@@ -232,7 +232,7 @@ grep -rn ": any\b\|<any>\|as any" {路径}
 grep -rn "@ts-ignore\|@ts-expect-error" {路径}
 
 # 入口注册检测
-grep -n "import\|require" {entry_file}
+grep -n "import\|require" {main_entry_file}
 
 # 硬编码 URL 检测
 grep -rn "http://\|https://" {路径} | grep -v ".md\|test\|//"
