@@ -217,8 +217,8 @@ P1/P2/P3 数量摘要
 4. 模块化
 ### 技术栈适配（模块化检查）
 根据实际技术栈检查对应的模块导出和路由注册：
-- Python: 新文件是否在 __init__.py 中导出；新路由是否在 {main_entry_file} 注册
-- Node.js/TypeScript: 新文件是否在 index.ts barrel export 中声明；新路由是否在入口文件（app.ts）注册
+- Python: 新文件是否在 __init__.py 中导出；如果修改了路由相关文件，验证路由注册未被破坏
+- Node.js/TypeScript: 新文件是否在 index.ts barrel export 中声明；如果修改了路由相关文件，验证路由注册未被破坏
 - 其他框架: 按项目规范检查等效的模块导出和路由注册机制
 - 通用: 函数单一职责（超过 50 行的函数是否需要分解）
 
@@ -318,15 +318,17 @@ grep -rn "http://\|https://" {路径}  # 硬编码 URL
 2. **验证无回归**（每次修复后）：
 
 ```bash
-# 语法验证（使用 autoloop-plan.md 中的 syntax_check_cmd）
+# 语法验证（{syntax_check_cmd}）
 # plan 阶段应明确 syntax_check_file_arg: true/false。
 # - syntax_check_file_arg=true：  {syntax_check_cmd} {修改的文件}
 # - syntax_check_file_arg=false： {syntax_check_cmd}（不附加文件参数）
 
-# 如果路由文件被修改，检查主入口注册（按技术栈规范检查 {main_entry_file}）
-grep -n "{new_router_name}" {main_entry_file}
+# 如果修改了路由相关文件，验证路由注册未被破坏（使用 L1 近似检查）
+# 注意：T6 自身不收集 new_router_name/main_entry_file，此检查仅当项目使用 T5 deliver
+# 且 plan 中 new_router_name ≠ N/A 时适用
 
-# 如果修改了关键 import，检查循环依赖（按技术栈执行对应工具）
+# 语法验证（{syntax_check_cmd}）
+# 注意：语法检查 ≠ 循环依赖检测。如需检测循环依赖，使用项目特定工具。
 {syntax_check_cmd}
 ```
 
