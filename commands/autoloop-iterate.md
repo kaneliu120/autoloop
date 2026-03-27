@@ -283,7 +283,7 @@ git stash pop
 写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `templates/findings-template.md`：
 
 - **问题登记**：记录本轮发现的 KPI 偏差、改进副作用、测量误差
-- **策略复盘**：本轮改进策略的效果评估 — 实际改进量 vs 预期，保持/避免
+- **策略复盘**：本轮改进策略的效果评估 — 实际改进量 vs 预期，保持 | 避免 | 待验证（策略评价枚举见 protocols/loop-protocol.md 统一状态枚举）
 - **模式识别**：KPI 改进轨迹趋势（线性/指数/收益递减）、哪类改进最有效
 - **经验教训**：本轮对目标系统的新认知、哪些假设被验证或推翻
 
@@ -291,7 +291,7 @@ git stash pop
 
 ## 最终报告
 
-达到 KPI 或最大轮次后，输出（文件名见 `commands/autoloop.md` 最终输出文件命名规则）：
+达到 KPI 或最大轮次后，输出（文件名见 `protocols/loop-protocol.md` 统一输出文件命名章节）：
 
 ```markdown
 # AutoLoop Iterate — 迭代结果

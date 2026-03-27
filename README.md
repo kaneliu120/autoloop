@@ -151,7 +151,7 @@ AutoLoop 将：
 ├── autoloop-progress.md      # 每轮迭代详细记录
 ├── autoloop-findings.md      # 调研发现/问题清单（持续追加）
 ├── autoloop-results.tsv      # 结构化迭代日志（所有模板通用）
-└── autoloop-report-YYYYMMDD.md  # 最终报告
+└── autoloop-report-{topic}-{date}.md  # 最终报告（文件命名见 protocols/loop-protocol.md 统一输出文件命名章节）
 ```
 
 ---

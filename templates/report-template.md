@@ -178,5 +178,5 @@
 | 任务计划 | {路径}/autoloop-plan.md | 任务配置和变更记录 |
 | 发现记录 | {路径}/autoloop-findings.md | 完整的发现和问题清单 |
 | 进度追踪 | {路径}/autoloop-progress.md | 每轮迭代详细记录 |
-| 本报告 | {路径}/autoloop-report-{date}.md | 最终报告 |
+| 本报告 | {路径}/ | 最终报告（文件命名见 protocols/loop-protocol.md 统一输出文件命名章节）|
 | 结构化数据 | {路径}/autoloop-results.tsv | 结构化迭代日志（所有模板通用）|

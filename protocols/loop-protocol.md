@@ -50,7 +50,7 @@
 | T1 Research | `autoloop-report-{topic}-{date}.md` | plan + findings + progress + results.tsv |
 | T2 Compare | `autoloop-report-{topic}-{date}.md` | 同上 |
 | T3 Iterate | `autoloop-report-{topic}-{date}.md` | 同上 |
-| T4 Generate | `{output_path}/{naming_pattern}` | 同上 |
+| T4 Generate | `{output_path}/{naming_pattern}` (生成内容) + `autoloop-report-{topic}-{date}.md` (汇总报告) | 同上 |
 | T5 Deliver | `autoloop-delivery-{feature}-{date}.md` | 同上 |
 | T6 Quality | `autoloop-audit-{date}.md` | 同上 |
 | T7 Optimize | `autoloop-audit-{date}.md` | 同上 |
@@ -479,8 +479,8 @@ AutoLoop 有四种终止路径，按优先级排列：
 
 写入 findings.md 的"策略评估（REFLECT 第 2 层）"表：
 
-| 轮次 | 策略 | 效果评分(1-5) | 分数变化 | 保持/避免 | 原因 |
-|------|------|-------------|---------|----------|------|
+| 轮次 | 策略 | 效果评分(1-5) | 分数变化 | 保持 \| 避免 \| 待验证 | 原因 |
+|------|------|-------------|---------|---------------------|------|
 | R{N} | {策略描述} | {1-5} | {+/-分数} | **保持** / **避免** / **待验证** | {为什么有效/无效} |
 
 评价字段必须使用统一策略评价枚举（保持 / 避免 / 待验证）。
