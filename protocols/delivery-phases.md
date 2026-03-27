@@ -302,7 +302,7 @@ curl {health_check_url}
 **当 project_type ∈ {backend-api, fullstack, frontend-only} 且 acceptance_url ≠ N/A 时**：
 
 自动验证（verifier subagent）：
-- 调用方式：`Agent(subagent_type="code-reviewer", prompt="你是线上验收测试员。使用浏览器工具验证以下功能...")`
+- 调用方式：`Agent(subagent_type="verifier", prompt="你是线上验收测试员。使用浏览器工具验证以下功能...")`
 - 可选工具：Chrome DevTools MCP（如果已配置）
 - 访问相关页面，验证新功能是否可见
 - 执行功能操作，验证结果正确
