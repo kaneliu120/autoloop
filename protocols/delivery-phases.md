@@ -26,7 +26,7 @@
 - 功能需求描述（来自 autoloop-plan.md）
 - 代码库路径（绝对路径）
 - 技术栈信息
-- **T5 必须额外收集（在 plan 阶段）**：所有 T5 参数见 `protocols/loop-protocol.md` 统一参数词汇表（deploy_target、deploy_command、service_list、health_check_url、acceptance_url、doc_output_path、syntax_check_cmd、new_router_name、main_entry_file）
+- **T5 必须额外收集（在 plan 阶段）**：T5 所有参数以 `protocols/loop-protocol.md` 统一参数词汇表和激活矩阵为准（不在此处重复枚举，避免过时）
 
 ### 执行（并行）
 
@@ -334,7 +334,7 @@ Phase 5 阻塞：需要人工验收
 
 自动验证结果：{通过/有问题}
 
-（当 project_type ∈ {backend-api, fullstack, frontend-only} 时）
+（当 project_type ∈ {backend-api, fullstack, frontend-only} 且 acceptance_url ≠ N/A 时）
 请在浏览器（桌面 + 手机）访问 {acceptance_url}：
 
 （当 project_type = script 时）

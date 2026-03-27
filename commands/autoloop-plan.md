@@ -198,7 +198,6 @@ description: >
 交付配置：
 
 0. 项目类型（project_type）：
-   {backend-api / fullstack / frontend-only / script / data-pipeline / library}
    枚举值见 protocols/loop-protocol.md project_type 枚举。
    此项决定后续哪些变量为必填、哪些可填 N/A（见激活矩阵）。
 
@@ -222,7 +221,7 @@ description: >
 
 以下变量的必填性由 project_type 激活矩阵决定（见 protocols/loop-protocol.md）。
 变量为 N/A 时，对应的 Phase 4/5 门禁自动跳过。
-所有变量名见 protocols/loop-protocol.md 统一参数词汇表。
+参数以 protocols/loop-protocol.md 统一参数词汇表为准。
 
 5. 部署目标（deploy_target）：
    {部署目标主机/环境，如: sip-server 或 prod-01}
@@ -273,7 +272,6 @@ description: >
 质量审查配置：
 
 0. 项目类型（project_type）：
-   {backend-api / fullstack / frontend-only / script / data-pipeline / library}
    枚举值见 protocols/loop-protocol.md project_type 枚举。
 
 1. 代码库路径：{绝对路径}
@@ -290,14 +288,7 @@ description: >
 5. 特殊约束：
    {如：不能改动 API 接口签名 / 保持向后兼容}
 
-6. 语法检查命令（syntax_check_cmd）：
-   {裸命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
-
-7. 语法检查是否接受单文件参数（syntax_check_file_arg）：
-   {true / false}
-
-8. 主入口文件（main_entry_file）：
-   {主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
+6-8. 语法检查命令等参数以 protocols/loop-protocol.md 统一参数词汇表为准（syntax_check_cmd / syntax_check_file_arg / main_entry_file）。
 ```
 
 ### T7 Optimize — 优化配置
@@ -309,7 +300,6 @@ description: >
 优化配置：
 
 0. 项目类型（project_type）：
-   {backend-api / fullstack / frontend-only / script / data-pipeline / library}
    枚举值见 protocols/loop-protocol.md project_type 枚举。
 
 1. 系统路径：{绝对路径}
@@ -328,11 +318,7 @@ description: >
 4. 不可改动的部分：
    {如：public API 接口不变 / 数据库 schema 不变}
 
-5. 语法检查命令（syntax_check_cmd）：
-   {裸命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
-
-6. 语法检查是否接受单文件参数（syntax_check_file_arg）：
-   {true / false}
+5-6. 语法检查命令等参数以 protocols/loop-protocol.md 统一参数词汇表为准（syntax_check_cmd / syntax_check_file_arg）。
 ```
 
 ---
@@ -419,10 +405,7 @@ T2 的 key_assumptions 必须以结构化列表记录，格式：
 T5/T6/T7 必须首先填写 project_type（枚举值见 protocols/loop-protocol.md），
 后续变量的必填/可选由 project_type 激活矩阵决定。
 
-T5/T6/T7 的所有规范变量名（project_type / deploy_target / deploy_command / service_list / service_count /
-health_check_url / acceptance_url / doc_output_path / syntax_check_cmd / syntax_check_file_arg /
-new_router_name / main_entry_file）均见 protocols/loop-protocol.md 统一参数词汇表，不得使用
-同义词或自造变量名。
+T5/T6/T7 的所有规范变量名以 `protocols/loop-protocol.md` 统一参数词汇表为准，不得使用同义词或自造变量名。
 
 ---
 

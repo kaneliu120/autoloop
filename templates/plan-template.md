@@ -85,6 +85,8 @@
 - health_check_url：{健康检查 URL，如 https://example.com/api/health；不适用则留空}
 - acceptance_url：{线上验收 URL，如 https://example.com}
 - doc_output_path：{方案文档输出目录绝对路径}
+- migration_check_cmd：{迁移状态验证命令；无迁移则填 N/A}
+- frontend_dir：{前端代码目录绝对路径；无前端则填 N/A}
 
 **T6 Quality**：
 - project_type：{backend-api / fullstack / frontend-only / script / data-pipeline / library}（枚举值和激活矩阵见 protocols/loop-protocol.md）

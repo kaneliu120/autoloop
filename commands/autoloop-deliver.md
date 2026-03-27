@@ -108,14 +108,9 @@ frontend_dir：{从 autoloop-plan.md 读取}
 
 ### 质量门禁（阶段 0）
 
-Phase 0 门禁见 `protocols/quality-gates.md` T5 行 及 `protocols/delivery-phases.md`：
+Phase 0 门禁见 `protocols/quality-gates.md` T5 行 及 `protocols/delivery-phases.md`。
 
-- [ ] 所有需要修改的文件已识别（通过读取代码确认，不是猜测）
-- [ ] 数据库变更已描述（变更内容和原因）
-- [ ] 新增/修改路由已列出（路径和方法）
-- [ ] 风险已识别
-- [ ] 实施顺序已确定（解决依赖关系）
-- [ ] 验收标准已明确（可测量的功能验收条件）
+验收要求：文件识别完整、数据库变更已描述、路由已列出、风险已识别、实施顺序已确定、验收标准已明确。
 
 ---
 
@@ -134,12 +129,9 @@ Phase 0 门禁见 `protocols/quality-gates.md` T5 行 及 `protocols/delivery-ph
 
 ### 质量门禁（阶段 0.5 文档化）
 
-Phase 0.5 门禁见 `protocols/quality-gates.md` T5 行 及 `protocols/delivery-phases.md`：
+Phase 0.5 门禁见 `protocols/quality-gates.md` T5 行 及 `protocols/delivery-phases.md`。
 
-- [ ] 文档包含：问题描述、影响范围、具体方案、实施步骤、验收标准
-- [ ] 数据库变更有具体 DDL（有则必须，无变更则标注"无"）
-- [ ] API 接口有明确定义（路径、方法、请求/响应格式，有则必须，无新路由则标注"无"）
-- [ ] 有回滚方案
+验收要求：文档完整（问题描述/影响范围/具体方案/实施步骤/验收标准）+ 人工 confirmed。
 
 ### 阻塞：等待人工确认（阶段 0.5）
 
@@ -234,7 +226,7 @@ new_router_name：{从 autoloop-plan.md 读取}
 - 修改/新建的文件列表（绝对路径）
 - 每个文件的关键变更摘要
 - 语法验证结果（全部通过）
--（当 new_router_name ≠ N/A 时）[L1] 主入口文件注册确认：grep -n '{new_router_name}' {main_entry_file}（L1 近似检查，已知局限见 protocols/quality-gates.md 验证层级章节）
+-（当 new_router_name ≠ N/A 时）[L1] 主入口文件注册确认（验证方法见 protocols/quality-gates.md 路由注册门禁，L1 近似检查）
 ```
 
 **1c. 前端开发（仅当 frontend_dir ≠ N/A 时执行）** — 可与核心开发并行
@@ -332,9 +324,7 @@ code-reviewer subagent（调度方式见 `protocols/agent-dispatch.md` code-revi
 
 Phase 2 门禁见 `protocols/quality-gates.md` T5 行：
 
-- [ ] P1 问题 = 0（安全漏洞、数据丢失风险）
-- [ ] P2 问题 = 0（功能缺陷、错误处理缺失）
-- [ ] P3 问题已记录（不强制修复，记入最终报告）
+Phase 2 通过标准见 `protocols/quality-gates.md` T5 行（P1/P2 计数要求）。P3 问题不强制修复，记入最终报告。
 
 P1/P2 问题必须修复后重审（返回阶段 1 针对性修复）。重试上限见 `protocols/loop-protocol.md` 统一重试规则（T5 Phase 2 审查-修复循环最多 3 轮）。
 
@@ -362,8 +352,8 @@ migration_check_cmd：{从 autoloop-plan.md 读取}
    - syntax_check_file_arg=false：{syntax_check_cmd}（项目级，不附加文件参数）
 
 2. 路由注册检查（仅当 new_router_name ≠ N/A 时执行）
-   [L1] grep -n '{new_router_name}' {main_entry_file}
-   期望：找到该 router 的具体注册语句（L1 近似检查，已知局限见 protocols/quality-gates.md 验证层级章节）
+   [L1] 验证方法见 protocols/quality-gates.md 路由注册门禁（L1 近似检查）
+   期望：找到该 router 的具体注册语句
 
 3. 数据库迁移验证（仅当 migration_check_cmd ≠ N/A 时执行）
    使用 {migration_check_cmd} 验证迁移状态
@@ -381,7 +371,7 @@ migration_check_cmd：{从 autoloop-plan.md 读取}
 Phase 3 门禁见 `protocols/quality-gates.md` T5 行：
 
 - [ ] 语法验证通过（按 `syntax_check_file_arg` 决定是否附加文件参数）
-- [ ] [L1] 路由注册：`grep -n '{new_router_name}' {main_entry_file}` 找到注册语句（无新路由则 N/A）（L1 近似检查，已知局限见 protocols/quality-gates.md 验证层级章节）
+- [ ] [L1] 路由注册验证通过（无新路由则 N/A）（验证方法见 protocols/quality-gates.md 路由注册门禁）
 - [ ] 数据库迁移状态正确：`{migration_check_cmd}`（无迁移则 N/A）
 
 ---

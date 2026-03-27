@@ -12,7 +12,7 @@
 | service_list | string[] | 服务名称列表（如 [sip-backend, sip-worker]）| plan | T5 | 可选 | 仅当有常驻服务时（script/library = N/A） |
 | service_count | int | 服务数量（自动计算 = len(service_list)，不手动填写）| 自动 | T5 | 自动 | = len(service_list)，service_list = N/A 时此项也 N/A |
 | health_check_url | string | 健康检查 URL（如 https://example.com/api/health）| plan | T5 | 可选 | 仅当有 HTTP 服务时 |
-| acceptance_url | string | 线上验收 URL（如 https://example.com）| plan | T5 | 可选 | 仅当有用户界面时 |
+| acceptance_url | string | 线上验收 URL（如 https://example.com）| plan | T5 | 可选 | 仅当有浏览器验收入口时（纯API后端可填 N/A） |
 | doc_output_path | string | 方案文档输出目录（绝对路径）| plan | T5 | 必填 | 所有 project_type |
 | syntax_check_cmd | string | 语法检查裸命令（如 python3 -m py_compile 或 npx tsc --noEmit），不含文件参数占位符；文件参数由 syntax_check_file_arg 控制是否追加 | plan | T5/T6/T7 | 必填 | 所有 project_type |
 | syntax_check_file_arg | boolean | 语法检查命令是否接受单文件参数（python3 -m py_compile → true；npx tsc --noEmit → false）| plan | T5/T6/T7 | 必填 | 所有 project_type |
@@ -43,7 +43,7 @@ library        — 库/SDK（无服务、无部署、有发布）
 | deploy_command | ✓ | ✓ | ✓ | ○ | ✓ | ○ |
 | service_list | ✓ | ✓ | ○ | ○ | ○ | ○ |
 | health_check_url | ✓ | ✓ | ○ | ○ | ○ | ○ |
-| acceptance_url | ✓ | ✓ | ✓ | ○ | ○ | ○ |
+| acceptance_url | ○ | ✓ | ✓ | ○ | ○ | ○ |
 | new_router_name | ✓ | ✓ | ○ | ○ | ○ | ○ |
 | main_entry_file | ✓ | ✓ | ○ | ○ | ○ | ○ |
 | migration_check_cmd | ✓ | ✓ | ○ | ○ | ✓ | ○ |
