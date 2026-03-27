@@ -172,7 +172,7 @@ description: >
 敏感性测试（假设来自 plan.key_assumptions，计算规则见 protocols/quality-gates.md T2敏感性分析章节）：
 
 对每个关键假设 H（从 plan.key_assumptions 读取结构化列表）：
-  按 quality-gates.md 规定的变动幅度正反向测试 → 重新推导排名 → 与原排名对比
+  按 protocols/quality-gates.md T2 敏感性分析章节规定的变动幅度正反向测试 → 重新推导排名 → 与原排名对比
 
 示例输出：
 场景 1（{假设名称} 正向变动）：

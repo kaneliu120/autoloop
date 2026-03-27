@@ -10,7 +10,7 @@
 
 ## 安全性评分体系（Security）
 
-### 目标分数：≥ 9/10
+### 目标分数：见 `protocols/quality-gates.md` 门禁评估矩阵 T6 行
 
 ### 满分条件（10/10）
 
@@ -94,7 +94,7 @@ grep -rn "\.\./\|path\.join\|open(" {路径}
 
 ## 可靠性评分体系（Reliability）
 
-### 目标分数：≥ 8/10
+### 目标分数：见 `protocols/quality-gates.md` 门禁评估矩阵 T6 行
 
 ### 满分条件（10/10）
 
@@ -166,7 +166,7 @@ grep -rn "/health\|healthCheck" {路径}
 
 ## 可维护性评分体系（Maintainability）
 
-### 目标分数：≥ 8/10
+### 目标分数：见 `protocols/quality-gates.md` 门禁评估矩阵 T6 行
 
 ### 满分条件（10/10）
 
@@ -242,7 +242,7 @@ grep -rn "http://\|https://" {路径} | grep -v ".md\|test\|//"
 
 ## 架构评分体系（Architecture）
 
-### 目标分数：≥ 8/10（T7）
+### 目标分数：见 `protocols/quality-gates.md` 门禁评估矩阵 T7 行
 
 ### 满分条件（10/10）
 
@@ -295,7 +295,7 @@ npx madge --circular {路径}
 
 ## 性能评分体系（Performance）
 
-### 目标分数：≥ 8/10（T7）
+### 目标分数：见 `protocols/quality-gates.md` 门禁评估矩阵 T7 行
 
 ### 满分条件（10/10）
 
@@ -351,7 +351,7 @@ grep -rn "findMany\|find(\)" {路径} | grep -v "take\|limit\|skip"
 
 ## 稳定性评分体系（Stability）
 
-### 目标分数：≥ 8/10（T7）
+### 目标分数：见 `protocols/quality-gates.md` 门禁评估矩阵 T7 行
 
 ### 满分条件（10/10）
 

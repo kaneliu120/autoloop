@@ -90,10 +90,10 @@ description: >
 
 生成变量数据表（写入 `autoloop-results.tsv`，TSV schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节）：
 
-```text
+```tsv
 （TSV 格式见 protocols/loop-protocol.md 统一 TSV Schema）
-001          generate    pending    score          —               —        —        待生成
-002          generate    pending    score          —               —        —        待生成
+001	generate	pending	score	—	—	—	待生成
+002	generate	pending	score	—	—	—	待生成
 ```
 
 变量数据写入 `autoloop-findings.md`，不进 TSV。TSV 的 details 列仅记录状态摘要（如"重试1次后通过"），不记录变量键值对。
@@ -205,12 +205,12 @@ description: >
 
 实时更新 `autoloop-results.tsv`（TSV schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节）：
 
-```
+```tsv
 （TSV 格式见 protocols/loop-protocol.md 统一 TSV Schema）
-001          generate    pass      score          8.5             —        —        重试0次
-002          generate    pass      score          7.2             —        —        重试1次: 第一次生成语调不对
-003          generate    review    score          6.0             —        —        重试2次仍未达标: 变量信息不足
-004          generate    pending   score          —               —        —        生成中
+001	generate	pass	score	8.5	—	—	重试0次
+002	generate	pass	score	7.2	—	—	重试1次: 第一次生成语调不对
+003	generate	review	score	6.0	—	—	重试2次仍未达标: 变量信息不足
+004	generate	pending	score	—	—	—	生成中
 ```
 
 每完成 10% 输出进度：

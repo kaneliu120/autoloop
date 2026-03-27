@@ -48,13 +48,13 @@ description: >
 
 | 模板 | 默认轮次 | 默认预算 | 质量门禁 |
 |------|---------|---------|---------|
-| T1 Research | 3 | 无限制 | 见 quality-gates.md T1 行 |
-| T2 Compare | 2 | 无限制 | 见 quality-gates.md T2 行 |
-| T3 Iterate | 无上限 | 用户定义 | 见 quality-gates.md T3 章节 |
-| T4 Generate | items × 2 | 无限制 | 见 quality-gates.md T4 章节 |
-| T5 Deliver | 1（线性阶段制） | 无限制 | 见 quality-gates.md T5 行 |
-| T6 Quality | 无上限 | 无限制 | 见 quality-gates.md T6 行 |
-| T7 Optimize | 无上限 | 无限制 | 见 quality-gates.md T7 行 |
+| T1 Research | 3 | 无限制 | 见 protocols/quality-gates.md 门禁评估矩阵 T1 行 |
+| T2 Compare | 2 | 无限制 | 见 protocols/quality-gates.md 门禁评估矩阵 T2 行 |
+| T3 Iterate | 无上限 | 用户定义 | 见 protocols/quality-gates.md 门禁评估矩阵 T3 行 |
+| T4 Generate | items × 2 | 无限制 | 见 protocols/quality-gates.md 门禁评估矩阵 T4 行 |
+| T5 Deliver | 1（线性阶段制） | 无限制 | 见 protocols/quality-gates.md 门禁评估矩阵 T5 行 |
+| T6 Quality | 无上限 | 无限制 | 见 protocols/quality-gates.md 门禁评估矩阵 T6 行 |
+| T7 Optimize | 无上限 | 无限制 | 见 protocols/quality-gates.md 门禁评估矩阵 T7 行 |
 
 向导在 Step 4/5 展示对应行的默认值，用户可调整。
 
