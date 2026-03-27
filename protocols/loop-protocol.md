@@ -383,9 +383,9 @@ Fallback 策略：
 例外：delivery 模板（T5）因包含人工确认环节，允许 Phase 2 审查-修复循环最多 **3 轮**。所有其他模板遵守 2 次上限。
 
 各协议文件中涉及重试/回退次数的描述均以本规则为准：
-- `agent-dispatch.md` 中 subagent 重试 → 最多 2 次
-- `delivery-phases.md` 中 Phase 2 修复-审查循环 → 最多 3 轮（仅 T5，因含人工确认）
-- `delivery-phases.md` 中其他阶段回退 → 最多 2 次（与本规则对齐）
+- `protocols/agent-dispatch.md` 中 subagent 重试 → 最多 2 次
+- `protocols/delivery-phases.md` 中 Phase 2 修复-审查循环 → 最多 3 轮（仅 T5，因含人工确认）
+- `protocols/delivery-phases.md` 中其他阶段回退 → 最多 2 次（与本规则对齐）
 
 ### 失败处理
 
@@ -598,7 +598,7 @@ AutoLoop 有四种终止路径，按优先级排列：
 1. 更新 plan.md：状态 = 已完成，终止原因 = 阻塞终止
 2. 清楚说明阻塞原因
 3. 列出需要用户提供的信息
-3. 说明提供后如何继续
+4. 说明提供后如何继续
 
 ---
 

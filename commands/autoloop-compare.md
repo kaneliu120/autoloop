@@ -164,8 +164,6 @@ description: >
 
 ### 2.2 敏感性分析
 
-敏感性分析从 `autoloop-plan.md` 的 `key_assumptions` 字段读取关键假设列表（结构化格式：假设名称 + 当前值 + 单位）。plan 中未提供则自动从评估维度中识别成本/时间/规模类维度作为假设来源。
-
 敏感性分析从 `autoloop-plan.md` 的 `key_assumptions` 字段读取关键假设列表（结构化格式：假设名称 + 当前值 + 单位）。plan 中未提供则自动从评估维度中识别成本/时间/规模类维度作为假设来源。完整计算方法和通过标准见 `protocols/quality-gates.md` T2敏感性分析章节。
 
 ```
