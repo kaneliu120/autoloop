@@ -96,7 +96,7 @@
 
 **Step 7**（当 deploy_command ≠ N/A 时）：提交代码并部署
 
-**Step 8**（当 acceptance_url ≠ N/A 时）：线上验收，人工确认
+**Step 8**：人工验收。所有 project_type 均执行人工验收。验收方式按 project_type 分流（见 `protocols/delivery-phases.md` Phase 5）。（当 acceptance_url ≠ N/A 时）包含浏览器访问线上环境。
 
 ---
 

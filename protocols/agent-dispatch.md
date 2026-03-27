@@ -829,7 +829,7 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 | 变量 | 填充值 |
 |------|--------|
 | `{tech_stack}` | Next.js App Router + TypeScript + TanStack Query v5 + Tailwind CSS v4 |
-| `{syntax_check_cmd}` | `cd {frontend_dir} && npx tsc --noEmit`（`{frontend_dir}` 见 loop-protocol.md 统一参数词汇表）|
+| `{syntax_check_cmd}` | `npx tsc --noEmit`（裸命令；在 `{frontend_dir}` 目录下执行，`{frontend_dir}` 见 loop-protocol.md 统一参数词汇表）|
 | `{main_entry_file}` | `{codebase_path}/app/layout.tsx` |
 | `{tech_constraints}` | 使用 TypeScript，不使用 any；API 调用通过 /api/* 路由；状态管理使用 TanStack Query v5 的 useQuery/useMutation；样式使用 Tailwind CSS v4 |
 

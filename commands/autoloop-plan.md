@@ -181,6 +181,19 @@ description: >
 ```
 
 ### T5 Deliver — 交付配置
+
+#### project_type 驱动的字段收集
+
+收集 project_type 后，按以下流程动态生成后续问题：
+
+1. 读取 `protocols/loop-protocol.md` 的"项目类型与变量激活矩阵"
+2. 找到用户选择的 project_type 对应列
+3. ✓ 标记的变量 → 必须询问，不可跳过
+4. ○ 标记的变量 → 询问"是否适用？"，不适用则自动填 N/A
+5. 不在当前模板适用范围的变量 → 跳过
+
+**禁止在本文件中复制激活矩阵的必填/可选规则。** 必填性以 loop-protocol.md 激活矩阵为唯一真源。
+
 ```
 交付配置：
 
@@ -188,7 +201,6 @@ description: >
    {backend-api / fullstack / frontend-only / script / data-pipeline / library}
    枚举值见 protocols/loop-protocol.md project_type 枚举。
    此项决定后续哪些变量为必填、哪些可填 N/A（见激活矩阵）。
-   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 1. 功能需求（详细描述）：
    {用户输入}
@@ -208,76 +220,61 @@ description: >
    - 是否需要新增/修改表？{是/否}
    - 如果是：{描述变更}
 
+以下变量的必填性由 project_type 激活矩阵决定（见 protocols/loop-protocol.md）。
+变量为 N/A 时，对应的 Phase 4/5 门禁自动跳过。
+所有变量名见 protocols/loop-protocol.md 统一参数词汇表。
+
 5. 部署目标（deploy_target）：
    {部署目标主机/环境，如: sip-server 或 prod-01}
-   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 6. 部署命令（deploy_command）：
-   {完整的部署执行命令，如: gcloud compute ssh {host} --zone={zone} --command="cd {path} && git pull origin main && sudo bash deploy.sh"}
+   {完整的部署执行命令}
    如无远程部署：{本地命令，如 docker-compose up -d --build}
-   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 7. 服务列表（service_list）：
    {部署后需要检查的服务名称列表，如: [sip-backend, sip-worker, sip-scheduler, sip-frontend]}
    如不适用：{填 N/A}
-   必填性由 project_type 激活矩阵决定（见 protocols/loop-protocol.md）：
-   - backend-api / fullstack：service_list 为必填（✓）
-   - frontend-only / script / data-pipeline / library：service_list 为可选（○），可填 N/A
-   - 如果 service_list 为 N/A，Phase 4 服务检查门禁自动标记为 N/A（跳过）。
-   - 如果 health_check_url 为空，Phase 4 健康检查门禁自动标记为 N/A（跳过）。
-   - script / library 类型允许 service_list 和 health_check_url 同时为 N/A（无常驻服务）。
-   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 8. 文档输出路径（doc_output_path）：
    {方案文档存放的目录绝对路径}
-   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 9. 健康检查 URL（health_check_url）：
-   {如 https://example.com/api/health，或留空}
-   必填性由 project_type 激活矩阵决定（见 protocols/loop-protocol.md）：
-   - backend-api / fullstack：health_check_url 为必填（✓）
-   - 其他类型：可选（○），留空则 Phase 4 健康检查标记为 N/A
-   变量名见 protocols/loop-protocol.md 统一参数词汇表
+   {如 https://example.com/api/health，或留空则 N/A}
 
 10. 线上验收 URL（acceptance_url）：
     {验收时打开的线上地址，如 https://example.com}
-    变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 11. 语法检查命令（syntax_check_cmd）：
-    {语法检查命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
-    变量名见 protocols/loop-protocol.md 统一参数词汇表
+    {裸命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"，不含文件参数}
 
 12. 语法检查是否接受单文件参数（syntax_check_file_arg）：
     {true = 如 python3 -m py_compile，接受单文件路径作为参数}
     {false = 如 npx tsc --noEmit，项目级验证，不接受文件参数}
-    变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 13. 主入口文件（main_entry_file）：
     {主入口文件绝对路径，如 /project/backend/main.py}
-    变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 14. 新路由变量名（new_router_name）：
     {本次新增的 router 变量名，如 comments_router，无新路由则填 N/A}
-    变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 15. 前端目录（frontend_dir）：
     {前端代码目录绝对路径，如 /project/frontend；无前端则填 N/A}
-    变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 16. 数据库迁移验证命令（migration_check_cmd）：
     {迁移状态验证命令，如 python -m alembic current && python -m alembic check；无迁移则填 N/A}
-    变量名见 protocols/loop-protocol.md 统一参数词汇表
 ```
 
 ### T6 Quality — 质量审查配置
+
+收集 project_type 后，按 `protocols/loop-protocol.md` 激活矩阵动态确定后续变量的必填性（流程同上方 T5）。
+所有变量名见 protocols/loop-protocol.md 统一参数词汇表。
+
 ```
 质量审查配置：
 
 0. 项目类型（project_type）：
    {backend-api / fullstack / frontend-only / script / data-pipeline / library}
    枚举值见 protocols/loop-protocol.md project_type 枚举。
-   此项决定后续哪些变量为必填、哪些可填 N/A（见激活矩阵）。
-   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 1. 代码库路径：{绝对路径}
 
@@ -294,27 +291,26 @@ description: >
    {如：不能改动 API 接口签名 / 保持向后兼容}
 
 6. 语法检查命令（syntax_check_cmd）：
-   {语法检查命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
-   变量名见 protocols/loop-protocol.md 统一参数词汇表
+   {裸命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
 
 7. 语法检查是否接受单文件参数（syntax_check_file_arg）：
-   {true / false，规则见上方 T5 第12项说明}
-   变量名见 protocols/loop-protocol.md 统一参数词汇表
+   {true / false}
 
 8. 主入口文件（main_entry_file）：
    {主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
-   变量名见 protocols/loop-protocol.md 统一参数词汇表
 ```
 
 ### T7 Optimize — 优化配置
+
+收集 project_type 后，按 `protocols/loop-protocol.md` 激活矩阵动态确定后续变量的必填性（流程同上方 T5）。
+所有变量名见 protocols/loop-protocol.md 统一参数词汇表。
+
 ```
 优化配置：
 
 0. 项目类型（project_type）：
    {backend-api / fullstack / frontend-only / script / data-pipeline / library}
    枚举值见 protocols/loop-protocol.md project_type 枚举。
-   此项决定后续哪些变量为必填、哪些可填 N/A（见激活矩阵）。
-   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 1. 系统路径：{绝对路径}
 
@@ -333,12 +329,10 @@ description: >
    {如：public API 接口不变 / 数据库 schema 不变}
 
 5. 语法检查命令（syntax_check_cmd）：
-   {语法检查命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
-   变量名见 protocols/loop-protocol.md 统一参数词汇表
+   {裸命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
 
 6. 语法检查是否接受单文件参数（syntax_check_file_arg）：
-   {true / false，规则见上方 T5 第12项说明}
-   变量名见 protocols/loop-protocol.md 统一参数词汇表
+   {true / false}
 ```
 
 ---
