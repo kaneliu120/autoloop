@@ -60,7 +60,7 @@ AutoLoop 会询问你想做什么，自动选择模板并开始执行。
 
 ## 7 个任务模板
 
-| 模板 | 命令 | 适用场景 | 质量门禁（阈值见 quality-gates.md）|
+| 模板 | 命令 | 适用场景 | 质量门禁（阈值见 protocols/quality-gates.md 门禁评估矩阵）|
 |------|------|---------|---------|
 | **Research** | `/autoloop:research` | 系统性调研某个领域/技术 | 覆盖率、可信度、一致性、完整性 |
 | **Compare** | `/autoloop:compare` | 在多个选项中做决策 | 全维度覆盖、偏见检查、敏感性分析 |
@@ -89,7 +89,7 @@ AutoLoop 将：
 2. 并行调度 8 个 researcher subagents
 3. 交叉验证矛盾信息
 4. 计算覆盖率/可信度/一致性/完整性
-5. 迭代 2-3 轮直到全部达标（阈值见 protocols/quality-gates.md T1 行）
+5. 迭代 2-3 轮直到全部达标（阈值见 protocols/quality-gates.md 门禁评估矩阵 T1 行）
 6. 输出带证据的推荐报告
 
 ---
@@ -134,7 +134,7 @@ AutoLoop 将：
 1. 分析现有代码库架构
 2. 生成方案文档（等待确认）
 3. 并行开发：后端 API + 前端组件
-4. 代码审查（P1/P2 = 0 才进入下一步）
+4. 代码审查（门禁见 `protocols/quality-gates.md` 门禁评估矩阵 T5 行）
 5. 语法验证（py_compile + tsc）
 6. 提交并部署到 GCP
 7. 线上验收（等待人工确认）

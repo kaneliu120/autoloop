@@ -50,7 +50,7 @@ REFLECT（反思）
 1. 本轮完成了什么（具体，可量化）
 2. 质量门禁当前得分（数字，不是"好/差"）
 3. 下一轮计划（具体行动，不是方向）
-4. 终止判断（继续/完成/需要用户决策）
+4. 终止判断（继续/已完成/需要用户决策）
 5. 反思记录（问题登记 + 策略复盘 + 模式识别 + 经验沉淀）
 
 ---
@@ -89,9 +89,9 @@ REFLECT（反思）
 
 **质量门禁**（完整定义和具体计算方法见 `protocols/quality-gates.md`）：
 - 覆盖率 100%（所有选项的所有维度都必须有内容）
-- 可信度（见 quality-gates.md 可信度门禁）
-- 偏见检查（见 quality-gates.md T2 专属门禁 — 偏见检查，含通过标准和计算方法）
-- 敏感性分析（见 quality-gates.md T2 专属门禁 — 敏感性分析，含通过标准）
+- 可信度（见 protocols/quality-gates.md 门禁评估矩阵 T2 行）
+- 偏见检查（见 protocols/quality-gates.md T2 专属门禁 — 偏见检查，含通过标准和计算方法）
+- 敏感性分析（见 protocols/quality-gates.md T2 专属门禁 — 敏感性分析，含通过标准）
 
 **最大迭代**：默认 2 轮，可配置
 
@@ -182,7 +182,7 @@ REFLECT（反思）
 - 第 1 轮：全面诊断（三个维度并行）
 - 第 2-N 轮：跨维度协同修复（一个修复可能同时改善多个维度）
 - 每 5 个修复后 checkpoint 重新评分
-- 三个维度全部达到 quality-gates.md T7 行阈值才停止
+- 三个维度全部达到 protocols/quality-gates.md 门禁评估矩阵 T7 行阈值才停止
 
 **质量门禁**（具体阈值见 `protocols/quality-gates.md` T7 门禁）：
 - 架构分
@@ -248,18 +248,18 @@ REFLECT（反思）
 
 | 模板 | 门禁维度 | 参考位置 |
 |------|---------|---------|
-| T1 Research | 覆盖率、可信度、一致性、完整性 | quality-gates.md 知识类任务门禁 |
-| T2 Compare | 覆盖率、可信度、偏见检查、敏感性分析 | quality-gates.md T2 专属门禁 |
-| T3 Iterate | KPI 达目标值 | quality-gates.md T3 专属门禁 |
-| T4 Generate | 通过率、平均分 | quality-gates.md T4 专属门禁 |
+| T1 Research | 覆盖率、可信度、一致性、完整性 | protocols/quality-gates.md 门禁评估矩阵 T1 行 |
+| T2 Compare | 覆盖率、可信度、偏见检查、敏感性分析 | protocols/quality-gates.md 门禁评估矩阵 T2 行 |
+| T3 Iterate | KPI 达目标值 | protocols/quality-gates.md 门禁评估矩阵 T3 行 |
+| T4 Generate | 通过率、平均分 | protocols/quality-gates.md 门禁评估矩阵 T4 行 |
 
 ### 工程类任务（T5/T6/T7）
 
 | 模板 | 门禁维度 | 参考位置 |
 |------|---------|---------|
-| T5 Deliver | 语法验证、安全性、服务健康、人工验收 | quality-gates.md 工程类任务门禁 + delivery-phases.md |
-| T6 Quality | 安全性、可靠性、可维护性（复合判定）| quality-gates.md T6 复合判定规则 |
-| T7 Optimize | 架构、性能、稳定性 | quality-gates.md 工程类任务门禁 |
+| T5 Deliver | 语法验证、安全性、服务健康、人工验收 | protocols/quality-gates.md 门禁评估矩阵 T5 行 + delivery-phases.md |
+| T6 Quality | 安全性、可靠性、可维护性（复合判定）| protocols/quality-gates.md 门禁评估矩阵 T6 行 |
+| T7 Optimize | 架构、性能、稳定性 | protocols/quality-gates.md 门禁评估矩阵 T7 行 |
 
 扣分规则、严重级别（P1/P2/P3）和检测命令见 `protocols/enterprise-standard.md`。
 
@@ -304,22 +304,22 @@ REFLECT（反思）
 
 ## 终止条件
 
-### 正常终止（任务完成）
+### 正常终止（任务状态=已完成，终止原因=达标终止）
 - 所有质量门禁通过（数字达标，不是"差不多"）
 - autoloop-results.tsv 已生成（所有模板通用的结构化迭代日志，记录每轮得分变化；最终报告文件命名见 `protocols/loop-protocol.md` 统一输出文件命名章节）
 - 向用户提交最终报告
 
-### 预算耗尽（资源耗尽）
+### 预算耗尽（任务状态=已完成，终止原因=预算耗尽）
 - 达到最大迭代次数
 - 向用户报告当前状态、未达标维度、建议下一步
 - 不宣告失败，宣告"当前最优解"
 
-### 用户中断
+### 用户中断（任务状态=已完成，终止原因=用户中断）
 - 用户输入"stop"/"停止"/"够了"
 - 保存当前进度到 autoloop-progress.md
 - 提交中间结果，标注完成度
 
-### 阻塞终止（需要人工决策）
+### 阻塞终止（任务状态=已完成，终止原因=阻塞终止）
 - 发现无法自动解决的矛盾
 - 需要用户提供关键信息
 - 涉及不可逆操作（数据删除、生产部署）

@@ -189,10 +189,10 @@ syntax_check_cmd：{从 autoloop-plan.md 读取}
 
 **1b. 核心开发** — 数据库迁移后执行
 
-core-dev subagent（调度方式见 `protocols/agent-dispatch.md` backend-dev 章节）：
+backend-dev subagent（调度方式见 `protocols/agent-dispatch.md` backend-dev 章节）：
 
 ```text
-你是 core-dev subagent，负责核心代码实现。
+你是 backend-dev subagent，负责核心代码实现。
 
 执行流程：
 1. 读取 protocols/enterprise-standard.md 技术栈特定检测章节获取编码规范
