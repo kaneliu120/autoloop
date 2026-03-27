@@ -193,10 +193,10 @@ syntax_check_cmd：{从 autoloop-plan.md 读取}
 
 **1b. 核心开发** — 数据库迁移后执行
 
-backend-dev subagent（调度方式见 `protocols/agent-dispatch.md` backend-dev 章节）：
+core-dev subagent（调度方式见 `protocols/agent-dispatch.md` backend-dev 章节）：
 
 ```text
-你是 backend-dev subagent，负责核心代码实现。
+你是 core-dev subagent，负责核心代码实现。
 
 方案文档：{路径}
 代码库路径：{绝对路径}

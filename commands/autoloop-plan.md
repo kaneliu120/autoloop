@@ -360,15 +360,122 @@ description: >
 
 ## Step 6: 生成计划文件
 
-收集所有参数后，使用 `templates/plan-template.md` 生成完整的 `autoloop-plan.md`，将收集到的变量填入对应字段。必须包含模板中的所有章节（含 **扩展维度** 和 **策略历史**），不得省略。
+收集所有参数后，生成完整的 `autoloop-plan.md`，必须严格遵循 `templates/plan-template.md` 的结构，包含所有章节（含 **扩展维度** 和 **策略历史**）：
 
-**生成规则**：
-- T2 的 key_assumptions 必须以结构化列表记录，格式见 `templates/plan-template.md` T2 章节
-- 敏感性分析计算方法见 `protocols/quality-gates.md` T2敏感性分析章节
-- T5/T6/T7 必须首先填写 project_type（枚举值见 `protocols/loop-protocol.md`），后续变量的必填/可选由 project_type 激活矩阵决定
-- T5/T6/T7 的所有规范变量名以 `protocols/loop-protocol.md` 统一参数词汇表为准，不得使用同义词或自造变量名
-- 质量门禁阈值见 `protocols/quality-gates.md` 门禁评估矩阵
-- 输出文件命名见 `protocols/loop-protocol.md` 统一输出文件命名章节
+```markdown
+# AutoLoop 任务计划
+
+## 元信息
+
+| 字段 | 值 |
+|------|-----|
+| 任务 ID | autoloop-{YYYYMMDD-HHMMSS} |
+| 模板 | T{N}: {名称} |
+| 状态 | 准备开始 |
+| 创建时间 | {ISO 8601} |
+| 最后更新 | {ISO 8601} |
+| 工作目录 | {绝对路径} |
+| 计划版本 | 1.0 |
+
+---
+
+## 目标描述
+
+**一句话目标**：{简洁描述，最多 1 句}
+
+**详细背景**：
+{用户目标的完整描述，包含背景、现状、期望结果}
+
+**成功标准**（可测量）：
+- {标准 1}：{具体判断方法}
+- {标准 2}：{具体判断方法}
+
+---
+
+## 任务参数
+
+### 模板特定参数
+
+{按 templates/plan-template.md 中该模板的完整字段填写，不得省略任何字段}
+
+T2 的 key_assumptions 必须以结构化列表记录，格式：
+  - 假设名称：{名称}，当前值：{数值}，单位：{单位}
+（敏感性分析计算方法见 protocols/quality-gates.md T2敏感性分析章节）
+
+T5/T6/T7 必须首先填写 project_type（枚举值见 protocols/loop-protocol.md），
+后续变量的必填/可选由 project_type 激活矩阵决定。
+
+T5/T6/T7 的所有规范变量名以 `protocols/loop-protocol.md` 统一参数词汇表为准，不得使用同义词或自造变量名。
+
+---
+
+## 范围定义
+
+**包含**：
+- {范围 1}
+- {范围 2}
+
+**排除**：
+- {排除项 1}（原因：{原因}）
+
+**扩展维度**（迭代中新增）：
+- （初始为空，迭代过程中如发现新维度则追加）
+
+---
+
+## 质量门禁
+
+质量门禁阈值见 `protocols/quality-gates.md` 门禁评估矩阵。
+
+| 维度 | 目标分数 | 当前分数 | 目标阈值 | 状态 |
+|------|---------|---------|---------|------|
+| {维度 1} | — | — | ≥ {阈值} | 待启动 |
+| {维度 2} | — | — | ≥ {阈值} | 待启动 |
+| {维度 3} | — | — | ≥ {阈值} | 待启动 |
+
+**全部达标条件**：所有维度同时达到目标阈值（见 protocols/quality-gates.md）
+
+---
+
+## 迭代预算
+
+| 字段 | 值 |
+|------|-----|
+| 最大轮次 | {N} |
+| 当前轮次 | 0 |
+| 时间限制 | {无限制 / N 分钟} |
+| 预算耗尽策略 | {输出当前最优 / 询问用户} |
+
+---
+
+## 输出文件
+
+输出文件命名见 `protocols/loop-protocol.md` 统一输出文件命名章节。
+
+| 文件 | 路径 | 用途 | 状态 |
+|------|------|------|------|
+| autoloop-plan.md | {工作目录}/autoloop-plan.md | 任务计划（本文件）| 已创建 |
+| autoloop-progress.md | {工作目录}/autoloop-progress.md | 迭代进度 | 待创建 |
+| autoloop-findings.md | {工作目录}/autoloop-findings.md | 发现记录 | 待创建 |
+| autoloop-results.tsv | {工作目录}/autoloop-results.tsv | 结构化迭代日志 | 待创建 |
+| {最终报告名} | {工作目录}/{最终报告名} | 最终报告 | 待创建 |
+
+---
+
+## 策略历史（已尝试方法）
+
+| 轮次 | 维度 | 策略 | 结果 | 弃用原因 |
+|------|------|------|------|---------|
+| — | — | — | — | — |
+
+---
+
+## 变更记录
+
+| 时间 | 字段 | 变更前 | 变更后 | 原因 |
+|------|------|--------|--------|------|
+| {创建时间} | 初始创建 | — | — | — |
+```
 
 生成计划文件后，立即创建 Bootstrap 文件（`autoloop-findings.md`、`autoloop-progress.md`、`autoloop-results.tsv`），然后输出确认并自动进入执行：
 

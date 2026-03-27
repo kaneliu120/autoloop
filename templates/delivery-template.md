@@ -53,7 +53,12 @@
 
 ### 核心实现
 
-{根据 project_type 描述实现方案，执行指引见 commands/autoloop-deliver.md}
+{描述主要的实现方案。根据 project_type 组织内容：
+- backend-api/fullstack：数据模型 → API路由 → 业务逻辑
+- frontend-only：组件结构 → 状态管理 → API调用
+- script：入口 → 核心逻辑 → 输出处理
+- data-pipeline：数据源 → 转换逻辑 → 目标写入
+- library：公共API → 内部实现 → 导出}
 
 ### 数据库迁移（当 migration_check_cmd ≠ N/A 时）
 
