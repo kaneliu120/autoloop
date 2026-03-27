@@ -20,8 +20,6 @@ description: >
 
 ### 技术栈检测与验证命令
 
-在阶段 0 扫描前，先确认技术栈，选择对应的验证命令：
-
 所有技术栈使用 plan 中定义的 `{syntax_check_cmd}`（见 `protocols/loop-protocol.md` 统一参数词汇表）进行语法验证，按 `syntax_check_file_arg` 决定是否附加文件参数。（当 project_type ∈ {backend-api, fullstack} 且 main_entry_file ≠ N/A 时）模块导出和路由注册完整性检查基于 `main_entry_file`。
 
 如果 plan 阶段未指定验证命令，在开始扫描前向用户确认：
@@ -65,111 +63,22 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 
 ## 第一轮：三维度并行扫描
 
-**同时运行 3 个 code-reviewer subagents**（独立，并行）：
+### 派遣
 
-### Security Reviewer Subagent
+角色：scanner x3，角色化为安全/可靠性/可维护性三个维度（职责定义见 `protocols/agent-dispatch.md`，角色化说明见 T6 团队配置）
 
-```
-你是 security-reviewer subagent，专注代码安全审查。
+### 本次范围
 
-执行流程：
-1. 读取 protocols/enterprise-standard.md 安全性维度获取完整检查项和扣分规则
-2. 读取 protocols/enterprise-standard.md 安全性检测命令章节获取检测方法
-3. 根据本次审查范围（代码库路径和模块列表），生成针对性安全检查清单
-4. 按清单逐项审查，运行检测命令
-5. 按 protocols/quality-gates.md 的严重级别分类输出报告
+- 代码库路径：{绝对路径}
+- 审查模块：{模块列表，留空则全部}
 
-代码库路径：{绝对路径}
-审查模块：{模块列表，留空则全部}
+### 执行流程
 
-输出格式：
-## 安全审查报告
-
-### 发现的问题
-
-| ID | 文件（绝对路径） | 行号 | 类型 | 严重级别 | 描述 | 影响分析 | 修复建议 |
-|----|---------------|------|------|---------|------|---------|---------|
-| S001 | {路径} | {行} | SQL注入 | P1 | {描述} | {影响} | {建议} |
-
-### 安全性评分
-
-初始分：10
-扣分项：
-- {问题 S001}：-{分} （原因：{分类}）
-最终安全性得分：{N}/10
-
-### 严重级别摘要
-P1（必须立即修复）：{N} 个
-P2（应该在本次修复）：{N} 个
-P3（建议修复）：{N} 个
-```
-
-### Reliability Reviewer Subagent
-
-```
-你是 reliability-reviewer subagent，专注代码可靠性审查。
-
-执行流程：
-1. 读取 protocols/enterprise-standard.md 可靠性维度获取完整检查项和扣分规则
-2. 读取 protocols/enterprise-standard.md 可靠性检测命令章节获取检测方法
-3. 根据本次审查范围，生成针对性可靠性检查清单
-4. 按清单逐项审查，运行检测命令
-5. 按 protocols/quality-gates.md 的严重级别分类输出报告
-
-代码库路径：{绝对路径}
-审查模块：{模块列表}
-
-输出格式：
-## 可靠性审查报告
-
-### 发现的问题
-
-| ID | 文件 | 行号 | 类型 | 严重级别 | 描述 | 修复建议 |
-|----|------|------|------|---------|------|---------|
-| R001 | {路径} | {行} | 静默失败 | P1 | {描述} | {建议} |
-
-### 可靠性评分
-
-初始分：10
-扣分项：...
-最终可靠性得分：{N}/10
-
-P1/P2/P3 数量摘要
-```
-
-### Maintainability Reviewer Subagent
-
-```
-你是 maintainability-reviewer subagent，专注代码可维护性审查。
-
-执行流程：
-1. 读取 protocols/enterprise-standard.md 可维护性维度获取完整检查项和扣分规则
-2. 读取 protocols/enterprise-standard.md 可维护性检测命令章节获取检测方法
-3. 根据本次审查范围，生成针对性可维护性检查清单
-4. 按清单逐项审查，运行检测命令
-5. 按 protocols/quality-gates.md 的严重级别分类输出报告
-
-代码库路径：{绝对路径}
-审查模块：{模块列表}
-
-输出格式：
-## 可维护性审查报告
-
-### 发现的问题
-
-| ID | 文件 | 行号 | 类型 | 严重级别 | 描述 | 修复建议 |
-|----|------|------|------|---------|------|---------|
-
-### 可维护性评分
-
-初始分：10
-扣分项：...
-最终可维护性得分：{N}/10
-```
+1. 三个 scanner 并行运行，每个读取 `protocols/enterprise-standard.md` 对应维度章节 + `protocols/quality-gates.md` 门禁标准
+2. 每个 scanner 根据审查范围生成针对性检查清单，运行检测命令
+3. 按角色定义的输出格式交付：问题清单（P1/P2/P3 分类）+ 维度评分
 
 ### 第一轮结束：汇总扫描结果
-
-将三个报告汇总，建立统一的问题清单：
 
 ```markdown
 ## 第 1 轮扫描完成
@@ -204,52 +113,23 @@ P1/P2/P3 数量摘要
 
 ### 每个修复的执行流程
 
-**对每个问题（按优先级）**：
+**派遣**：角色 fixer（职责定义见 `protocols/agent-dispatch.md`）
 
-1. **分配修复 subagent**：
+1. fixer 读取 `protocols/enterprise-standard.md` 获取修复规范 + `protocols/quality-gates.md` 获取验证标准
+2. 根据问题描述和修复建议，制定最小化修复方案
+3. 实施修复并运行 `{syntax_check_cmd}` 验证
+4. 确认修复有效且无回归
+5. 更新问题清单状态为"已修复"（使用 `protocols/loop-protocol.md` 统一状态枚举）
 
-```
-你是 fix-{类型} subagent，修复以下代码质量问题。
+**输入**：问题 ID、文件（绝对路径）、行号、问题描述、修复建议、syntax_check_cmd
 
-执行流程：
-1. 读取 protocols/enterprise-standard.md 获取该问题类型的修复规范
-2. 读取 protocols/quality-gates.md 获取验证通过标准
-3. 根据问题描述和修复建议，制定最小化修复方案
-4. 实施修复并运行语法验证
-5. 确认修复有效且无回归
+**输出**：修改内容（diff 格式）+ 语法验证结果 + 是否引入新问题
 
-问题 ID：{ID}
-文件：{绝对路径}
-行号：{行}
-问题描述：{描述}
-修复建议：{建议}
-syntax_check_cmd：{从 autoloop-plan.md 读取}
+### 验证无回归（每次修复后）
 
-输出：
-- 修改内容（diff 格式）
-- {syntax_check_cmd} 验证结果（必须通过）
-- 是否引入新问题（是/否，如是则描述）
-```
-
-2. **验证无回归**（每次修复后）：
-
-```bash
-# 语法验证（{syntax_check_cmd}）
-# plan 阶段应明确 syntax_check_file_arg: true/false。
-# - syntax_check_file_arg=true：  {syntax_check_cmd} {修改的文件}
-# - syntax_check_file_arg=false： {syntax_check_cmd}（不附加文件参数）
-
-# 如果修改了路由相关文件，验证模块导出完整性（使用 [L1] 近似检查）
-# （当 project_type ∈ {backend-api, fullstack} 且 main_entry_file ≠ N/A 时）
-# 检查主入口文件中的路由/模块注册是否完整（grep 已有路由是否仍存在）
-# 注意：T6 不使用 new_router_name（T5 专属），而是通用检查已有注册是否被破坏
-
-# 语法验证（{syntax_check_cmd}）
-# 注意：语法检查 ≠ 循环依赖检测。如需检测循环依赖，使用项目特定工具。
-{syntax_check_cmd}
-```
-
-3. **更新问题清单状态**：将已修复的问题状态更新为 "已修复"（使用 loop-protocol.md 统一状态枚举）。
+- 语法验证：按 `syntax_check_file_arg` 决定是否附加文件参数
+- 路由完整性（如修改了路由相关文件）：当 project_type ∈ {backend-api, fullstack} 且 main_entry_file ≠ N/A 时，[L1] 近似检查已有注册是否被破坏
+- 注意：语法检查 ≠ 循环依赖检测
 
 ### 批量修复的并行规则
 
@@ -281,25 +161,13 @@ Checkpoint（已修复 {N} 个问题）
 
 ## 最终验收扫描
 
-所有 P1 和 P2 修复完成后，重新运行三维度完整扫描：
-
-```
-最终扫描目标：确认所有问题已修复，无回归
-
-安全性重新扫描 → {N}/10（改进：{+X}）
-可靠性重新扫描 → {N}/10（改进：{+X}）
-可维护性重新扫描 → {N}/10（改进：{+X}）
-
-新发现问题（改进过程中引入的）：{N} 个
-```
+所有 P1 和 P2 修复完成后，重新运行三维度完整扫描（同第一轮派遣方式）。
 
 ### 终止判断
 
 终止条件为复合判定，完整规则见 `protocols/quality-gates.md` T6 复合判定规则。
 
 ```
-终止条件为复合判定（具体阈值和判定规则见 protocols/quality-gates.md T6 复合判定规则）：
-
 条件一：分数达标（各维度达到 protocols/quality-gates.md 门禁评估矩阵 T6 行规定的阈值）
   安全性 {N}/10  ✓/✗
   可靠性 {N}/10  ✓/✗

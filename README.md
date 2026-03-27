@@ -180,7 +180,7 @@ OBSERVE → ORIENT → DECIDE → ACT → VERIFY → SYNTHESIZE → EVOLVE → R
 - 一致性 87.5%（非规范性示例，具体阈值见 protocols/quality-gates.md）
 - 安全得分 9.2/10（达标，不是"安全性良好"）
 
-### 阻塞点设计
+### 暂停确认点设计
 
 T5 Deliver 有 2 个强制人工确认：
 - 阶段 0.5：方案文档确认后才开发

@@ -52,111 +52,19 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 
 ## 第一轮：三维度并行全面诊断
 
-**同时运行 3 个 diagnostic subagents**（并行）：
+### 派遣
 
-### Architecture Diagnostic Subagent
+角色：scanner x3，角色化为架构/性能/稳定性三个维度（职责定义见 `protocols/agent-dispatch.md`，角色化说明见 T7 团队配置）
 
-```
-你是 architecture-diagnostic subagent，负责全面的架构诊断。
+### 本次范围
 
-执行流程：
-1. 读取 protocols/enterprise-standard.md 架构维度获取完整诊断项和扣分规则
-2. 读取 protocols/enterprise-standard.md 架构维度检测命令章节获取检测方法
-3. 根据代码库结构，生成针对性架构诊断清单
-4. 按清单逐项诊断，运行检测命令
-5. 输出架构诊断报告，标注跨维度影响
+- 代码库路径：{绝对路径}
 
-代码库路径：{绝对路径}
+### 执行流程
 
-输出：
-## 架构诊断报告
-
-### 分层分析结果
-{描述当前分层状态}
-
-### 发现的架构问题
-
-| ID | 类型 | 影响文件 | 严重级别 | 描述 | 修复建议 | 影响维度 |
-|----|------|---------|--------|------|---------|---------|
-| A001 | 跨层访问 | {路径} | P1 | {描述} | {建议} | 架构 |
-
-### 架构评分
-
-初始分：10
-扣分项：...
-架构得分：{N}/10
-
-### 跨维度影响
-（哪些架构问题同时影响性能或稳定性）
-```
-
-### Performance Diagnostic Subagent
-
-```
-你是 performance-diagnostic subagent，负责全面的性能诊断。
-
-执行流程：
-1. 读取 protocols/enterprise-standard.md 性能维度获取完整诊断项和扣分规则
-2. 读取 protocols/enterprise-standard.md 性能维度检测命令章节获取检测方法
-3. 根据代码库结构，生成针对性性能诊断清单
-4. 按清单逐项诊断，运行检测命令
-5. 输出性能诊断报告，标注最高收益修复项
-
-代码库路径：{绝对路径}
-
-输出：
-## 性能诊断报告
-
-### 发现的性能问题
-
-| ID | 类型 | 影响文件 | 严重级别 | 描述 | 预期收益 | 修复建议 |
-|----|------|---------|--------|------|---------|---------|
-| P001 | N+1查询 | {路径} | P1 | {描述} | {减少X次查询/请求} | {建议} |
-
-### 性能评分
-
-初始分：10
-扣分项：...
-性能得分：{N}/10
-
-### 最高收益修复（TOP 3）
-（预期改善最大的 3 个问题）
-```
-
-### Stability Diagnostic Subagent
-
-```
-你是 stability-diagnostic subagent，负责全面的稳定性诊断。
-
-执行流程：
-1. 读取 protocols/enterprise-standard.md 稳定性维度获取完整诊断项和扣分规则
-2. 读取 protocols/enterprise-standard.md 稳定性维度检测命令章节获取检测方法
-3. 根据代码库结构，生成针对性稳定性诊断清单
-4. 按清单逐项诊断，运行检测命令
-5. 输出稳定性诊断报告
-
-代码库路径：{绝对路径}
-
-输出：
-## 稳定性诊断报告
-
-### 外部依赖清单
-
-| 依赖 | 有超时 | 有降级 | 有重试 | 风险评估 |
-|------|--------|--------|--------|---------|
-| Redis | 是/否 | 是/否 | 是/否 | P1/P2/P3 |
-
-### 发现的稳定性问题
-
-| ID | 类型 | 影响文件 | 严重级别 | 描述 | 影响场景 | 修复建议 |
-|----|------|---------|--------|------|---------|---------|
-
-### 稳定性评分
-
-初始分：10
-扣分项：...
-稳定性得分：{N}/10
-```
+1. 三个 scanner 并行运行，每个读取 `protocols/enterprise-standard.md` 对应维度章节
+2. 每个 scanner 根据代码库结构生成针对性诊断清单，运行检测命令
+3. 按角色定义的输出格式交付：问题清单（P1/P2/P3 分类 + 跨维度影响标注）+ 维度评分
 
 ---
 
@@ -169,9 +77,7 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 
 | 问题 ID | 描述 | 架构影响 | 性能影响 | 稳定性影响 | 综合优先级 |
 |---------|------|---------|---------|-----------|----------|
-| A001 | 路由层直接访问 DB | 高 | 中（无 ORM 优化）| 中（无统一错误处理）| P1 |
-| P001 | N+1 查询 | 低 | 高 | 低 | P1 |
-| S001 | Redis 无超时 | 低 | 低 | 高 | P1 |
+| A001 | {描述} | 高 | 中 | 中 | P1 |
 ```
 
 **综合优先级规则**：
@@ -183,100 +89,32 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 
 ## 第 2-N 轮：协同修复循环
 
-### 修复 subagent 指令（按优先级）
+### 派遣
 
-```
-你是 optimization-fix subagent，负责以下性能/架构/稳定性问题修复。
+角色：fixer（职责定义见 `protocols/agent-dispatch.md`）
 
-执行流程：
-1. 读取 protocols/enterprise-standard.md 获取该问题类型的修复规范和检测方法
-2. 读取 protocols/quality-gates.md 获取验证通过标准
-3. 根据问题描述和修复建议，制定最小化修复方案
+### 本次上下文
+
+- 问题 ID、类型、描述、影响文件（绝对路径）、修复建议
+- syntax_check_cmd、syntax_check_file_arg
+
+### 执行流程
+
+1. fixer 读取 `protocols/enterprise-standard.md` 获取修复规范和检测方法
+2. 读取 `protocols/quality-gates.md` 获取验证通过标准
+3. 根据问题描述制定最小化修复方案
 4. 实施修复并运行语法验证
 5. 评估修复对三维度的影响
 
-问题 ID：{ID}
-类型：{架构/性能/稳定性}
-描述：{问题描述}
-影响文件：{绝对路径列表}
-修复建议：{具体建议}
-syntax_check_cmd：{从 autoloop-plan.md 读取}
-syntax_check_file_arg：{从 autoloop-plan.md 读取}
+### 约束（不可违反）
 
-约束（不可违反）：
 - 不改变 public API 签名（路由路径、请求/响应格式）
 - 不改变数据库 schema（除非方案中明确说明）
 - 修改后必须通过语法验证
 
-输出：
-- 修改文件列表
-- 每个文件的关键修改说明
-- 验证结果
-- 预期对三维度评分的影响
-- 是否需要测试关联功能
-```
+### 常见优化方案参考
 
-### 常见优化方案模板（示例，以实际技术栈为准）
-
-**N+1 查询修复**（示例使用 Python/SQLAlchemy，其他 ORM 按等效方式修复）：
-
-```python
-# 修复前（N+1）
-companies = await session.execute(select(Company))
-for company in companies:
-    contacts = await session.execute(  # N 次额外查询
-        select(Contact).where(Contact.company_id == company.id)
-    )
-
-# 修复后（JOIN 或 selectinload）
-from sqlalchemy.orm import selectinload
-
-companies = await session.execute(
-    select(Company).options(selectinload(Company.contacts))
-)
-# Node.js/Prisma 等效：include: { contacts: true }
-# 其他 ORM：使用对应的 eager loading / JOIN 机制
-```
-
-**缓存降级回退修复**（示例使用 Python/Redis，其他缓存层按等效方式修复）：
-
-```python
-# 修复前（缓存失败直接崩溃）
-async def get_cached_data(key: str) -> dict:
-    return await redis.get(key)  # 异常会导致 500
-
-# 修复后（有降级）
-async def get_cached_data(key: str) -> dict | None:
-    try:
-        result = await redis.get(key)
-        return result
-    except Exception as e:
-        logger.warning(f"Cache miss for {key}: {e}")
-        return None  # 降级到数据库查询
-# Node.js 等效：同样的 try/catch 模式
-```
-
-**服务层提取修复**（示例使用 Python/FastAPI，其他框架按等效分层方式修复）：
-
-```python
-# 修复前（路由层直接操作 DB）
-@router.get("/companies")
-async def list_companies(session: AsyncSession = Depends(get_session)):
-    result = await session.execute(select(Company))  # 路由层直接查库
-    return result.scalars().all()
-
-# 修复后（通过 service 层）
-# backend/services/company_service.py
-async def list_companies(session: AsyncSession) -> list[Company]:
-    result = await session.execute(select(Company))
-    return result.scalars().all()
-
-# backend/api/companies.py
-@router.get("/companies")
-async def list_companies_route(session: AsyncSession = Depends(get_session)):
-    return await company_service.list_companies(session)
-# Node.js/Express 等效：controller 调用 service，service 操作 repository
-```
+enterprise-standard.md 中包含各类问题的修复模式（N+1 查询、缓存降级、服务层提取等），fixer 根据实际技术栈选择等效方案。
 
 ---
 
@@ -284,14 +122,12 @@ async def list_companies_route(session: AsyncSession = Depends(get_session)):
 
 每个 Checkpoint 必须重新运行对应维度的验证命令，不允许仅凭代码审查更新分数。
 
-### 三维度验证命令
-
-各维度验证命令见 `protocols/enterprise-standard.md` 对应维度的检测命令章节（架构/性能/稳定性），按实际技术栈执行。每个 Checkpoint 必须基于实际运行的命令输出更新分数。
+各维度验证命令见 `protocols/enterprise-standard.md` 对应维度的检测命令章节。
 
 ```
 Checkpoint（已完成 {N} 个修复）
 
-验证结果（必须基于上方实际运行的命令输出）：
+验证结果（必须基于实际运行的命令输出）：
   架构验证: {循环依赖检测结果 / 跨层访问数量}
   性能验证: {API平均响应时间 / 查询耗时}
   稳定性验证: {error handling覆盖率 / 静默失败数量}
