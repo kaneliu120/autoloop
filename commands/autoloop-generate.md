@@ -92,8 +92,8 @@ description: >
 
 ```text
 （TSV 格式见 protocols/loop-protocol.md 统一 TSV Schema）
-001          generate    pending    score          —               —        待生成
-002          generate    pending    score          —               —        待生成
+001          generate    pending    score          —               —        —        待生成
+002          generate    pending    score          —               —        —        待生成
 ```
 
 变量数据写入 `autoloop-findings.md`，不进 TSV。TSV 的 details 列仅记录状态摘要（如"重试1次后通过"），不记录变量键值对。
@@ -164,7 +164,7 @@ description: >
 2. {标准 2}：{评分说明}
 3. {标准 3}：{评分说明}
 
-评分规则见 protocols/quality-gates.md T4 单元评分标准。根据门禁阈值判定：通过/需改进/重生成。
+评分规则见 protocols/quality-gates.md T4 专属门禁（通过率、平均分）。根据门禁阈值判定：通过/需改进/重生成。
 
 注意：你的评分独立于生成者的自评。如果分歧 > 2 分，以你的评分为准。
 
@@ -180,7 +180,7 @@ description: >
 
 ## 重试机制
 
-重试上限见 `protocols/loop-protocol.md` 统一重试规则（默认 2 次）。对于评分低于 `protocols/quality-gates.md` T4 单元通过阈值的单元，触发重试：
+重试上限见 `protocols/loop-protocol.md` 统一重试规则（默认 2 次）。对于评分低于 `protocols/quality-gates.md` T4 专属门禁中平均分阈值的单元，触发重试：
 
 **第 1 次重试**：
 - 将 quality-checker 的问题反馈给 generator
@@ -197,7 +197,7 @@ description: >
 **第 2 次重试（最后一次）**：
 - 换一个不同的生成策略
 - 完全重新生成，不参考之前的版本
-- 如果仍低于 `protocols/quality-gates.md` T4 单元通过阈值，标注为"需人工审查"，继续其他单元
+- 如果仍低于 `protocols/quality-gates.md` T4 专属门禁中平均分阈值，标注为"需人工审查"，继续其他单元
 
 ---
 
@@ -207,10 +207,10 @@ description: >
 
 ```
 （TSV 格式见 protocols/loop-protocol.md 统一 TSV Schema）
-001          generate    pass      score          8.5             —        重试0次
-002          generate    pass      score          7.2             —        重试1次: 第一次生成语调不对
-003          generate    review    score          6.0             —        重试2次仍未达标: 变量信息不足
-004          generate    pending   score          —               —        生成中
+001          generate    pass      score          8.5             —        —        重试0次
+002          generate    pass      score          7.2             —        —        重试1次: 第一次生成语调不对
+003          generate    review    score          6.0             —        —        重试2次仍未达标: 变量信息不足
+004          generate    pending   score          —               —        —        生成中
 ```
 
 每完成 10% 输出进度：

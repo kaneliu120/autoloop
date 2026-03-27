@@ -269,9 +269,9 @@ description: >
 
 ```tsv
 （TSV 格式见 protocols/loop-protocol.md 统一 TSV Schema）
-1	compare	pass	功能匹配度	8	—	选项A, 权重0.25, 证据3条
-1	compare	pass	技术成熟度	9	—	选项A, 权重0.20, 证据5条
-1	compare	pass	功能匹配度	7	—	选项B, 权重0.25, 证据2条
+1	compare	pass	功能匹配度	8	—	选项A	权重0.25, 证据3条
+1	compare	pass	技术成熟度	9	—	选项A	权重0.20, 证据5条
+1	compare	pass	功能匹配度	7	—	选项B	权重0.25, 证据2条
 ```
 
 证据来源 URL 和详细分析记录到 `autoloop-findings.md`，不放在 results.tsv。
