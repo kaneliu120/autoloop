@@ -250,17 +250,32 @@ key_assumptions:
 # 通过标准：零错误（有 warning 可以接受，但必须记录）
 ```
 
-### 路由注册门禁（强制，有新路由时）
+### 验证层级说明
 
-```bash
-# 验证新路由已注册（{new_router_name} = plan 中定义的 router 变量名）
-# 按技术栈选择对应命令：
-# Python/FastAPI: grep -n "include_router.*{new_router_name}" {main_entry_file}
-# Node.js: grep -n "use\|route" {main_entry_file}
-# 其他: 按项目规范检查主入口的路由注册
+AutoLoop 的验证分为两个层级：
 
-# 通过标准：grep 找到该 router 的具体注册语句
-```
+| 层级 | 名称 | 方法 | 可信度 | 适用场景 |
+|------|------|------|--------|---------|
+| L1 | 近似检查 | grep/文本搜索 | 中（可能有假阳性：匹配到注释、import、未使用变量） | 快速验证，用于门禁初筛 |
+| L2 | 精确验证 | 框架特定pattern/AST分析/运行时测试 | 高 | 最终验收，用于关键门禁 |
+
+门禁中标注 `[L1]` 或 `[L2]` 表示该验证的层级。当 L1 检查通过但执行者仍不确信时，应升级到 L2。
+
+### 路由注册门禁（当 new_router_name ≠ N/A 时）
+
+**[L1] 近似检查**（快速初筛）：
+按技术栈选择对应 grep pattern：
+- Python/FastAPI: `grep -n "include_router.*{new_router_name}" {main_entry_file}`
+- Node.js/Express: `grep -n "use.*{new_router_name}\|router.*{new_router_name}" {main_entry_file}`
+- 其他: `grep -n "{new_router_name}" {main_entry_file}`
+
+通过标准：grep 找到匹配行。
+
+**已知局限**：L1 检查可能将 import 语句、注释、未使用变量误判为注册。如果 grep 结果中没有明确的注册/挂载语句，需人工确认或升级到 L2。
+
+**[L2] 精确验证**（可选，推荐用于关键门禁）：
+- 人工审查 grep 结果，确认匹配行是实际的注册/挂载语句（不是 import 或注释）
+- 或运行项目的启动命令，确认路由可访问
 
 ### 安全性门禁（T5/T6）
 
@@ -334,7 +349,7 @@ T7 企业级标准：稳定性得分 ≥ 8/10
 | T2 Compare | 覆盖率 100% | 可信度 ≥ 80% | 偏见检查：每选项偏见分数 < 0.15（即10分量表差 < 1.5分）| 敏感性分析：key_assumptions 每项 ±20% 后推荐第1位不变 | 任一未达标 |
 | T3 Iterate | KPI 达目标值（用户在 plan 中设定的 KPI 数值达到目标阈值）| — | — | — | KPI 未达标 |
 | T4 Generate | 通过率 ≥ 95% | 平均分 ≥ 7/10 | — | — | 任一未达标 |
-| T5 Deliver | 语法验证通过 | P1/P2 = 0 | Phase 4: service_list 全部 active（N/A 则跳过）+ health_check_url 返回200（N/A 则跳过）；两者至少须提供一项 | Phase 5: 用户输入 "verified"（人工线上验收确认） | 任一未达标 |
+| T5 Deliver | 语法验证通过 | P1/P2 = 0 | Phase 4: service_list 全部 active（N/A 则跳过）+ health_check_url 返回200（N/A 则跳过） | Phase 5: 用户输入 "verified"（人工线上验收确认） | 任一未达标 |
 | T6 Quality | 安全 ≥ 9/10 | 可靠 ≥ 8/10 | 可维护 ≥ 8/10 | — | 复合判定（见下方规则）|
 | T7 Optimize | 架构 ≥ 8/10 | 性能 ≥ 8/10 | 稳定 ≥ 8/10 | — | 任一未达标 |
 
@@ -345,7 +360,7 @@ T7 企业级标准：稳定性得分 ≥ 8/10
 ```text
 如果 service_list 为空或 N/A：Phase 4 服务检查标记为 N/A（跳过）
 如果 health_check_url 为空：Phase 4 健康检查标记为 N/A（跳过）
-合法性约束：service_list 和 health_check_url 至少须提供其中一项，否则 plan 不合法
+对于 script/library 类型的 project_type，两者均可为 N/A（无常驻服务）
 Phase 5：始终需要用户输入 'verified'，不受 N/A 影响
 ```
 

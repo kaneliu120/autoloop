@@ -4,24 +4,53 @@
 
 **规则**：所有 AutoLoop 文件（commands/、protocols/、templates/）中涉及下列概念时，必须使用下表中的变量名，不得自行发明同义词。
 
-| 变量名 | 类型 | 用途 | 收集时机 | 适用模板 |
-|--------|------|------|---------|---------|
-| deploy_target | string | 部署目标主机/环境（如 sip-server、prod-01）| plan | T5 |
-| deploy_command | string | 部署执行命令（完整命令，如 gcloud compute ssh ...）| plan | T5 |
-| service_list | string[] | 服务名称列表（如 [sip-backend, sip-worker]）| plan | T5 |
-| service_count | int | 服务数量（自动计算 = len(service_list)，不手动填写）| 自动 | T5 |
-| health_check_url | string | 健康检查 URL（如 https://example.com/api/health）| plan | T5 |
-| acceptance_url | string | 线上验收 URL（如 https://example.com）| plan | T5 |
-| doc_output_path | string | 方案文档输出目录（绝对路径）| plan | T5 |
-| syntax_check_cmd | string | 语法检查命令（如 python3 -m py_compile {file} 或 npx tsc --noEmit）| plan | T5/T6/T7 |
-| syntax_check_file_arg | boolean | 语法检查命令是否接受单文件参数（python3 -m py_compile → true；npx tsc --noEmit → false）| plan | T5/T6/T7 |
-| new_router_name | string | 本次新增的 router 变量名（如 comments_router；无新路由填 N/A）| plan | T5 |
-| main_entry_file | string | 主入口文件绝对路径（如 /project/backend/main.py 或 /project/src/app.ts）| plan | T5/T6 |
-| output_path | string | 输出目录绝对路径（默认 {工作目录}/autoloop-output/）| plan | T4 |
-| naming_pattern | string | 文件命名规则（如 {template_name}-{index}.md）| plan | T4 |
-| key_assumptions | list[{name, current_value, unit}] | T2 对比中的关键假设（结构化列表，每项含名称+当前值+单位，用于敏感性分析）| plan | T2 |
-| migration_check_cmd | string | 数据库迁移状态验证命令（如 python -m alembic current && python -m alembic check；无迁移填 N/A）| plan | T5 |
-| frontend_dir | string | 前端代码目录绝对路径（如 /project/frontend）| plan | T5 |
+| 变量名 | 类型 | 用途 | 收集时机 | 适用模板 | 必填/可选 | 条件 |
+|--------|------|------|---------|---------|----------|------|
+| project_type | enum | 项目类型，决定哪些变量和模块被激活 | plan | T5/T6/T7 | 必填 | — |
+| deploy_target | string | 部署目标主机/环境（如 sip-server、prod-01）| plan | T5 | 可选 | 仅当需要远程部署时（script/library 通常 N/A） |
+| deploy_command | string | 部署执行命令（完整命令，如 gcloud compute ssh ...）| plan | T5 | 可选 | 同 deploy_target |
+| service_list | string[] | 服务名称列表（如 [sip-backend, sip-worker]）| plan | T5 | 可选 | 仅当有常驻服务时（script/library = N/A） |
+| service_count | int | 服务数量（自动计算 = len(service_list)，不手动填写）| 自动 | T5 | 自动 | = len(service_list)，service_list = N/A 时此项也 N/A |
+| health_check_url | string | 健康检查 URL（如 https://example.com/api/health）| plan | T5 | 可选 | 仅当有 HTTP 服务时 |
+| acceptance_url | string | 线上验收 URL（如 https://example.com）| plan | T5 | 可选 | 仅当有用户界面时 |
+| doc_output_path | string | 方案文档输出目录（绝对路径）| plan | T5 | 必填 | 所有 project_type |
+| syntax_check_cmd | string | 语法检查命令（如 python3 -m py_compile {file} 或 npx tsc --noEmit）| plan | T5/T6/T7 | 必填 | 所有 project_type |
+| syntax_check_file_arg | boolean | 语法检查命令是否接受单文件参数（python3 -m py_compile → true；npx tsc --noEmit → false）| plan | T5/T6/T7 | 必填 | 所有 project_type |
+| new_router_name | string | 本次新增的 router 变量名（如 comments_router；无新路由填 N/A）| plan | T5 | 条件必填 | 仅当 project_type ∈ {backend-api, fullstack} 且有新路由时；否则填 N/A |
+| main_entry_file | string | 主入口文件绝对路径（如 /project/backend/main.py 或 /project/src/app.ts）| plan | T5/T6 | 条件必填 | 仅当 project_type ∈ {backend-api, fullstack} 时；其他类型可填项目主文件或 N/A |
+| output_path | string | 输出目录绝对路径（默认 {工作目录}/autoloop-output/）| plan | T4 | 必填 | T4 |
+| naming_pattern | string | 文件命名规则（如 {template_name}-{index}.md）| plan | T4 | 必填 | T4 |
+| key_assumptions | list[{name, current_value, unit}] | T2 对比中的关键假设（结构化列表，每项含名称+当前值+单位，用于敏感性分析）| plan | T2 | 必填 | T2 |
+| migration_check_cmd | string | 数据库迁移状态验证命令（如 python -m alembic current && python -m alembic check；无迁移填 N/A）| plan | T5 | 条件必填 | 仅当 project_type ∈ {backend-api, fullstack, data-pipeline} 且有数据库迁移时；否则 N/A |
+| frontend_dir | string | 前端代码目录绝对路径（如 /project/frontend）| plan | T5 | 条件必填 | 仅当 project_type ∈ {fullstack, frontend-only} 时；否则 N/A |
+
+**project_type 枚举值**：
+
+```
+backend-api    — 后端API（有路由、有数据库）
+fullstack      — 全栈（前端+后端+数据库）
+frontend-only  — 纯前端（无后端路由、无数据库）
+script         — 脚本/CLI工具（无服务、无路由）
+data-pipeline  — 数据管线/ETL（可能有数据库但无API路由）
+library        — 库/SDK（无服务、无部署、有发布）
+```
+
+### 项目类型与变量激活矩阵
+
+| 变量 | backend-api | fullstack | frontend-only | script | data-pipeline | library |
+|------|:-----------:|:---------:|:-------------:|:------:|:-------------:|:-------:|
+| deploy_target | ✓ | ✓ | ✓ | ○ | ✓ | ○ |
+| deploy_command | ✓ | ✓ | ✓ | ○ | ✓ | ○ |
+| service_list | ✓ | ✓ | ○ | ○ | ○ | ○ |
+| health_check_url | ✓ | ✓ | ○ | ○ | ○ | ○ |
+| acceptance_url | ✓ | ✓ | ✓ | ○ | ○ | ○ |
+| new_router_name | ✓ | ✓ | ○ | ○ | ○ | ○ |
+| main_entry_file | ✓ | ✓ | ○ | ○ | ○ | ○ |
+| migration_check_cmd | ✓ | ✓ | ○ | ○ | ✓ | ○ |
+| frontend_dir | ○ | ✓ | ✓ | ○ | ○ | ○ |
+| syntax_check_cmd | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+✓ = 必填（必须提供有效值） ○ = 可选（填 N/A 跳过相关流程）
 
 ---
 

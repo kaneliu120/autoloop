@@ -29,19 +29,19 @@
 | {路径} | 修改 | {改什么} |
 | {路径} | 新建 | {实现什么} |
 
-### 数据库变更
+### 数据库变更（当 migration_check_cmd ≠ N/A 时填写，否则删除本节）
 
-{数据库变更SQL — 根据实际技术栈编写。如有新增表、新增列、新增索引，在此写出完整 DDL 语句（包含幂等保护，如 IF NOT EXISTS）。无数据库变更则填写"无"。}
+{数据库变更SQL — 根据实际技术栈编写。如有新增表、新增列、新增索引，在此写出完整 DDL 语句（包含幂等保护，如 IF NOT EXISTS）。}
 
 使用 `{migration_check_cmd}` 验证迁移状态。
 
-### API 变更
+### API 变更（当 new_router_name ≠ N/A 时填写，否则删除本节）
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | {方法} | {路径} | {说明} |
 
-### 前端变更（如有）
+### 前端变更（当 frontend_dir ≠ N/A 时填写，否则删除本节）
 
 | 页面/组件 | 路径 | 改动说明 |
 |---------|------|---------|
@@ -51,27 +51,27 @@
 
 ## 具体方案
 
-### 后端实现
+### 核心实现
 
-{描述后端实现方案，包括数据模型设计、路由逻辑、关键函数签名。使用通用描述，不依赖特定框架语法。}
+{描述主要的实现方案。根据 project_type 组织内容：
+- backend-api/fullstack：数据模型 → API路由 → 业务逻辑
+- frontend-only：组件结构 → 状态管理 → API调用
+- script：入口 → 核心逻辑 → 输出处理
+- data-pipeline：数据源 → 转换逻辑 → 目标写入
+- library：公共API → 内部实现 → 导出}
 
-#### 数据模型
+### 数据库迁移（当 migration_check_cmd ≠ N/A 时）
 
-{描述数据模型的字段和关系。具体实现语法参见附录技术栈示例。}
+{迁移方案：新表/列/索引，迁移文件组织，回滚支持。}
+使用 `{migration_check_cmd}` 验证迁移状态。
 
-#### API 路由
-
-{描述新增路由的路径、方法、请求参数、响应格式。}
+### 路由注册（当 new_router_name ≠ N/A 时）
 
 在 `{main_entry_file}` 注册 `{new_router_name}`。
 
-### 前端实现（如有）
+### 前端实现（当 frontend_dir ≠ N/A 时）
 
-{描述前端实现方案，包括组件结构、状态管理、API 调用方式。具体实现语法参见附录技术栈示例。}
-
-### 数据库迁移
-
-{描述迁移方案：需要创建哪些新表/列/索引，迁移文件如何组织，如何支持回滚（downgrade）。具体迁移工具用法参见附录技术栈示例。}
+{组件结构、状态管理、API调用方式。}
 
 ---
 
@@ -79,30 +79,24 @@
 
 **Step 0**：读取现有相关代码，确认理解现有架构
 
-**Step 1**：创建数据库迁移脚本（数据库先行，其他开发依赖此步骤）
+**Step 1**（当 migration_check_cmd ≠ N/A 时）：创建数据库迁移脚本
 - 迁移文件包含 upgrade 和 downgrade 实现
 - 使用幂等操作防止重复执行报错
 
-**Step 2**：实现数据模型（{model 文件路径}）
+**Step 2**：实现核心功能模块
+{根据 project_type 描述主要实现，不预设固定步骤序列}
 
-**Step 3**：实现请求/响应 Schema（{schema 文件路径}）
+**Step 3**（当 new_router_name ≠ N/A 时）：在 `{main_entry_file}` 注册 `{new_router_name}`
 
-**Step 4**：实现路由函数（{路由文件路径}）
-- 所有外部调用有异常处理，不允许静默失败
-- 新文件在模块导出文件中声明
+**Step 4**（当 frontend_dir ≠ N/A 时）：实现前端组件（可与 Step 2 并行）
 
-**Step 5**：在 `{main_entry_file}` 注册 `{new_router_name}`
-- 按项目技术栈的路由注册规范操作
+**Step 5**：对所有修改文件运行语法检查（`{syntax_check_cmd}`）
 
-**Step 6**：实现前端组件（如有，可与 Step 2-5 并行）
+**Step 6**：代码审查（安全 / 可靠性 / 接口一致性），P1/P2 = 0 才可继续
 
-**Step 7**：对所有修改文件运行语法检查（`{syntax_check_cmd}`，按 `{syntax_check_file_arg}` 决定是否附加单文件参数）
+**Step 7**（当 deploy_command ≠ N/A 时）：提交代码并部署
 
-**Step 8**：代码审查（安全 / 可靠性 / 接口一致性），P1/P2 = 0 才可继续
-
-**Step 9**：提交代码并部署（`{deploy_command}`）
-
-**Step 10**：线上验收（访问 `{acceptance_url}`，人工确认）
+**Step 8**（当 acceptance_url ≠ N/A 时）：线上验收，人工确认
 
 ---
 
@@ -125,11 +119,11 @@
 
 **技术验收**：
 - [ ] 所有修改文件通过语法检查（`{syntax_check_cmd}`）
-- [ ] 新路由已注册：`grep -n "{new_router_name}" {main_entry_file}`
-- [ ] 数据库迁移状态正确：`{migration_check_cmd}`（无迁移则 N/A）
+- [ ] （当 new_router_name ≠ N/A 时）路由注册验证通过 — 见下方验证说明
+- [ ] （当 migration_check_cmd ≠ N/A 时）数据库迁移状态正确
 - [ ] 代码审查 P1/P2 = 0
-- [ ] Health check（`{health_check_url}`）返回 200（N/A 则跳过）
-- [ ] `{service_list}` 中所有服务全部 active（N/A 则跳过）
+- [ ] （当 health_check_url ≠ N/A 时）Health check 返回 200
+- [ ] （当 service_list ≠ N/A 时）所有服务全部 active
 
 **线上验收**：
 - [ ] 浏览器（桌面）功能正常
