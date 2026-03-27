@@ -372,6 +372,7 @@ description: >
 | 任务 ID | autoloop-{YYYYMMDD-HHMMSS} |
 | 模板 | T{N}: {名称} |
 | 状态 | 准备开始 |
+| 终止原因 | N/A |
 | 创建时间 | {ISO 8601} |
 | 最后更新 | {ISO 8601} |
 | 工作目录 | {绝对路径} |

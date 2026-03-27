@@ -176,7 +176,7 @@ P1: {N}，P2: {N}，P3: {N}
 门禁阈值见 `protocols/quality-gates.md` 门禁评估矩阵 T5 行。
 
 ### 阻塞条件
-有 P1 或 P2 问题 → 返回 Phase 1 针对性修复（最多 3 轮修复-审查循环；T5 因含人工确认环节，允许此例外，见 loop-protocol.md 统一重试上限规则）
+有 P1 或 P2 问题 → 返回 Phase 1 针对性修复（最多 3 轮修复-审查循环；T5 因含人工确认环节，允许此例外，见 protocols/loop-protocol.md 统一重试上限规则）
 
 ---
 

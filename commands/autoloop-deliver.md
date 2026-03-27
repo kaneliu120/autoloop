@@ -46,7 +46,7 @@ description: >
 
 **并行运行以下 subagents**（调度规范见 `protocols/agent-dispatch.md`）：
 
-**planner subagent**（调度方式见 agent-dispatch.md planner 章节）：
+**planner subagent**（调度方式见 protocols/agent-dispatch.md planner 章节）：
 
 ```text
 你是 planner subagent，负责技术方案设计。
@@ -90,7 +90,7 @@ frontend_dir：{从 autoloop-plan.md 读取}
 {关键函数/API 的签名}
 ```
 
-**researcher subagent**（如果需要外部信息，调度方式见 agent-dispatch.md researcher 章节）：
+**researcher subagent**（如果需要外部信息，调度方式见 protocols/agent-dispatch.md researcher 章节）：
 
 ```text
 你是 researcher subagent，调研以下技术实现的最佳实践：
