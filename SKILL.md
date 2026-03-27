@@ -109,7 +109,7 @@ REFLECT（反思）
 
 **质量门禁**：用户定义的 KPI 达到目标值
 
-**最大迭代**：默认 5 轮，可配置
+**最大迭代**：默认无上限，可配置
 
 ---
 
@@ -169,7 +169,7 @@ REFLECT（反思）
 
 **关键参数**：plan 阶段必须首先收集 `project_type`（枚举值见 `protocols/loop-protocol.md`），决定哪些检查适用
 
-**最大迭代**：默认 5 轮，直到全部达标
+**最大迭代**：默认无上限，直到全部达标
 
 ---
 
@@ -200,7 +200,7 @@ REFLECT（反思）
 ### 并行调度（独立任务）
 以下情况必须并行：
 - 多个 researcher 搜索不同维度
-- 多个 reviewer 检查不同代码模块
+- 多个 scanner 或 code-reviewer 检查不同代码模块
 - 多个 generator 生成不同内容单元
 - frontend-dev 和 backend-dev 开发不同层
 
