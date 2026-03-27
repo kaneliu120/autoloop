@@ -593,7 +593,11 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 **适用模板**：T6
 
-使用 `autoloop-quality.md` 中定义的完整 Security Reviewer 指令模板（含审查清单和评分规则）。
+执行流程：
+1. 读取 `protocols/enterprise-standard.md` 安全性维度获取完整检查项和扣分规则
+2. 读取 `protocols/quality-gates.md` 安全性门禁章节获取 P1/P2/P3 分类和通过标准
+3. 根据本次审查范围生成针对性检查清单
+4. 按清单逐项扫描，输出问题清单和评分
 
 ---
 
@@ -607,7 +611,11 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 **适用模板**：T6
 
-使用 `autoloop-quality.md` 中定义的完整 Reliability Reviewer 指令模板。
+执行流程：
+1. 读取 `protocols/enterprise-standard.md` 可靠性维度获取完整检查项和扣分规则
+2. 读取 `protocols/quality-gates.md` 可靠性门禁章节获取 P1/P2/P3 分类和通过标准
+3. 根据本次审查范围生成针对性检查清单
+4. 按清单逐项扫描，输出问题清单和评分
 
 ---
 
@@ -621,7 +629,11 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 **适用模板**：T6
 
-使用 `autoloop-quality.md` 中定义的完整 Maintainability Reviewer 指令模板。
+执行流程：
+1. 读取 `protocols/enterprise-standard.md` 可维护性维度获取完整检查项和扣分规则
+2. 读取 `protocols/quality-gates.md` 可维护性门禁章节获取 P1/P2/P3 分类和通过标准
+3. 根据本次审查范围生成针对性检查清单
+4. 按清单逐项扫描，输出问题清单和评分
 
 ---
 
@@ -679,7 +691,11 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 **适用模板**：T7
 
-使用 `autoloop-optimize.md` 中定义的完整 Architecture Diagnostic 指令模板。
+执行流程：
+1. 读取 `protocols/enterprise-standard.md` 架构维度获取完整诊断项和扣分规则
+2. 读取 `protocols/quality-gates.md` 架构门禁章节获取通过标准
+3. 根据本次诊断范围生成针对性检查清单
+4. 按清单逐项诊断，输出问题清单和评分
 
 ---
 
@@ -693,7 +709,11 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 **适用模板**：T7
 
-使用 `autoloop-optimize.md` 中定义的完整 Performance Diagnostic 指令模板。
+执行流程：
+1. 读取 `protocols/enterprise-standard.md` 性能维度获取完整诊断项和扣分规则
+2. 读取 `protocols/quality-gates.md` 性能门禁章节获取通过标准
+3. 根据本次诊断范围生成针对性检查清单
+4. 按清单逐项诊断，输出问题清单和评分
 
 ---
 
@@ -707,7 +727,11 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 **适用模板**：T7
 
-使用 `autoloop-optimize.md` 中定义的完整 Stability Diagnostic 指令模板。
+执行流程：
+1. 读取 `protocols/enterprise-standard.md` 稳定性维度获取完整诊断项和扣分规则
+2. 读取 `protocols/quality-gates.md` 稳定性门禁章节获取通过标准
+3. 根据本次诊断范围生成针对性检查清单
+4. 按清单逐项诊断，输出问题清单和评分
 
 ---
 
