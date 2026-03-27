@@ -28,8 +28,6 @@ description: >
 
 > 以下为非规范性示例，实际 KPI 应根据任务目标动态量化。
 
-模糊 KPI → 具体 KPI 的转换示例：
-
 | 模糊描述 | 量化 KPI |
 |---------|---------|
 | "更快" | API P95 延迟 < 200ms |
@@ -44,7 +42,7 @@ description: >
 
 在任何改动之前，测量当前状态，写入 `autoloop-progress.md` 的"基线"部分（格式见 `protocols/loop-protocol.md` 第1轮 Bootstrap 规则）：
 
-```
+```text
 基线测量报告：
 
 KPI 指标：{指标名}
@@ -61,7 +59,7 @@ KPI 指标：{指标名}
 
 ### OBSERVE：差距分析
 
-```
+```text
 读取 autoloop-findings.md 的反思章节（Round 2+ 必执行）
 获取遗留问题、有效/无效策略、已识别模式、经验教训
 （Step 0 规范见 protocols/loop-protocol.md OBSERVE Step 0 章节）
@@ -98,7 +96,7 @@ KPI 指标：{指标名}
 
 ### DECIDE：本轮行动计划
 
-```
+```text
 本轮行动计划：
 1. {具体行动 1}（预期改进：{预估值}）
    执行者：{agent 类型}
@@ -117,41 +115,30 @@ KPI 指标：{指标名}
 
 ### ACT：执行改进
 
-分配 subagent 执行改进（调度规范见 `protocols/agent-dispatch.md`）。每个 subagent 必须收到：
+#### 派遣
 
-```
-你是 {类型} subagent，负责以下改进任务：
+角色：按任务类型选择（backend-dev / frontend-dev / fixer 等，职责定义见 `protocols/agent-dispatch.md`）
 
-目标 KPI：{KPI 名称} 从 {当前值} 降低到 {目标值}
+#### 本次范围
 
-本次改进任务：
-{具体任务描述}
-
-改动约束：
-- 可以修改：{允许修改的范围}
+- 目标 KPI：{KPI 名称} 从 {当前值} 到 {目标值}
+- 改进任务：{具体任务描述}
+- 可修改范围：{允许修改的范围}
 - 不可修改：{禁止修改的内容}
-- 保持不变：{API 接口 / 数据库 schema / 其他约束}
+- 相关文件：{绝对路径列表}
 
-相关文件（绝对路径）：
-- {文件 1}
-- {文件 2}
+#### 执行流程
 
-执行后验证：
-- 运行：{验证命令}
-- 期望结果：{预期输出}
-
-输出：
-1. 修改了哪些文件，每个文件改了什么
-2. 验证结果截图/输出
-3. 预期对 KPI 的影响
-4. 是否引入了新的问题
-```
+1. 读取对应 protocol 获取规范
+2. 根据任务描述制定实施方案
+3. 实施修改，每步验证
+4. 输出：修改文件列表 + 验证结果 + 预期 KPI 影响 + 是否引入新问题
 
 ### VERIFY：重新测量
 
 KPI 门禁定义见 `protocols/quality-gates.md` T3 KPI Target 章节。
 
-```
+```text
 改进后 KPI 测量：
 
 测量命令：{命令}
@@ -175,17 +162,17 @@ KPI 门禁定义见 `protocols/quality-gates.md` T3 KPI Target 章节。
 
 **情况 1：KPI 改进但体验变差**
 
-```
+```text
 检测到潜在问题：
-  KPI {指标} 从 {X} 改善到 {Y}（↑）
-  但 {其他指标} 从 {X} 降低到 {Y}（↓）
+  KPI {指标} 从 {X} 改善到 {Y}（上升）
+  但 {其他指标} 从 {X} 降低到 {Y}（下降）
 
   这是可接受的权衡吗？继续 / 回滚 / 调整目标？
 ```
 
 **情况 2：发现根本性问题**
 
-```
+```text
 发现根本性问题，需要决策：
 
   问题：{描述}
@@ -201,7 +188,7 @@ KPI 门禁定义见 `protocols/quality-gates.md` T3 KPI Target 章节。
 
 **情况 3：连续无进展**
 
-```
+```text
 连续 {N} 轮改进幅度低于阈值（见 protocols/evolution-rules.md 进化类型 3）：
 
   当前 KPI：{值}（目标：{值}）

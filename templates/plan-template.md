@@ -6,8 +6,8 @@
 |------|-----|
 | 任务 ID | autoloop-{YYYYMMDD-HHMMSS} |
 | 模板 | T{N}: {名称} |
-| 状态 | 准备开始 / 进行中 / 已完成 |
-| 终止原因 | N/A / 达标终止 / 预算耗尽 / 用户中断 / 阻塞终止 |
+| 状态 | 准备开始 / 执行中 / 暂停等待确认 / 暂停等待输入 / 已完成 |
+| 终止原因 | N/A / 达标终止 / 预算耗尽 / 用户终止 / 无法继续 |
 | 创建时间 | {ISO 8601} |
 | 最后更新 | {ISO 8601} |
 | 工作目录 | {绝对路径} |
@@ -47,13 +47,10 @@
 - 选项 B：{描述}
 - 评估维度：{维度 1}（权重 {X}%）、{维度 2}（权重 {Y}%）...
 - 决策标准：{最重要的因素}
-- key_assumptions（关键假设表，用于敏感性分析）：
-
-| 假设名称 | 当前值 | 单位 | 敏感性区间（±20% 范围）|
-|---------|--------|------|----------------------|
-| {假设 1，如市场增长率} | {当前值，如 15} | {单位，如 %/年} | {低值} ~ {高值} |
-| {假设 2，如实施周期} | {当前值，如 6} | {单位，如 月} | {低值} ~ {高值} |
-| {假设 3，如团队规模} | {当前值，如 5} | {单位，如 人} | {低值} ~ {高值} |
+- key_assumptions（关键假设，结构化列表，每项含 name + current_value + unit，用于敏感性分析；计算方法见 protocols/quality-gates.md T2敏感性分析章节）：
+  - 假设名称：{假设 1，如市场增长率}，当前值：{如 15}，单位：{如 %/年}
+  - 假设名称：{假设 2，如实施周期}，当前值：{如 6}，单位：{如 月}
+  - 假设名称：{假设 3，如团队规模}，当前值：{如 5}，单位：{如 人}
 
 **T3 Iterate**：
 - KPI：{指标名} = {目标值}
@@ -70,19 +67,19 @@
 - naming_pattern：{文件命名规则，如 {template_name}-{index}.md}
 
 **T5 Deliver**：
-- project_type：{枚举值见 protocols/loop-protocol.md project_type 枚举，激活矩阵见同文档}
+- project_type：{项目类型}
 - 功能描述：{详细需求}
 - 代码库路径：{绝对路径}
 - 新增路由：{是/否}，路由前缀：{前缀}
 - new_router_name：{本次新增的 router 变量名，如 comments_router}
 - main_entry_file：{主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
 - 数据库变更：{是/否}，变更内容：{描述}
-- syntax_check_cmd：{语法检查裸命令，如 python3 -m py_compile 或 npx tsc --noEmit，不含文件参数占位符；文件参数由 syntax_check_file_arg 控制}
-- syntax_check_file_arg：{true/false，语法检查命令是否接受单文件参数；python3 -m py_compile → true，npx tsc --noEmit → false}
+- syntax_check_cmd：{语法检查命令，如 python3 -m py_compile 或 npx tsc --noEmit}
+- syntax_check_file_arg：{true/false，语法检查命令是否接受单文件参数}
 - deploy_target：{部署目标主机/环境，如 prod-server}
-- deploy_command：{完整部署执行命令，如 gcloud compute ssh ... --command="cd /opt/sip && git pull && sudo bash deploy.sh"}
-- service_list：{服务名称列表，如 [backend-api, worker, scheduler, frontend]；不适用则填 N/A}
-- service_count：{自动计算，= len(service_list)；service_list = N/A 时此项也 N/A}（与 protocols/loop-protocol.md 统一参数词汇表一致）
+- deploy_command：{完整部署执行命令}
+- service_list：{服务名称列表，不适用则填 N/A}
+- service_count：{服务数量，不适用则填 N/A}
 - health_check_url：{健康检查 URL，如 https://example.com/api/health；不适用则留空}
 - acceptance_url：{线上验收 URL，如 https://example.com}
 - doc_output_path：{方案文档输出目录绝对路径}
@@ -90,19 +87,19 @@
 - frontend_dir：{前端代码目录绝对路径；无前端则填 N/A}
 
 **T6 Quality**：
-- project_type：{枚举值见 protocols/loop-protocol.md project_type 枚举，激活矩阵见同文档}
+- project_type：{项目类型}
 - 代码库路径：{绝对路径}
 - 审查模块：{模块列表 / 全量}
-- syntax_check_cmd：{语法检查裸命令，如 python3 -m py_compile 或 npx tsc --noEmit，不含文件参数占位符；文件参数由 syntax_check_file_arg 控制}
+- syntax_check_cmd：{语法检查命令}
 - syntax_check_file_arg：{true/false，语法检查命令是否接受单文件参数}
-- main_entry_file：{主入口文件绝对路径，如 /project/backend/main.py；必填性由 project_type 激活矩阵决定}
+- main_entry_file：{主入口文件绝对路径}
 - 已知问题：{描述 / 无}
 - 特殊约束：{约束 / 无}
 
 **T7 Optimize**：
-- project_type：{枚举值见 protocols/loop-protocol.md project_type 枚举，激活矩阵见同文档}
+- project_type：{项目类型}
 - 系统路径：{绝对路径}
-- syntax_check_cmd：{语法检查裸命令，如 python3 -m py_compile 或 npx tsc --noEmit，不含文件参数占位符；文件参数由 syntax_check_file_arg 控制}
+- syntax_check_cmd：{语法检查命令}
 - syntax_check_file_arg：{true/false，语法检查命令是否接受单文件参数}
 - 当前性能：{指标：值}
 - 优先方向：{全部 / 架构 / 性能 / 稳定性}
@@ -155,7 +152,7 @@
 | autoloop-plan.md | {工作目录}/autoloop-plan.md | 任务计划（本文件）| 已创建 |
 | autoloop-progress.md | {工作目录}/autoloop-progress.md | 迭代进度 | 待创建 |
 | autoloop-findings.md | {工作目录}/autoloop-findings.md | 发现记录 | 待创建 |
-| 最终报告 | {工作目录}/ | 最终报告（文件命名见 protocols/loop-protocol.md 统一输出文件命名章节）| 待创建 |
+| 最终报告 | {工作目录}/{最终报告文件名} | 最终报告 | 待创建 |
 | autoloop-results.tsv | {工作目录}/autoloop-results.tsv | 结构化迭代日志（所有模板通用）| 待创建 |
 
 ---

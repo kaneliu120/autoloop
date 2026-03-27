@@ -85,11 +85,11 @@
 
 **Step 5**：对所有修改文件运行语法检查（`{syntax_check_cmd}`）
 
-**Step 6**：代码审查（安全 / 可靠性 / 接口一致性），门禁见 `protocols/quality-gates.md` 门禁评估矩阵 T5 行
+**Step 6**：代码审查（安全 / 可靠性 / 接口一致性）
 
 **Step 7**：{提交代码并部署，不涉及则标注"跳过"}
 
-**Step 8**：人工验收（验收方式见 `protocols/delivery-phases.md` Phase 5）
+**Step 8**：人工验收
 
 ---
 
@@ -114,11 +114,11 @@
 - [ ] 所有修改文件通过语法检查（`{syntax_check_cmd}`）
 - [ ] 路由注册验证通过（不涉及则标注 N/A）
 - [ ] 数据库迁移状态正确（不涉及则标注 N/A）
-- [ ] 代码审查通过（门禁见 `protocols/quality-gates.md` 门禁评估矩阵 T5 行）
+- [ ] 代码审查通过
 - [ ] Health check 返回 200（不涉及则标注 N/A）
 - [ ] 所有服务全部 active（不涉及则标注 N/A）
 
-**线上验收**（验收方式由 command 根据 project_type 填充，规则见 `protocols/delivery-phases.md` Phase 5）：
+**线上验收**：
 - [ ] {验收项 1}
 - [ ] {验收项 2}
 - [ ] {验收项 3}
@@ -132,17 +132,9 @@
 
 **回滚步骤**：
 
-```bash
-# 1. Git 回滚
-git revert {commit_hash}
-git push origin main
-
-# 2. 重新部署（不涉及则跳过）
-{deploy_command}
-
-# 3. 数据库回滚（不涉及则跳过）
-{数据库回滚命令}
-```
+1. {代码回滚步骤}
+2. {重新部署步骤，不涉及则标注"不涉及"}
+3. {数据库回滚步骤，不涉及则标注"不涉及"}
 
 **回滚预计耗时**：{N} 分钟
 
