@@ -69,7 +69,7 @@ description: >
 
 **按模板按需追加**：
 
-T1 Research: 调研维度（可以自动生成）、最大轮次（默认 3）
+T1 Research: 调研维度（可以自动生成）、最大轮次（默认值见 `protocols/parameters.md` default_rounds.T1）
 T2 Compare: 要比较的选项列表（必须用户提供）
 T3 Iterate: KPI 定义和当前基线（必须用户提供）
 T4 Generate: 模板示例（至少 1 个）、数量
