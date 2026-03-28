@@ -17,7 +17,7 @@
 
 ## 统一参数词汇表
 
-**规则**：所有 AutoLoop 文件（commands/、protocols/、templates/）中涉及下列概念时，必须使用下表中的变量名，不得自行发明同义词。
+**规则**：所有 AutoLoop 文件（commands/、references/、assets/）中涉及下列概念时，必须使用下表中的变量名，不得自行发明同义词。
 
 | 变量名 | 类型 | 用途 | 收集时机 | 适用模板 |
 |--------|------|------|---------|---------|
@@ -294,9 +294,9 @@ Template（格式）← 被填充后成为交付物
 
 这确保每一轮都带着上轮的认知进入，而非从零开始。
 
-**全局经验读取**：除读取当前任务的 findings.md 外，还须读取 `protocols/experience-registry.md` 全局策略效果库中同模板 + context_tags重叠 的推荐策略（按 success_rate 降序）。context_tags重叠 = 当前任务的标签与策略的context_tags至少有2个相同标签。无重叠标签的策略不推荐，避免跨上下文误迁移。首轮冷启动时，全局经验是唯一的策略参考来源。
+**全局经验读取**：除读取当前任务的 findings.md 外，还须读取 `references/experience-registry.md` 全局策略效果库中同模板 + context_tags重叠 的推荐策略（按 success_rate 降序）。context_tags重叠 = 当前任务的标签与策略的context_tags至少有2个相同标签。无重叠标签的策略不推荐，避免跨上下文误迁移。首轮冷启动时，全局经验是唯一的策略参考来源。
 
-**协议版本检测**：OBSERVE 开始时检查当前 `protocol_version` 是否与上次任务的版本一致。如果不一致（minor/major变更），触发重基线流程（规则见 `protocols/evolution-rules.md` 重基线章节），以新基线作为本轮起点。
+**协议版本检测**：OBSERVE 开始时检查当前 `protocol_version` 是否与上次任务的版本一致。如果不一致（minor/major变更），触发重基线流程（规则见 `references/evolution-rules.md` 重基线章节），以新基线作为本轮起点。
 
 **T6/T7 的 OBSERVE Step 0 同样适用**：T6 和 T7 在 Round 2+ 执行 OBSERVE 时，必须首先读取 findings.md 的反思章节，获取遗留问题清单、无效修复模式和已识别的系统性根因，再制定本轮修复策略。
 
@@ -447,7 +447,7 @@ side_effect字段使用强化：不允许未经验证直接填"无"，必须在V
 
 ### Subagent 调度规范
 
-每次调度必须提供完整上下文（详见 `protocols/agent-dispatch.md`）：
+每次调度必须提供完整上下文（详见 `references/agent-dispatch.md`）：
 1. 角色定义（你是 X subagent）
 2. 具体任务（可操作，不是方向）
 3. 输入（文件绝对路径、信息内容）
@@ -664,7 +664,7 @@ AutoLoop 有四种终止路径，按优先级排列：
 - 可泛化的方法论（下次类似任务可直接复用）
 - 对 AutoLoop 自身流程的改进建议
 
-**经验提取与分发**：REFLECT 完成后，从本轮发现中提取可泛化的经验条目，按 `protocols/experience-registry.md` 定义的评估标准（类型、影响层级、置信度）评估后，分发到对应文件。低风险经验直接写入，高风险经验记录为待审批。
+**经验提取与分发**：REFLECT 完成后，从本轮发现中提取可泛化的经验条目，按 `references/experience-registry.md` 定义的评估标准（类型、影响层级、置信度）评估后，分发到对应文件。低风险经验直接写入，高风险经验记录为待审批。
 
 **关键规则**:
 - REFLECT 必须写入 `autoloop-findings.md` 的 4 层结构表，不能只在思考中完成

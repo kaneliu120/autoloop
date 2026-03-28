@@ -26,7 +26,7 @@
 - 功能需求描述（来自 autoloop-plan.md）
 - 代码库路径（绝对路径）
 - 技术栈信息
-- **T5 必须额外收集（在 plan 阶段）**：所有 T5 参数见 `protocols/loop-protocol.md` 统一参数词汇表（deploy_target、deploy_command、service_list、health_check_url、acceptance_url、doc_output_path、syntax_check_cmd、new_router_name、main_entry_file）
+- **T5 必须额外收集（在 plan 阶段）**：所有 T5 参数见 `references/loop-protocol.md` 统一参数词汇表（deploy_target、deploy_command、service_list、health_check_url、acceptance_url、doc_output_path、syntax_check_cmd、new_router_name、main_entry_file）
 
 ### 执行（并行）
 
@@ -72,7 +72,7 @@
 生成方案文档，写入：
 `{doc_output_path}/{功能名}-{YYYY-MM-DD}.md`
 
-其中 `{doc_output_path}` 的值来自 `autoloop-plan.md` 的 `doc_output_path` 字段（唯一来源，见 `protocols/loop-protocol.md` 统一参数词汇表）。不得在此处硬编码任何路径。
+其中 `{doc_output_path}` 的值来自 `autoloop-plan.md` 的 `doc_output_path` 字段（唯一来源，见 `references/loop-protocol.md` 统一参数词汇表）。不得在此处硬编码任何路径。
 
 文档须包含以下章节：问题描述、影响范围（修改文件列表+数据库变更+API变更）、具体方案、实施步骤、风险与缓解、验收标准、回滚方案
 

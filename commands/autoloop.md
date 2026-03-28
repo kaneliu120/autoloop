@@ -60,7 +60,7 @@ description: >
 匹配得分 = max(命中触发词的权重) + 上下文加分（上限 1.0）
 ```
 
-**Step 2d — 置信度分支**（阈值见 `protocols/parameters.md` routing 参数）：
+**Step 2d — 置信度分支**（阈值见 `references/parameters.md` routing 参数）：
 
 | 置信度 | 条件 | 行为 |
 |--------|------|------|
@@ -95,7 +95,7 @@ description: >
 
 **按模板按需追加**：
 
-T1 Research: 调研维度（可以自动生成）、最大轮次（默认值见 `protocols/parameters.md` default_rounds.T1）
+T1 Research: 调研维度（可以自动生成）、最大轮次（默认值见 `references/parameters.md` default_rounds.T1）
 T2 Compare: 要比较的选项列表（必须用户提供）
 T3 Iterate: KPI 定义和当前基线（必须用户提供）
 T4 Generate: 模板示例（至少 1 个）、数量
@@ -109,15 +109,15 @@ T7 Optimize: 系统/代码库路径（必须）、优先方向（可选）
 
 **唯一路径**：将已解析的目标、模板类型和初步参数传递给 `/autoloop:plan` 向导。计划文件的创建、格式、字段完整性全部由向导负责，本入口不自行创建任何计划内容。
 
-向导输出符合 `templates/plan-template.md` 规范的完整 `autoloop-plan.md` 后，自动进入 Step 5。
+向导输出符合 `assets/plan-template.md` 规范的完整 `autoloop-plan.md` 后，自动进入 Step 5。
 
 ### Step 5: Bootstrap — 创建迭代文件
 
-`/autoloop:plan` 确认计划后，立即创建以下三个文件（Bootstrap 规则见 `protocols/loop-protocol.md` 第1轮 Bootstrap 规则章节）：
+`/autoloop:plan` 确认计划后，立即创建以下三个文件（Bootstrap 规则见 `references/loop-protocol.md` 第1轮 Bootstrap 规则章节）：
 
-- `autoloop-findings.md`（使用 `templates/findings-template.md`）
-- `autoloop-progress.md`（使用 `templates/progress-template.md`）
-- `autoloop-results.tsv`（TSV Schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节，写入15列表头行）
+- `autoloop-findings.md`（使用 `assets/findings-template.md`）
+- `autoloop-progress.md`（使用 `assets/progress-template.md`）
+- `autoloop-results.tsv`（TSV Schema 见 `references/loop-protocol.md` 统一 TSV Schema 章节，写入15列表头行）
 
 Bootstrap 完成后**自动进入第一轮执行，不等待用户额外确认**。如果用户在计划摘要阶段提出修改，更新计划文件后再启动。
 
@@ -135,7 +135,7 @@ Bootstrap 完成后**自动进入第一轮执行，不等待用户额外确认**
 - T6: `/autoloop:quality` 第一轮：三维度并行扫描
 - T7: `/autoloop:optimize` 第一轮：全面诊断
 
-每轮结束后，**必须执行 REFLECT**（所有模板通用）：写入 `autoloop-findings.md` 的4层反思结构表，格式见 `templates/findings-template.md`。详见 `protocols/loop-protocol.md` REFLECT 章节。
+每轮结束后，**必须执行 REFLECT**（所有模板通用）：写入 `autoloop-findings.md` 的4层反思结构表，格式见 `assets/findings-template.md`。详见 `references/loop-protocol.md` REFLECT 章节。
 
 ---
 
@@ -171,7 +171,7 @@ AutoLoop 第 {N} 轮完成
 
 ## 终止与最终输出
 
-达到终止条件后，生成最终报告（格式参见 `templates/report-template.md`），包含：
+达到终止条件后，生成最终报告（格式参见 `assets/report-template.md`），包含：
 
 1. 执行摘要（目标、结果、质量达标情况）
 2. 详细发现（从 autoloop-findings.md 整合）
@@ -186,22 +186,22 @@ AutoLoop 第 {N} 轮完成
 
 ## 最终输出文件命名规则
 
-最终输出文件命名规则见 `protocols/loop-protocol.md` 统一输出文件命名章节。
+最终输出文件命名规则见 `references/loop-protocol.md` 统一输出文件命名章节。
 
 ---
 
 ## TSV Schema
 
-TSV schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节。
+TSV schema 见 `references/loop-protocol.md` 统一 TSV Schema 章节。
 
 ---
 
 ## 错误处理
 
-**subagent 失败**：记录失败原因，用备用策略重试（重试上限见 `protocols/loop-protocol.md` 统一重试规则），仍失败则标记该维度为"部分完成"，继续其他维度。
+**subagent 失败**：记录失败原因，用备用策略重试（重试上限见 `references/loop-protocol.md` 统一重试规则），仍失败则标记该维度为"部分完成"，继续其他维度。
 
 **无法获取信息**：在 findings 中注明"信息不可用"及原因，不要停止整个循环。
 
 **矛盾发现**：记录矛盾，标注置信度，向用户报告，等待人工判断。
 
-**超出预算**：不继续迭代，输出当前最优结果，告知用户哪些目标未达成。终止层级完整定义见 `protocols/quality-gates.md` 概述章节。
+**超出预算**：不继续迭代，输出当前最优结果，告知用户哪些目标未达成。终止层级完整定义见 `references/quality-gates.md` 概述章节。

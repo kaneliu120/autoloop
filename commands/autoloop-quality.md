@@ -3,7 +3,7 @@ name: autoloop-quality
 description: >
   AutoLoop T6: 企业级质量迭代模板。三维度并行扫描（安全/可靠/可维护），
   按 P1→P2→P3 优先级修复，每修复后验证无回归，直到全部达到企业级标准。
-  目标：达到 protocols/quality-gates.md T6 门禁矩阵要求。
+  目标：达到 references/quality-gates.md T6 门禁矩阵要求。
   触发：/autoloop:quality 或任何需要将代码提升到企业级质量的任务。
 ---
 
@@ -22,14 +22,14 @@ description: >
 
 在阶段 0 扫描前，先确认技术栈，选择对应的验证命令：
 
-所有技术栈使用 plan 中定义的 `{syntax_check_cmd}`（见 `protocols/loop-protocol.md` 统一参数词汇表）进行语法验证，按 `syntax_check_file_arg` 决定是否附加文件参数。模块导出和路由注册检查方式由 plan 的 `main_entry_file` 决定。
+所有技术栈使用 plan 中定义的 `{syntax_check_cmd}`（见 `references/loop-protocol.md` 统一参数词汇表）进行语法验证，按 `syntax_check_file_arg` 决定是否附加文件参数。模块导出和路由注册检查方式由 plan 的 `main_entry_file` 决定。
 
 如果 plan 阶段未指定验证命令，在开始扫描前向用户确认：
 "检测到技术栈：{检测结果}。将使用 {验证命令} 进行语法验证，是否正确？"
 
-**Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再制定本轮修复计划。详见 `protocols/loop-protocol.md` OBSERVE Step 0 章节。
+**Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再制定本轮修复计划。详见 `references/loop-protocol.md` OBSERVE Step 0 章节。
 
-- **经验库读取**: 读取 `protocols/experience-registry.md` 中与当前任务类型和目标维度匹配的条目，识别状态为「推荐」或「候选默认」的策略，传递到 DECIDE 阶段参考
+- **经验库读取**: 读取 `references/experience-registry.md` 中与当前任务类型和目标维度匹配的条目，识别状态为「推荐」或「候选默认」的策略，传递到 DECIDE 阶段参考
 
 ---
 
@@ -38,7 +38,7 @@ description: >
 每轮修复开始前，在执行任何扫描或修复行动之前，必须先完成 OBSERVE Step 0：
 
 ```
-**Domain Pack 加载**：执行 domain pack 自动检测（见 domain-packs/README.md §加载机制）。扫描工作目录技术栈特征自动加载匹配 pack；如 plan 中手动指定 `domain_pack` 则使用指定值；`domain_pack: none` 显式禁用。加载后用 pack 检测命令替换 enterprise-standard.md 的通用命令，权重调整覆盖通用权重。
+**Domain Pack 加载**：执行 domain pack 自动检测（见 domain-pack-spec.md §加载机制）。扫描工作目录技术栈特征自动加载匹配 pack；如 plan 中手动指定 `domain_pack` 则使用指定值；`domain_pack: none` 显式禁用。加载后用 pack 检测命令替换 enterprise-standard.md 的通用命令，权重调整覆盖通用权重。
 
 OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
   读取 autoloop-findings.md 的反思章节（4层结构表）
@@ -49,21 +49,21 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
   - 经验教训：哪类修复最有效、哪些验证步骤能发现最多问题
 
   完成后再扫描当前代码状态并制定本轮修复计划
-  （完整规范见 protocols/loop-protocol.md OBSERVE Step 0 章节）
+  （完整规范见 references/loop-protocol.md OBSERVE Step 0 章节）
 ```
 
 ---
 
 ## 企业级质量标准定义
 
-> **评分标准完整定义见 `protocols/enterprise-standard.md`。**
+> **评分标准完整定义见 `references/enterprise-standard.md`。**
 > T6 审查必须覆盖 enterprise-standard.md 中的所有检查项，包括但不限于：
 > 超时配置、重试逻辑、健康检查、测试覆盖、连接池配置等。
 > 不得仅依赖本文件中的简化列表，必须以 enterprise-standard.md 为准。
 
-**目标分数**：质量门禁阈值见 `protocols/quality-gates.md` T6 行（安全性、可靠性、可维护性各维度分数目标）。
+**目标分数**：质量门禁阈值见 `references/quality-gates.md` T6 行（安全性、可靠性、可维护性各维度分数目标）。
 
-**达标条件（复合判定，见 protocols/quality-gates.md T6 复合判定规则）**：
+**达标条件（复合判定，见 references/quality-gates.md T6 复合判定规则）**：
 - 分数达标 AND 计数达标（P1=0，安全P2=0）两个条件必须同时满足
 
 ---
@@ -290,7 +290,7 @@ grep -rn "http://\|https://" {路径}  # 硬编码 URL
 
 **对每个问题（按优先级）**：
 
-1. **工单生成**: 按 `protocols/agent-dispatch.md` 对应角色模板生成委派工单，填充任务目标、输入数据、输出格式、质量标准、范围限制、当前轮次、上下文摘要
+1. **工单生成**: 按 `references/agent-dispatch.md` 对应角色模板生成委派工单，填充任务目标、输入数据、输出格式、质量标准、范围限制、当前轮次、上下文摘要
 
 2. **分配修复 subagent**：
 
@@ -382,7 +382,7 @@ Checkpoint（已修复 {N} 个问题）
 
 ### 终止判断
 
-终止条件为复合判定（必须同时满足两个条件），完整规则见 `protocols/quality-gates.md` T6 复合判定规则。
+终止条件为复合判定（必须同时满足两个条件），完整规则见 `references/quality-gates.md` T6 复合判定规则。
 
 ```
 条件一：分数达标（阈值见 quality-gates.md T6 门禁行）
@@ -407,21 +407,21 @@ Checkpoint（已修复 {N} 个问题）
 
 ## 每轮 REFLECT 执行规范
 
-每修复批次（checkpoint）完成后，在 EVOLVE 判断之后执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `protocols/loop-protocol.md` REFLECT 章节）：
+每修复批次（checkpoint）完成后，在 EVOLVE 判断之后执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `references/loop-protocol.md` REFLECT 章节）：
 
-写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `templates/findings-template.md`：
+写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `assets/findings-template.md`：
 
 - **问题登记**：记录本轮发现的代码问题、修复是否引入新问题、审查遗漏、未能修复的遗留项
-- **策略复盘**：修复策略/审查方法/验证命令的效果评估（保持 | 避免 | 待验证）（策略评价枚举见 protocols/loop-protocol.md 统一状态枚举）
+- **策略复盘**：修复策略/审查方法/验证命令的效果评估（保持 | 避免 | 待验证）（策略评价枚举见 references/loop-protocol.md 统一状态枚举）
 - **模式识别**：反复出现的代码问题类型（说明有架构级根因）、修复→新问题的因果链、哪类问题集中在同一模块
 - **经验教训**：哪类修复最有效、哪些验证步骤能发现最多问题、安全/可靠/可维护性三维度的系统性教训
-- **经验写回**: 将本轮策略效果写入 `protocols/experience-registry.md`（策略ID、适用场景、效果评分、执行上下文，遵循效果记录表格式）
+- **经验写回**: 将本轮策略效果写入 `references/experience-registry.md`（策略ID、适用场景、效果评分、执行上下文，遵循效果记录表格式）
 
 ---
 
 ## 最终审计报告
 
-文件名遵循 `protocols/loop-protocol.md` 统一输出文件命名章节（T6: `autoloop-audit-{date}.md`）。写入时使用 `templates/audit-template.md`：
+文件名遵循 `references/loop-protocol.md` 统一输出文件命名章节（T6: `autoloop-audit-{date}.md`）。写入时使用 `assets/audit-template.md`：
 
 ```markdown
 # 企业级质量审计报告

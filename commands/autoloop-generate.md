@@ -2,8 +2,8 @@
 name: autoloop-generate
 description: >
   AutoLoop T4: 批量内容生成模板。模板驱动 + 并行生成 + 逐项质量检查 + 自动重试。
-  每个生成单元独立评分，低分自动重生成，重试上限见 protocols/loop-protocol.md 统一重试规则（默认2次）。
-  质量门禁阈值见 protocols/quality-gates.md T4 行。
+  每个生成单元独立评分，低分自动重生成，重试上限见 references/loop-protocol.md 统一重试规则（默认2次）。
+  质量门禁阈值见 references/quality-gates.md T4 行。
   触发：/autoloop:generate 或任何需要批量生成同类内容的任务。
 ---
 
@@ -15,14 +15,14 @@ description: >
 - 内容类型（报告/邮件/代码/数据/文案等）
 - 变量列表（每个生成单元的变化项）
 - 数量
-- 质量标准（通过标准见 `protocols/quality-gates.md` T4 行）
+- 质量标准（通过标准见 `references/quality-gates.md` T4 行）
 - 示例（至少 1 个用户认可的样本）
-- 输出位置（output_path，变量名见 `protocols/loop-protocol.md` 统一参数词汇表）
-- 文件命名规则（naming_pattern，变量名见 `protocols/loop-protocol.md` 统一参数词汇表）
+- 输出位置（output_path，变量名见 `references/loop-protocol.md` 统一参数词汇表）
+- 文件命名规则（naming_pattern，变量名见 `references/loop-protocol.md` 统一参数词汇表）
 
-**Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再扫描当前状态。详见 `protocols/loop-protocol.md` OBSERVE Step 0 章节。
+**Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再扫描当前状态。详见 `references/loop-protocol.md` OBSERVE Step 0 章节。
 
-- **经验库读取**: 读取 `protocols/experience-registry.md` 中与当前任务类型和目标维度匹配的条目，识别状态为「推荐」或「候选默认」的策略，传递到 DECIDE 阶段参考
+- **经验库读取**: 读取 `references/experience-registry.md` 中与当前任务类型和目标维度匹配的条目，识别状态为「推荐」或「候选默认」的策略，传递到 DECIDE 阶段参考
 
 ---
 
@@ -30,7 +30,7 @@ description: >
 
 从用户提供的示例中提取模板结构。
 
-运行 template-extractor subagent（调度方式见 `protocols/agent-dispatch.md` template-extractor 章节）：
+运行 template-extractor subagent（调度方式见 `references/agent-dispatch.md` template-extractor 章节）：
 
 ```
 你是 template-extractor subagent。
@@ -90,10 +90,10 @@ description: >
 如果变量需要推断，使用规则生成。
 如果变量需要用户提供，列出清单请用户确认。
 
-生成状态跟踪行（写入 `autoloop-results.tsv`，每个生成单元一行，记录状态和分数；TSV schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节）：
+生成状态跟踪行（写入 `autoloop-results.tsv`，每个生成单元一行，记录状态和分数；TSV schema 见 `references/loop-protocol.md` 统一 TSV Schema 章节）：
 
 ```text
-（TSV 格式见 protocols/loop-protocol.md 统一 TSV Schema，15列）
+（TSV 格式见 references/loop-protocol.md 统一 TSV Schema，15列）
 001  generate  待检查  score  —  —  baseline  待生成  无  —  001  {version}  待生成
 002  generate  待检查  score  —  —  baseline  待生成  无  —  002  {version}  待生成
 ```
@@ -104,9 +104,9 @@ description: >
 
 ## 第三步：并行批量生成
 
-- **工单生成**: 按 `protocols/agent-dispatch.md` 对应角色模板生成委派工单，填充任务目标、输入数据、输出格式、质量标准、范围限制、当前轮次、上下文摘要
+- **工单生成**: 按 `references/agent-dispatch.md` 对应角色模板生成委派工单，填充任务目标、输入数据、输出格式、质量标准、范围限制、当前轮次、上下文摘要
 
-将所有生成单元分配给 generator subagents，并行执行（调度规范见 `protocols/agent-dispatch.md`）。
+将所有生成单元分配给 generator subagents，并行执行（调度规范见 `references/agent-dispatch.md`）。
 
 每批并行数量：最多 5 个（防止输出质量因并行过多下降）。
 
@@ -155,7 +155,7 @@ description: >
 
 ## 第四步：逐项质量评分
 
-每个单元生成完成后，运行独立的 quality-checker subagent（调度方式见 `protocols/agent-dispatch.md` quality-checker 章节）。
+每个单元生成完成后，运行独立的 quality-checker subagent（调度方式见 `references/agent-dispatch.md` quality-checker 章节）。
 
 评分时必须同时输出分数、判据（命中哪个锚点区间）、证据（来源URL或文件行号）。缺少任一项的评分无效，该维度记为待检查。
 
@@ -190,7 +190,7 @@ description: >
 
 ## 重试机制
 
-重试上限见 `protocols/loop-protocol.md` 统一重试规则（默认 2 次）。对于评分低于 `protocols/quality-gates.md` T4 单元通过阈值的单元，触发重试：
+重试上限见 `references/loop-protocol.md` 统一重试规则（默认 2 次）。对于评分低于 `references/quality-gates.md` T4 单元通过阈值的单元，触发重试：
 
 **第 1 次重试**：
 - 将 quality-checker 的问题反馈给 generator
@@ -207,16 +207,16 @@ description: >
 **第 2 次重试（最后一次）**：
 - 换一个不同的生成策略
 - 完全重新生成，不参考之前的版本
-- 如果仍低于 `protocols/quality-gates.md` T4 单元通过阈值，标注为"需人工审查"，继续其他单元
+- 如果仍低于 `references/quality-gates.md` T4 单元通过阈值，标注为"需人工审查"，继续其他单元
 
 ---
 
 ## 批次进度追踪
 
-实时更新 `autoloop-results.tsv`（TSV schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节）：
+实时更新 `autoloop-results.tsv`（TSV schema 见 `references/loop-protocol.md` 统一 TSV Schema 章节）：
 
 ```
-（TSV 格式见 protocols/loop-protocol.md 统一 TSV Schema，15列）
+（TSV 格式见 references/loop-protocol.md 统一 TSV Schema，15列）
 1  generate  通过    score  8.5  —  S01-template-gen  按模板生成  无  —  001  {version}  重试0次
 1  generate  通过    score  7.2  —  S01-template-gen  按模板生成  无  —  002  {version}  重试1次: 语调调整
 1  generate  待审查  score  6.0  —  S02-rewrite       完全重写    无  —  003  {version}  重试2次仍未达标
@@ -238,7 +238,7 @@ description: >
 
 ## 最终汇总
 
-所有单元完成后，生成汇总报告（文件名见 `protocols/loop-protocol.md` 统一输出文件命名章节）：
+所有单元完成后，生成汇总报告（文件名见 `references/loop-protocol.md` 统一输出文件命名章节）：
 
 ```markdown
 ## 批量生成完成报告
@@ -252,8 +252,8 @@ description: >
 | 需人工审查 | {N} | {%} |
 | **总计** | {总N} | 100% |
 
-通过率：{X}%（目标阈值见 protocols/quality-gates.md T4 通过率章节）
-平均得分：{X}/10（目标阈值见 protocols/quality-gates.md T4 平均分章节）
+通过率：{X}%（目标阈值见 references/quality-gates.md T4 通过率章节）
+平均得分：{X}/10（目标阈值见 references/quality-gates.md T4 平均分章节）
 
 ### 质量分布
 
@@ -278,22 +278,22 @@ description: >
 
 ### 输出文件
 
-所有通过的内容已写入：{output_path}（来自 autoloop-plan.md，变量名见 protocols/loop-protocol.md）
+所有通过的内容已写入：{output_path}（来自 autoloop-plan.md，变量名见 references/loop-protocol.md）
 ```
 
 ---
 
 ## 每轮 REFLECT 执行规范
 
-每批生成完成（或每完成 25% 进度）后执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `protocols/loop-protocol.md` REFLECT 章节）：
+每批生成完成（或每完成 25% 进度）后执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `references/loop-protocol.md` REFLECT 章节）：
 
-写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `templates/findings-template.md`：
+写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `assets/findings-template.md`：
 
 - **问题登记**：记录本批发现的模板缺陷、变量数据问题、质量评分异常
-- **策略复盘**：生成策略/模板参数/质量标准的效果评估（保持 | 避免 | 待验证）（策略评价枚举见 protocols/loop-protocol.md 统一状态枚举）
+- **策略复盘**：生成策略/模板参数/质量标准的效果评估（保持 | 避免 | 待验证）（策略评价枚举见 references/loop-protocol.md 统一状态枚举）
 - **模式识别**：哪类变量值容易导致低分、哪些质量标准是瓶颈
 - **经验教训**：模板优化/生成提示词/质量评估方法的有效性总结
-- **经验写回**: 将本轮策略效果写入 `protocols/experience-registry.md`（策略ID、适用场景、效果评分、执行上下文，遵循效果记录表格式）
+- **经验写回**: 将本轮策略效果写入 `references/experience-registry.md`（策略ID、适用场景、效果评分、执行上下文，遵循效果记录表格式）
 
 ---
 
@@ -306,4 +306,4 @@ description: >
 - **结构化数据**：TSV 或 JSON
 - **邮件**：每封邮件独立 Markdown，包含 Subject / Body / Variables
 
-所有输出文件写入 `{output_path}`（来自 `autoloop-plan.md` 的 `output_path` 字段，变量名见 `protocols/loop-protocol.md` 统一参数词汇表）。不使用 `./output/` 相对路径。
+所有输出文件写入 `{output_path}`（来自 `autoloop-plan.md` 的 `output_path` 字段，变量名见 `references/loop-protocol.md` 统一参数词汇表）。不使用 `./output/` 相对路径。

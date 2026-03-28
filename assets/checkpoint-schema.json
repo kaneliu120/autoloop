@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AutoLoop Checkpoint",
+  "type": "object",
+  "required": ["task_id", "current_round", "current_phase", "last_completed_phase", "timestamp"],
+  "properties": {
+    "task_id": {"type": "string", "description": "任务ID，如 T1-RESEARCH-001"},
+    "current_round": {"type": "integer", "minimum": 0},
+    "current_phase": {"type": "string", "enum": ["OBSERVE", "ORIENT", "DECIDE", "ACT", "VERIFY", "SYNTHESIZE", "EVOLVE", "REFLECT"]},
+    "last_completed_phase": {"type": "string"},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "evolve_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "round": {"type": "integer"},
+          "decision": {"type": "string", "enum": ["continue", "stop", "pause", "switch"]},
+          "reason": {"type": "string"}
+        }
+      }
+    },
+    "pause_state": {
+      "type": ["object", "null"],
+      "properties": {
+        "reason": {"type": "string"},
+        "required_confirmation": {"type": "string"},
+        "paused_at": {"type": "string", "format": "date-time"}
+      }
+    }
+  }
+}

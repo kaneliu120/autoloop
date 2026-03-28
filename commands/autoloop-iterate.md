@@ -3,7 +3,7 @@ name: autoloop-iterate
 description: >
   AutoLoop T3: 目标驱动迭代模板。定义 KPI 和基线，每轮改进后重新测量，
   直到 KPI 达标或达到最大轮次。支持人工反馈介入。
-  质量门禁阈值见 protocols/quality-gates.md T3 行。
+  质量门禁阈值见 references/quality-gates.md T3 行。
   触发：/autoloop:iterate 或任何需要反复改进直到达标的任务。
 ---
 
@@ -20,9 +20,9 @@ description: >
 
 如果 KPI 定义不清晰（"质量更好"而不是"错误率 < 0.5%"），先帮用户将其量化。
 
-**Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再扫描当前状态。详见 `protocols/loop-protocol.md` OBSERVE Step 0 章节。
+**Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再扫描当前状态。详见 `references/loop-protocol.md` OBSERVE Step 0 章节。
 
-- **经验库读取**: 读取 `protocols/experience-registry.md` 中与当前任务类型和目标维度匹配的条目，识别状态为「推荐」或「候选默认」的策略，传递到 DECIDE 阶段参考
+- **经验库读取**: 读取 `references/experience-registry.md` 中与当前任务类型和目标维度匹配的条目，识别状态为「推荐」或「候选默认」的策略，传递到 DECIDE 阶段参考
 
 ---
 
@@ -42,7 +42,7 @@ description: >
 
 ## 第 0 步：基线测量（只执行一次）
 
-在任何改动之前，测量当前状态，写入 `autoloop-progress.md` 的"基线"部分（格式见 `protocols/loop-protocol.md` 第1轮 Bootstrap 规则）：
+在任何改动之前，测量当前状态，写入 `autoloop-progress.md` 的"基线"部分（格式见 `references/loop-protocol.md` 第1轮 Bootstrap 规则）：
 
 ```
 基线测量报告：
@@ -64,7 +64,7 @@ KPI 指标：{指标名}
 ```
 读取 autoloop-findings.md 的反思章节（Round 2+ 必执行）
 获取遗留问题、有效/无效策略、已识别模式、经验教训
-（Step 0 规范见 protocols/loop-protocol.md OBSERVE Step 0 章节）
+（Step 0 规范见 references/loop-protocol.md OBSERVE Step 0 章节）
 
 当前 KPI：{值} / 目标：{值} / 差距：{量}
 已消耗轮次：{N} / {最大}
@@ -92,7 +92,7 @@ KPI 指标：{指标名}
 - 策略：精细调优（参数调整、缓存策略、并发调整）
 - 注意收益递减
 
-**连续 2 轮改进低于停滞阈值（停滞阈值见 protocols/parameters.md improvement_threshold）**：
+**连续 2 轮改进低于停滞阈值（停滞阈值见 references/parameters.md improvement_threshold）**：
 - 当前方法已到极限，必须换思路
 - 考虑：换算法、改架构、重新定义 KPI（是否测量了正确的东西）
 
@@ -113,13 +113,13 @@ KPI 指标：{指标名}
 - 如果否，执行顺序：{1 先 / 2 先}
 ```
 
-并行/串行判断规则见 `protocols/agent-dispatch.md`。
+并行/串行判断规则见 `references/agent-dispatch.md`。
 
 ### ACT：执行改进
 
-- **工单生成**: 按 `protocols/agent-dispatch.md` 对应角色模板生成委派工单，填充任务目标、输入数据、输出格式、质量标准、范围限制、当前轮次、上下文摘要
+- **工单生成**: 按 `references/agent-dispatch.md` 对应角色模板生成委派工单，填充任务目标、输入数据、输出格式、质量标准、范围限制、当前轮次、上下文摘要
 
-分配 subagent 执行改进（调度规范见 `protocols/agent-dispatch.md`）。每个 subagent 必须收到：
+分配 subagent 执行改进（调度规范见 `references/agent-dispatch.md`）。每个 subagent 必须收到：
 
 ```
 你是 {类型} subagent，负责以下改进任务：
@@ -151,9 +151,9 @@ KPI 指标：{指标名}
 
 ### VERIFY：重新测量
 
-KPI 门禁定义见 `protocols/quality-gates.md` T3 KPI Target 章节。
+KPI 门禁定义见 `references/quality-gates.md` T3 KPI Target 章节。
 
-VERIFY阶段由独立的 kpi-evaluator subagent 执行评分（调度方式见 protocols/agent-dispatch.md 独立评分器章节）。kpi-evaluator 只接收KPI测量结果，不接收优化策略信息，按 quality-gates.md 锚点盲评。
+VERIFY阶段由独立的 kpi-evaluator subagent 执行评分（调度方式见 references/agent-dispatch.md 独立评分器章节）。kpi-evaluator 只接收KPI测量结果，不接收优化策略信息，按 quality-gates.md 锚点盲评。
 
 评分时必须同时输出分数、判据（命中哪个锚点区间）、证据（来源URL或文件行号）。缺少任一项的评分无效，该维度记为待检查。
 
@@ -177,7 +177,7 @@ VERIFY阶段由独立的 kpi-evaluator subagent 执行评分（调度方式见 p
 
 ## 人工反馈介入点
 
-在以下情况主动暂停，请求用户反馈（状态机进入暂停等待确认，见 `protocols/loop-protocol.md` 状态机章节）：
+在以下情况主动暂停，请求用户反馈（状态机进入暂停等待确认，见 `references/loop-protocol.md` 状态机章节）：
 
 **情况 1：KPI 改进但体验变差**
 
@@ -263,7 +263,7 @@ git stash pop
 
 ## 进度追踪
 
-每轮在 `autoloop-progress.md` 追加完整 8 阶段记录（OBSERVE/ORIENT/DECIDE/ACT/VERIFY/SYNTHESIZE/EVOLVE/REFLECT），格式见 `protocols/loop-protocol.md` 循环日志格式章节。以下为 T3 Iterate 的简化摘要示例（实际记录必须包含所有 8 个阶段）：
+每轮在 `autoloop-progress.md` 追加完整 8 阶段记录（OBSERVE/ORIENT/DECIDE/ACT/VERIFY/SYNTHESIZE/EVOLVE/REFLECT），格式见 `references/loop-protocol.md` 循环日志格式章节。以下为 T3 Iterate 的简化摘要示例（实际记录必须包含所有 8 个阶段）：
 
 ```markdown
 ## 第 {N} 轮 — {时间}
@@ -286,21 +286,21 @@ git stash pop
 
 ## 每轮 REFLECT 执行规范
 
-每轮 EVOLVE 判断之后，在进入下一轮 OBSERVE 之前执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `protocols/loop-protocol.md` REFLECT 章节）：
+每轮 EVOLVE 判断之后，在进入下一轮 OBSERVE 之前执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `references/loop-protocol.md` REFLECT 章节）：
 
-写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `templates/findings-template.md`：
+写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `assets/findings-template.md`：
 
 - **问题登记**：记录本轮发现的 KPI 偏差、改进副作用、测量误差
-- **策略复盘**：本轮改进策略的效果评估 — 实际改进量 vs 预期，保持 | 避免 | 待验证（策略评价枚举见 protocols/loop-protocol.md 统一状态枚举）
+- **策略复盘**：本轮改进策略的效果评估 — 实际改进量 vs 预期，保持 | 避免 | 待验证（策略评价枚举见 references/loop-protocol.md 统一状态枚举）
 - **模式识别**：KPI 改进轨迹趋势（线性/指数/收益递减）、哪类改进最有效
 - **经验教训**：本轮对目标系统的新认知、哪些假设被验证或推翻
-- **经验写回**: 将本轮策略效果写入 `protocols/experience-registry.md`（策略ID、适用场景、效果评分、执行上下文，遵循效果记录表格式）
+- **经验写回**: 将本轮策略效果写入 `references/experience-registry.md`（策略ID、适用场景、效果评分、执行上下文，遵循效果记录表格式）
 
 ---
 
 ## 最终报告
 
-达到 KPI 或最大轮次后，输出（文件名见 `protocols/loop-protocol.md` 统一输出文件命名章节）：
+达到 KPI 或最大轮次后，输出（文件名见 `references/loop-protocol.md` 统一输出文件命名章节）：
 
 ```markdown
 # AutoLoop Iterate — 迭代结果
