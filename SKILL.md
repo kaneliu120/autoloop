@@ -41,6 +41,14 @@ description: >
 - **MANDATORY**：任务初始化使用 `python ${SKILL_DIR}/scripts/autoloop-init.py <工作目录> <模板> <目标>` 创建Bootstrap文件
 - 无scripts/时LLM手动执行（降级模式），但会增加格式错误风险
 
+**Claude Code Hooks 自动强制执行**（可选，需在 `~/.claude/settings.json` 中配置）：
+
+- **PostToolUse:Write|Edit → autoloop-score.py**：写入 `autoloop-findings.md` 后自动计算质量门禁
+- **PostToolUse:Write|Edit → autoloop-tsv.py validate**：写入 `autoloop-results.tsv` 后自动校验 TSV 格式
+- **Stop → autoloop-validate.py**：会话结束时自动检查跨文件主键一致性（仅当工作目录有 `autoloop-plan.md` 时触发）
+
+hooks 配置已内置于 `~/.claude/settings.json`，无需额外安装。非 Claude Code 环境（Codex/Gemini CLI）无法使用 hooks，回退到 MANDATORY 手动模式。
+
 **协议版本化**：当前版本 1.0.0，minor/major 变更后触发重基线。详见 `protocols/evolution-rules.md` 重基线规则。
 
 **结果验证**：协议变更必须声明预期目标（渐进式、≤20%幅度），验证窗口内未达标则触发回滚评估。详见 `protocols/evolution-rules.md` 结果验证。
@@ -372,6 +380,7 @@ AutoLoop 是 CLAUDE.md Orchestrator-First 模式的具体实现：
 ```
 /autoloop          → 交互式入口，引导选择模板
 /autoloop:plan     → 向导式任务配置
+/autoloop:pipeline → 多模板链式执行（T1→T2→T5 等）
 /autoloop:research → 全景调研（T1）
 /autoloop:compare  → 多方案对比（T2）
 /autoloop:iterate  → 目标驱动迭代（T3）
