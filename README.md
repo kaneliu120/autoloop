@@ -60,7 +60,7 @@ AutoLoop 会询问你想做什么，自动选择模板并开始执行。
 
 ## 7 个任务模板
 
-| 模板 | 命令 | 适用场景 | 质量门禁（阈值见 protocols/quality-gates.md 门禁评估矩阵）|
+| 模板 | 命令 | 适用场景 | 质量门禁（阈值见 quality-gates.md）|
 |------|------|---------|---------|
 | **Research** | `/autoloop:research` | 系统性调研某个领域/技术 | 覆盖率、可信度、一致性、完整性 |
 | **Compare** | `/autoloop:compare` | 在多个选项中做决策 | 全维度覆盖、偏见检查、敏感性分析 |
@@ -89,7 +89,7 @@ AutoLoop 将：
 2. 并行调度 8 个 researcher subagents
 3. 交叉验证矛盾信息
 4. 计算覆盖率/可信度/一致性/完整性
-5. 迭代 2-3 轮直到全部达标（阈值见 protocols/quality-gates.md 门禁评估矩阵 T1 行）
+5. 迭代直到全部达标（阈值见 protocols/quality-gates.md T1 行）
 6. 输出带证据的推荐报告
 
 ---
@@ -105,7 +105,7 @@ AutoLoop 将：
 ```
 
 AutoLoop 将：
-1. 并行运行安全/可靠/可维护三个 scanner
+1. 并行运行安全/可靠/可维护三个 reviewer
 2. 初始评分：安全 7.5/可靠 6.2/可维护 7.8
 3. 按 P1 → P2 → P3 优先级修复
 4. 每次修复后 py_compile 验证无回归
@@ -134,7 +134,7 @@ AutoLoop 将：
 1. 分析现有代码库架构
 2. 生成方案文档（等待确认）
 3. 并行开发：后端 API + 前端组件
-4. 代码审查（门禁见 `protocols/quality-gates.md` 门禁评估矩阵 T5 行）
+4. 代码审查（P1/P2 = 0 才进入下一步）
 5. 语法验证（py_compile + tsc）
 6. 提交并部署到 GCP
 7. 线上验收（等待人工确认）
@@ -150,13 +150,17 @@ AutoLoop 将：
 ├── autoloop-plan.md          # 任务配置（范围、质量标准、预算）
 ├── autoloop-progress.md      # 每轮迭代详细记录
 ├── autoloop-findings.md      # 调研发现/问题清单（持续追加）
-├── autoloop-results.tsv      # 结构化迭代日志（所有模板通用）
+├── autoloop-results.tsv      # 结构化迭代日志（15 列 TSV，schema 见 loop-protocol.md）
 └── autoloop-report-{topic}-{date}.md  # 最终报告（文件命名见 protocols/loop-protocol.md 统一输出文件命名章节）
 ```
 
 ---
 
 ## 核心设计原则
+
+### 协议版本
+
+当前协议版本：**1.0.0**（定义见 `protocols/loop-protocol.md`）。版本格式：`{major}.{minor}.{patch}`，变更须经 REFLECT 提案 + 用户确认（流程见 `protocols/evolution-rules.md`）。
 
 ### OODA 循环 + 认知积累反馈
 
@@ -167,20 +171,26 @@ OBSERVE → ORIENT → DECIDE → ACT → VERIFY → SYNTHESIZE → EVOLVE → R
     └───────────── 认知积累反馈 ──────────────────────────────────────────┘
 ```
 
-不跳步，不合并，每步有明确的输入/输出。REFLECT 是强制环节，每轮必须写入 `autoloop-findings.md`，下一轮 OBSERVE 首先读取。
+不跳步，不合并，每步有明确的输入/输出。REFLECT 是强制环节，每轮必须写入 `autoloop-findings.md`，下一轮 OBSERVE 首先读取。跨任务经验沉淀到 `protocols/experience-registry.md`。
 
 ### 并行优先
 
 独立任务一定并行，有依赖的任务串行。
 不做无依据的串行等待。
 
-### 质量门禁数字化
+### 单策略隔离
+
+每轮 DECIDE 阶段只选择一个主策略执行，实现可归因的 A/B 验证。多策略并行无法归因分数变化。
+
+### 质量门禁数字化 + Fail-Closed
 
 所有门禁是数字，不是"感觉好了"（精确阈值见 `protocols/quality-gates.md`）：
-- 一致性 87.5%（非规范性示例，具体阈值见 protocols/quality-gates.md）
-- 安全得分 9.2/10（达标，不是"安全性良好"）
+- 一致性 87.5%（是否达标见 quality-gates.md T1 行一致性门禁）
+- 安全得分 9.2/10（是否达标见 quality-gates.md T6 安全性门禁）
 
-### 暂停确认点设计
+评分必须附带证据。无证据或低置信的评分视为未通过（fail-closed），必须下轮补充后重评。偏见检查中差异过大时运行独立评估仲裁。
+
+### 人工确认点设计
 
 T5 Deliver 有 2 个强制人工确认：
 - 阶段 0.5：方案文档确认后才开发
@@ -207,12 +217,14 @@ autoloop/
 │   ├── autoloop-quality.md         # T6: 企业级质量迭代
 │   └── autoloop-optimize.md        # T7: 架构/性能/稳定性优化
 ├── protocols/
-│   ├── loop-protocol.md            # OODA 循环规范
+│   ├── loop-protocol.md            # OODA 循环规范（含协议版本 + 统一 TSV schema + 参数词汇表）
 │   ├── quality-gates.md            # 质量门禁定义
 │   ├── agent-dispatch.md           # Subagent 调度规范
 │   ├── evolution-rules.md          # 轮间进化规则
 │   ├── enterprise-standard.md      # 企业级标准评分体系
-│   └── delivery-phases.md          # 交付阶段规范（T5）
+│   ├── delivery-phases.md          # 交付阶段规范（T5）
+│   ├── experience-registry.md      # 全局经验库（跨任务经验沉淀与淘汰）
+│   └── parameters.md               # 统一参数定义
 └── templates/
     ├── plan-template.md            # 任务计划模板
     ├── findings-template.md        # 发现记录模板
@@ -234,14 +246,7 @@ AutoLoop 是 CLAUDE.md Orchestrator-First 模式的具体实现：
 
 结合项目 CLAUDE.md 使用 AutoLoop 时，所有工程决策遵循该项目的代码约定（技术栈在 `autoloop-plan.md` 中收集，T5/T6/T7 执行时以 plan 中的参数为准）。
 
-### project_type 驱动的条件化流程
-
-T5/T6/T7 在 plan 阶段首先收集 `project_type`（枚举值见 `protocols/loop-protocol.md`），后续所有变量的必填/可选、阶段门禁的执行/跳过、验收方式的选择均由 `project_type` 激活矩阵驱动。例如：
-- `script` / `library` 类型无常驻服务，service_list 和 health_check_url 可为 N/A
-- Phase 4 部署和 Phase 5 验收按 project_type 选择对应的验证方式（浏览器/CLI/批处理/import）
-- 详见 `protocols/loop-protocol.md` 项目类型与变量激活矩阵
-
-> 示例（以实际项目为准）：如项目使用 FastAPI + SQLAlchemy，则 T5 的 syntax_check_cmd 填 `python3 -m py_compile`（裸命令，不含文件参数占位符），main_entry_file 填实际主入口路径。最终报告文件命名见 `protocols/loop-protocol.md` 统一输出文件命名章节。
+> 示例（以实际项目为准）：如项目使用 FastAPI + SQLAlchemy，则 T5 的 syntax_check_cmd 填 `python3 -m py_compile`，main_entry_file 填实际主入口路径。
 
 ---
 

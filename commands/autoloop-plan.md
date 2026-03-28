@@ -45,16 +45,17 @@ description: >
 ## 模板默认参数参考表
 
 质量门禁阈值见 `protocols/quality-gates.md` 门禁评估矩阵（各模板对应行）。
+默认轮次见 `protocols/parameters.md` 迭代控制参数章节。
 
 | 模板 | 默认轮次 | 默认预算 | 质量门禁 |
 |------|---------|---------|---------|
-| T1 Research | 3 | 无限制 | 见 protocols/quality-gates.md 门禁评估矩阵 T1 行 |
-| T2 Compare | 2 | 无限制 | 见 protocols/quality-gates.md 门禁评估矩阵 T2 行 |
-| T3 Iterate | 无上限 | 用户定义 | 见 protocols/quality-gates.md 门禁评估矩阵 T3 行 |
-| T4 Generate | items × 2 | 无限制 | 见 protocols/quality-gates.md 门禁评估矩阵 T4 行 |
-| T5 Deliver | 1（线性阶段制） | 无限制 | 见 protocols/quality-gates.md 门禁评估矩阵 T5 行 |
-| T6 Quality | 无上限 | 无限制 | 见 protocols/quality-gates.md 门禁评估矩阵 T6 行 |
-| T7 Optimize | 无上限 | 无限制 | 见 protocols/quality-gates.md 门禁评估矩阵 T7 行 |
+| T1 Research | 见 parameters.md | 无限制 | 见 quality-gates.md T1 行 |
+| T2 Compare | 见 parameters.md | 无限制 | 见 quality-gates.md T2 行 |
+| T3 Iterate | 见 parameters.md | 用户定义 | 见 quality-gates.md T3 章节 |
+| T4 Generate | 见 parameters.md | 无限制 | 见 quality-gates.md T4 章节 |
+| T5 Deliver | 见 parameters.md | 无限制 | 见 quality-gates.md T5 行 |
+| T6 Quality | 见 parameters.md | 无限制 | 见 quality-gates.md T6 行 |
+| T7 Optimize | 见 parameters.md | 无限制 | 见 quality-gates.md T7 行 |
 
 向导在 Step 4/5 展示对应行的默认值，用户可调整。
 
@@ -181,25 +182,8 @@ description: >
 ```
 
 ### T5 Deliver — 交付配置
-
-#### project_type 驱动的字段收集
-
-收集 project_type 后，按以下流程动态生成后续问题：
-
-1. 读取 `protocols/loop-protocol.md` 的"项目类型与变量激活矩阵"
-2. 找到用户选择的 project_type 对应列
-3. ✓ 标记的变量 → 必须询问，不可跳过
-4. ○ 标记的变量 → 询问"是否适用？"，不适用则自动填 N/A
-5. 不在当前模板适用范围的变量 → 跳过
-
-**禁止在本文件中复制激活矩阵的必填/可选规则。** 必填性以 loop-protocol.md 激活矩阵为唯一真源。
-
 ```
 交付配置：
-
-0. 项目类型（project_type）：
-   枚举值见 protocols/loop-protocol.md project_type 枚举。
-   此项决定后续哪些变量为必填、哪些可填 N/A（见激活矩阵）。
 
 1. 功能需求（详细描述）：
    {用户输入}
@@ -219,60 +203,64 @@ description: >
    - 是否需要新增/修改表？{是/否}
    - 如果是：{描述变更}
 
-以下变量的必填性由 project_type 激活矩阵决定（见 protocols/loop-protocol.md）。
-变量为 N/A 时，对应的 Phase 4/5 门禁自动跳过。
-参数以 protocols/loop-protocol.md 统一参数词汇表为准。
-
 5. 部署目标（deploy_target）：
    {部署目标主机/环境，如: sip-server 或 prod-01}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 6. 部署命令（deploy_command）：
-   {完整的部署执行命令}
+   {完整的部署执行命令，如: gcloud compute ssh {host} --zone={zone} --command="cd {path} && git pull origin main && sudo bash deploy.sh"}
    如无远程部署：{本地命令，如 docker-compose up -d --build}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 7. 服务列表（service_list）：
    {部署后需要检查的服务名称列表，如: [sip-backend, sip-worker, sip-scheduler, sip-frontend]}
    如不适用：{填 N/A}
+   注意：service_list 和 health_check_url 至少须提供其中一项，否则 plan 不合法。
+   - 如果 service_list 为 N/A，Phase 4 服务检查门禁自动标记为 N/A（跳过）。
+   - 如果 health_check_url 为空，Phase 4 健康检查门禁自动标记为 N/A（跳过）。
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 8. 文档输出路径（doc_output_path）：
    {方案文档存放的目录绝对路径}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 9. 健康检查 URL（health_check_url）：
-   {如 https://example.com/api/health，或留空则 N/A}
+   {如 https://example.com/api/health，或留空（此时 service_list 必须非空）}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 10. 线上验收 URL（acceptance_url）：
     {验收时打开的线上地址，如 https://example.com}
+    变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 11. 语法检查命令（syntax_check_cmd）：
-    {裸命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"，不含文件参数}
+    {语法检查命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
+    变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 12. 语法检查是否接受单文件参数（syntax_check_file_arg）：
     {true = 如 python3 -m py_compile，接受单文件路径作为参数}
     {false = 如 npx tsc --noEmit，项目级验证，不接受文件参数}
+    变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 13. 主入口文件（main_entry_file）：
     {主入口文件绝对路径，如 /project/backend/main.py}
+    变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 14. 新路由变量名（new_router_name）：
     {本次新增的 router 变量名，如 comments_router，无新路由则填 N/A}
+    变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 15. 前端目录（frontend_dir）：
     {前端代码目录绝对路径，如 /project/frontend；无前端则填 N/A}
+    变量名见 protocols/loop-protocol.md 统一参数词汇表
 
 16. 数据库迁移验证命令（migration_check_cmd）：
     {迁移状态验证命令，如 python -m alembic current && python -m alembic check；无迁移则填 N/A}
+    变量名见 protocols/loop-protocol.md 统一参数词汇表
 ```
 
 ### T6 Quality — 质量审查配置
-
-收集 project_type 后，按 `protocols/loop-protocol.md` 激活矩阵动态确定后续变量的必填性（流程同上方 T5）。
-所有变量名见 protocols/loop-protocol.md 统一参数词汇表。
-
 ```
 质量审查配置：
-
-0. 项目类型（project_type）：
-   枚举值见 protocols/loop-protocol.md project_type 枚举。
 
 1. 代码库路径：{绝对路径}
 
@@ -288,19 +276,22 @@ description: >
 5. 特殊约束：
    {如：不能改动 API 接口签名 / 保持向后兼容}
 
-6-8. 语法检查命令等参数以 protocols/loop-protocol.md 统一参数词汇表为准（syntax_check_cmd / syntax_check_file_arg / main_entry_file）。
+6. 语法检查命令（syntax_check_cmd）：
+   {语法检查命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
+
+7. 语法检查是否接受单文件参数（syntax_check_file_arg）：
+   {true / false，规则见上方 T5 第12项说明}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
+
+8. 主入口文件（main_entry_file）：
+   {主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
 ```
 
 ### T7 Optimize — 优化配置
-
-收集 project_type 后，按 `protocols/loop-protocol.md` 激活矩阵动态确定后续变量的必填性（流程同上方 T5）。
-所有变量名见 protocols/loop-protocol.md 统一参数词汇表。
-
 ```
 优化配置：
-
-0. 项目类型（project_type）：
-   枚举值见 protocols/loop-protocol.md project_type 枚举。
 
 1. 系统路径：{绝对路径}
 
@@ -318,7 +309,17 @@ description: >
 4. 不可改动的部分：
    {如：public API 接口不变 / 数据库 schema 不变}
 
-5-6. 语法检查命令等参数以 protocols/loop-protocol.md 统一参数词汇表为准（syntax_check_cmd / syntax_check_file_arg）。
+5. 语法检查命令（syntax_check_cmd）：
+   {语法检查命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
+
+6. 语法检查是否接受单文件参数（syntax_check_file_arg）：
+   {true / false，规则见上方 T5 第12项说明}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
+
+7. 主入口文件（main_entry_file）：
+   {主入口文件绝对路径，如 /project/backend/main.py}
+   变量名见 protocols/loop-protocol.md 统一参数词汇表
 ```
 
 ---
@@ -372,7 +373,6 @@ description: >
 | 任务 ID | autoloop-{YYYYMMDD-HHMMSS} |
 | 模板 | T{N}: {名称} |
 | 状态 | 准备开始 |
-| 终止原因 | N/A |
 | 创建时间 | {ISO 8601} |
 | 最后更新 | {ISO 8601} |
 | 工作目录 | {绝对路径} |
@@ -403,10 +403,10 @@ T2 的 key_assumptions 必须以结构化列表记录，格式：
   - 假设名称：{名称}，当前值：{数值}，单位：{单位}
 （敏感性分析计算方法见 protocols/quality-gates.md T2敏感性分析章节）
 
-T5/T6/T7 必须首先填写 project_type（枚举值见 protocols/loop-protocol.md），
-后续变量的必填/可选由 project_type 激活矩阵决定。
-
-T5/T6/T7 的所有规范变量名以 `protocols/loop-protocol.md` 统一参数词汇表为准，不得使用同义词或自造变量名。
+T5/T6/T7 的所有规范变量名（deploy_target / deploy_command / service_list / service_count /
+health_check_url / acceptance_url / doc_output_path / syntax_check_cmd / syntax_check_file_arg /
+new_router_name / main_entry_file）均见 protocols/loop-protocol.md 统一参数词汇表，不得使用
+同义词或自造变量名。
 
 ---
 

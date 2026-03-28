@@ -2,15 +2,19 @@
 
 ## 概述
 
+本文档是 quality-gates.md 的评分细则组件，定义 T6/T7 各维度的评分计算方法。通过标准（目标分数）见 quality-gates.md 门禁矩阵。
+
 本文档定义 AutoLoop T6（Quality）和 T7（Optimize）使用的企业级标准评分体系。所有评分规则是具体、可量化的，消除主观判断。
 
-评分维度（Security / Reliability / Maintainability / Architecture / Performance / Stability）及其目标分数均为**技术栈无关**的通用标准。各维度下设"技术栈特定检测"子节，列出针对具体技术栈的检测命令示例。
+> **客观化原则**：本文档所有扣分条目均使用可量化阈值或可grep验证的规则，不使用"清晰""重要""关键""频繁"等主观判断词。具体阈值可在 `parameters.md` 中调整。
+
+评分维度（Security / Reliability / Maintainability / Architecture / Performance / Stability）及其通过标准均为**技术栈无关**的通用标准。各维度下设"技术栈特定检测"子节，列出针对具体技术栈的检测命令示例。
 
 ---
 
 ## 安全性评分体系（Security）
 
-### 目标分数：见 `protocols/quality-gates.md` 门禁评估矩阵 T6 行
+### 通过标准：见 quality-gates.md 门禁矩阵
 
 ### 满分条件（10/10）
 
@@ -94,7 +98,7 @@ grep -rn "\.\./\|path\.join\|open(" {路径}
 
 ## 可靠性评分体系（Reliability）
 
-### 目标分数：见 `protocols/quality-gates.md` 门禁评估矩阵 T6 行
+### 通过标准：见 quality-gates.md 门禁矩阵
 
 ### 满分条件（10/10）
 
@@ -105,7 +109,7 @@ grep -rn "\.\./\|path\.join\|open(" {路径}
 - 所有外部依赖有降级回退（缓存服务宕机不崩溃主流程）
 - 关键写操作有事务保护
 - 所有 HTTP 客户端调用有超时配置
-- 重要操作有重试逻辑（带退避）
+- 外部调用重试：所有外部API调用和数据库写入有重试逻辑（≥ 1次重试，含指数退避或固定间隔）
 - 服务有健康检查端点（验证关键依赖连通性）
 
 ### 扣分规则（通用）
@@ -118,7 +122,7 @@ grep -rn "\.\./\|path\.join\|open(" {路径}
 | 缓存失败导致主流程崩溃（无降级）| -2 | P1 |
 | 外部 API 调用无超时 | -1 | P2 |
 | 关键写操作无事务 | -1 | P2 |
-| 无重试逻辑（应该重试的操作）| -1 | P2 |
+| 外部调用无重试：外部API调用或数据库写入缺少重试逻辑 | -1/处 | P2 |
 | 无健康检查端点 | -1 | P2 |
 | 错误日志缺少上下文 | -0.5 | P3 |
 | 资源泄漏（连接/文件未正确关闭）| -1 | P2 |
@@ -166,7 +170,7 @@ grep -rn "/health\|healthCheck" {路径}
 
 ## 可维护性评分体系（Maintainability）
 
-### 目标分数：见 `protocols/quality-gates.md` 门禁评估矩阵 T6 行
+### 通过标准：见 quality-gates.md 门禁矩阵
 
 ### 满分条件（10/10）
 
@@ -177,7 +181,7 @@ grep -rn "/health\|healthCheck" {路径}
 - 所有配置通过配置管理机制获取（无硬编码 URL/密钥/数字常量）
 - 新模块/文件已在入口文件/导出文件中注册
 - 函数单一职责（主要逻辑函数 < 50 行）
-- 命名语义清晰（无单字母变量名，无缩写）
+- 命名规范：变量/函数名 ≥ 3字符，无未在项目缩写表中注册的缩写，无连续数字后缀（如 temp1/temp2）
 - 有测试覆盖（关键路径）
 
 ### 扣分规则（通用）
@@ -193,7 +197,7 @@ grep -rn "/health\|healthCheck" {路径}
 | 硬编码 URL/端口 | -0.5/处 | P2 |
 | 硬编码超时/限制数字 | -0.5/处 | P3 |
 | 函数过长（> 80 行）| -0.5/处，最多 -2 | P3 |
-| 命名不清晰 | -0.5/处 | P3 |
+| 命名违规：变量/函数名 < 3字符，或含未注册缩写，或使用连续数字后缀 | -0.5/处 | P3 |
 | 无返回类型标注（关键函数）| -0.5/函数，最多 -1.5 | P3 |
 | 测试覆盖率 < 60%（关键路径）| -1 | P2 |
 | 测试覆盖率 < 40%（关键路径）| -2 | P2 |
@@ -209,7 +213,7 @@ grep -rn "from typing import.*Any\|: Any\b" {路径}
 # type: ignore 检测
 grep -rn "# type: ignore" {路径}
 
-# [L1] 入口注册检测（main.py）（L1 近似检查，已知局限见 protocols/quality-gates.md 验证层级章节）
+# 入口注册检测（main.py）
 grep -n "include_router" {main.py路径}
 
 # __init__.py 导出检测
@@ -231,7 +235,7 @@ grep -rn ": any\b\|<any>\|as any" {路径}
 # ts-ignore 检测
 grep -rn "@ts-ignore\|@ts-expect-error" {路径}
 
-# [L1] 入口注册检测（L1 近似检查，已知局限见 protocols/quality-gates.md 验证层级章节）
+# 入口注册检测
 grep -n "import\|require" {main_entry_file}
 
 # 硬编码 URL 检测
@@ -242,7 +246,7 @@ grep -rn "http://\|https://" {路径} | grep -v ".md\|test\|//"
 
 ## 架构评分体系（Architecture）
 
-### 目标分数：见 `protocols/quality-gates.md` 门禁评估矩阵 T7 行
+### 通过标准：见 quality-gates.md 门禁矩阵
 
 ### 满分条件（10/10）
 
@@ -295,16 +299,16 @@ npx madge --circular {路径}
 
 ## 性能评分体系（Performance）
 
-### 目标分数：见 `protocols/quality-gates.md` 门禁评估矩阵 T7 行
+### 通过标准：见 quality-gates.md 门禁矩阵
 
 ### 满分条件（10/10）
 
 - 零 N+1 查询（包括隐藏的 ORM 懒加载）
 - 数据库连接池配置合理（生产环境 pool_size ≥ 10）
 - 缓存连接池（不每次新建连接）
-- 热路径有缓存（频繁读、低更新的数据）
+- 高频查询缓存：被调用 ≥ 10次/请求 且更新频率 ≤ 1次/分钟 的数据查询有缓存层
 - 分页查询（列表接口不一次性返回所有数据）
-- 无同步阻塞在异步函数中
+- 无异步函数中混用同步调用
 - 索引覆盖高频查询字段
 
 ### 扣分规则（通用）
@@ -313,8 +317,8 @@ npx madge --circular {路径}
 |------|------|
 | N+1 查询（明显的循环查询）| -2/处，最多 -6 |
 | 无连接池（每次请求新建连接）| -3 |
-| 同步阻塞在异步函数中 | -2/处 |
-| 热路径无缓存 | -1/处 |
+| 异步函数中混用同步调用 | -2/处 |
+| 高频查询无缓存：符合 ≥ 10次/请求 + ≤ 1次/分钟更新条件但无缓存层的查询 | -1/处 |
 | 分页缺失（大量数据无限制返回）| -1/处 |
 | 缓存层无连接池 | -1 |
 | 高频查询字段无索引（EXPLAIN 验证）| -1 |
@@ -324,7 +328,7 @@ npx madge --circular {路径}
 #### Python/FastAPI（SQLAlchemy）
 
 ```bash
-# 同步阻塞检测
+# 同步混用检测
 grep -rn "time.sleep\|requests.get\|requests.post" {路径}
 
 # 无连接池检测
@@ -337,7 +341,7 @@ grep -rn "\.all()\|fetchall()" {路径}
 #### Node.js/TypeScript（Prisma/Drizzle）
 
 ```bash
-# 同步阻塞检测
+# 同步混用检测
 grep -rn "\.sync\b\|readFileSync\|execSync" {路径}
 
 # N+1 查询检测（循环中含 DB 调用）
@@ -351,7 +355,7 @@ grep -rn "findMany\|find(\)" {路径} | grep -v "take\|limit\|skip"
 
 ## 稳定性评分体系（Stability）
 
-### 目标分数：见 `protocols/quality-gates.md` 门禁评估矩阵 T7 行
+### 通过标准：见 quality-gates.md 门禁矩阵
 
 ### 满分条件（10/10）
 
@@ -373,8 +377,8 @@ grep -rn "findMany\|find(\)" {路径} | grep -v "take\|limit\|skip"
 | 缓存服务无超时配置 | -1 |
 | 无自动重启配置 | -1 |
 | 日志无请求上下文 | -0.5 |
-| 无重试逻辑（关键操作）| -1 |
-| 无告警配置（关键操作）| -1 |
+| （同上方可靠性维度"外部调用无重试"规则，不重复扣分）| — |
+| 缺少告警：错误率 > 1% 的端点或 P95延迟 > 5s 的操作无告警配置 | -1/处 |
 | 数据库连接池无预检 | -0.5 |
 
 ### 技术栈特定检测

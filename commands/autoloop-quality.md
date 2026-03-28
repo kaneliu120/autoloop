@@ -3,7 +3,7 @@ name: autoloop-quality
 description: >
   AutoLoop T6: 企业级质量迭代模板。三维度并行扫描（安全/可靠/可维护），
   按 P1→P2→P3 优先级修复，每修复后验证无回归，直到全部达到企业级标准。
-  目标阈值见 protocols/quality-gates.md T6 行。
+  目标：达到 protocols/quality-gates.md T6 门禁矩阵要求。
   触发：/autoloop:quality 或任何需要将代码提升到企业级质量的任务。
 ---
 
@@ -20,7 +20,9 @@ description: >
 
 ### 技术栈检测与验证命令
 
-所有技术栈使用 plan 中定义的 `{syntax_check_cmd}`（见 `protocols/loop-protocol.md` 统一参数词汇表）进行语法验证，按 `syntax_check_file_arg` 决定是否附加文件参数。（当 project_type ∈ {backend-api, fullstack} 且 main_entry_file ≠ N/A 时）模块导出和路由注册完整性检查基于 `main_entry_file`。
+在阶段 0 扫描前，先确认技术栈，选择对应的验证命令：
+
+所有技术栈使用 plan 中定义的 `{syntax_check_cmd}`（见 `protocols/loop-protocol.md` 统一参数词汇表）进行语法验证，按 `syntax_check_file_arg` 决定是否附加文件参数。模块导出和路由注册检查方式由 plan 的 `main_entry_file` 决定。
 
 如果 plan 阶段未指定验证命令，在开始扫描前向用户确认：
 "检测到技术栈：{检测结果}。将使用 {验证命令} 进行语法验证，是否正确？"
@@ -57,37 +59,206 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 
 **目标分数**：质量门禁阈值见 `protocols/quality-gates.md` T6 行（安全性、可靠性、可维护性各维度分数目标）。
 
-**达标条件**：复合判定规则见 `protocols/quality-gates.md` T6 复合判定规则（分数条件 + 计数条件必须同时满足）。
+**达标条件（复合判定，见 protocols/quality-gates.md T6 复合判定规则）**：
+- 分数达标 AND 计数达标（P1=0，安全P2=0）两个条件必须同时满足
 
 ---
 
 ## 第一轮：三维度并行扫描
 
-### 派遣
+**同时运行 3 个 code-reviewer subagents**（独立，并行）：
 
-角色：scanner x3，角色化为安全/可靠性/可维护性三个维度（职责定义见 `protocols/agent-dispatch.md`，角色化说明见 T6 团队配置）
+### Security Reviewer Subagent
 
-### 本次范围
+```
+你是 security-reviewer subagent，专注代码安全审查。
 
-- 代码库路径：{绝对路径}
-- 审查模块：{模块列表，留空则全部}
+代码库路径：{绝对路径}
+审查模块：{模块列表，留空则全部}
 
-### 执行流程
+审查清单：
+1. SQL 注入
+   - 查找：f-string 或 % 格式化直接拼接 SQL
+   - 查找：原始字符串传入 execute()
+   - 查找：ORM 的 text() 函数使用未参数化的用户输入
 
-1. 三个 scanner 并行运行，每个读取 `protocols/enterprise-standard.md` 对应维度章节 + `protocols/quality-gates.md` 门禁标准
-2. 每个 scanner 根据审查范围生成针对性检查清单，运行检测命令
-3. 按角色定义的输出格式交付：问题清单（P1/P2/P3 分类）+ 维度评分
+2. 命令注入
+   - 查找：subprocess.run/call/Popen 中包含用户输入
+   - 查找：os.system() / os.popen()
+   - 查找：eval() / exec() 包含用户输入
+
+3. XSS（如有前端）
+   - 查找：dangerouslySetInnerHTML
+   - 查找：innerHTML 赋值用户输入
+
+4. 路径穿越
+   - 查找：os.path.join() / open() 使用未校验的用户输入
+   - 查找：../../../ 类的路径构建
+
+5. 敏感数据暴露
+   - 查找：密码/密钥在 logger.info/debug/print 中
+   - 查找：密码/密钥在 API 响应的 dict 中
+   - 查找：.env 文件中的值被 response 返回
+
+6. 输入验证
+### 技术栈适配（输入验证检查）
+根据实际技术栈检查对应的输入验证机制：
+- Python/FastAPI: 路由参数有无 Pydantic 模型；接受文件上传的路由有无类型和大小检查
+- Node.js/Express: 有无 express-validator / zod / joi 验证中间件
+- 其他框架: 检查等效的请求验证机制，有无任意用户输入直接传入数据库/命令
+
+搜索命令参考（在代码库中执行 grep）：
+grep -rn "execute(f" {路径}
+grep -rn "subprocess" {路径}
+grep -rn "os.system" {路径}
+grep -rn "dangerouslySetInnerHTML" {路径}
+grep -rn "# type: ignore" {路径}
+
+输出格式：
+## 安全审查报告
+
+### 发现的问题
+
+| ID | 文件（绝对路径） | 行号 | 类型 | 严重级别 | 描述 | 影响分析 | 修复建议 |
+|----|---------------|------|------|---------|------|---------|---------|
+| S001 | {路径} | {行} | SQL注入 | P1 | {描述} | {影响} | {建议} |
+
+### 安全性评分
+
+初始分：10
+扣分项：
+- {问题 S001}：-{分} （原因：{分类}）
+最终安全性得分：{N}/10
+
+### 优先级摘要
+P1（必须立即修复）：{N} 个
+P2（应该在本次修复）：{N} 个
+P3（建议修复）：{N} 个
+```
+
+### Reliability Reviewer Subagent
+
+```
+你是 reliability-reviewer subagent，专注代码可靠性审查。
+
+代码库路径：{绝对路径}
+审查模块：{模块列表}
+
+审查清单：
+1. 异常处理覆盖
+   - 查找：HTTP 客户端调用（httpx/aiohttp/requests）无 try/except
+   - 查找：Redis 操作无 try/except
+   - 查找：数据库操作无 try/except
+   - 查找：文件操作无 try/except
+
+2. 静默失败
+   - 查找：except: pass
+   - 查找：except Exception: logger.debug（关键路径不够）
+   - 查找：空的 finally 块
+
+3. 降级回退
+   - 查找：Redis 缓存读取失败时有无降级到数据库
+   - 查找：外部 API 超时时有无重试或降级
+   - 查找：数据库连接失败时有无适当的错误响应
+
+4. 事务完整性
+   - 查找：多个数据库写操作是否在同一事务中
+   - 查找：写操作后是否有 await session.commit()
+
+5. 资源泄漏
+   - 查找：打开的连接/文件是否在 finally 或 async with 中关闭
+   - 查找：异步生成器是否有 return 语句
+
+搜索命令参考：
+grep -rn "except.*pass" {路径}
+grep -rn "except:" {路径}
+grep -rn "redis" {路径}  # 然后检查是否有 try/except
+
+输出格式：
+## 可靠性审查报告
+
+### 发现的问题
+
+| ID | 文件 | 行号 | 类型 | 严重级别 | 描述 | 修复建议 |
+|----|------|------|------|---------|------|---------|
+| R001 | {路径} | {行} | 静默失败 | P1 | {描述} | {建议} |
+
+### 可靠性评分
+
+初始分：10
+扣分项：...
+最终可靠性得分：{N}/10
+
+P1/P2/P3 数量摘要
+```
+
+### Maintainability Reviewer Subagent
+
+```
+你是 maintainability-reviewer subagent，专注代码可维护性审查。
+
+代码库路径：{绝对路径}
+审查模块：{模块列表}
+
+审查清单：
+1. 类型系统
+   - 查找：any 类型（Python: Any / TypeScript: any）
+   - 查找：# type: ignore
+   - 查找：缺少返回类型标注的函数
+
+2. 代码重复
+   - 识别：超过 10 行的重复代码块
+   - 识别：同样的功能在多处实现
+
+3. 硬编码
+   - 查找：URL / 端口 / 超时时间 硬编码（非配置文件）
+   - 查找：魔法数字（如 3600 而不是 CACHE_TTL）
+
+4. 模块化
+### 技术栈适配（模块化检查）
+根据实际技术栈检查对应的模块导出和路由注册：
+- Python: 新文件是否在 __init__.py 中导出；新路由是否在 {main_entry_file} 注册
+- Node.js/TypeScript: 新文件是否在 index.ts barrel export 中声明；新路由是否在入口文件（app.ts）注册
+- 其他框架: 按项目规范检查等效的模块导出和路由注册机制
+- 通用: 函数单一职责（超过 50 行的函数是否需要分解）
+
+5. 命名规范
+   - 查找：缩写变量名（如 d, tmp, x）
+   - 查找：不符合项目规范的命名风格（如 Python 中用 camelCase）
+
+搜索命令参考：
+grep -rn "Any" {路径}
+grep -rn ": any" {路径}
+grep -rn "# type: ignore" {路径}
+grep -rn "http://\|https://" {路径}  # 硬编码 URL
+
+输出格式：
+## 可维护性审查报告
+
+### 发现的问题
+
+| ID | 文件 | 行号 | 类型 | 严重级别 | 描述 | 修复建议 |
+|----|------|------|------|---------|------|---------|
+
+### 可维护性评分
+
+初始分：10
+扣分项：...
+最终可维护性得分：{N}/10
+```
 
 ### 第一轮结束：汇总扫描结果
+
+将三个报告汇总，建立统一的问题清单：
 
 ```markdown
 ## 第 1 轮扫描完成
 
-| 维度 | 初始得分 | 目标（见 protocols/quality-gates.md 门禁评估矩阵 T6 行）| 状态 |
+| 维度 | 初始得分 | 目标 | 状态 |
 |------|---------|------|------|
-| 安全性 | {N}/10 | {阈值} | 未达标/达标 |
-| 可靠性 | {N}/10 | {阈值} | 未达标/达标 |
-| 可维护性 | {N}/10 | {阈值} | 未达标/达标 |
+| 安全性 | {N}/10 | ≥9/10 | 未达标/达标 |
+| 可靠性 | {N}/10 | ≥8/10 | 未达标/达标 |
+| 可维护性 | {N}/10 | ≥8/10 | 未达标/达标 |
 
 总问题数：{N}
   P1（必须修复）：{N}
@@ -113,23 +284,53 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 
 ### 每个修复的执行流程
 
-**派遣**：角色 fixer（职责定义见 `protocols/agent-dispatch.md`）
+**对每个问题（按优先级）**：
 
-1. fixer 读取 `protocols/enterprise-standard.md` 获取修复规范 + `protocols/quality-gates.md` 获取验证标准
-2. 根据问题描述和修复建议，制定最小化修复方案
-3. 实施修复并运行 `{syntax_check_cmd}` 验证
-4. 确认修复有效且无回归
-5. 更新问题清单状态为"已修复"（使用 `protocols/loop-protocol.md` 统一状态枚举）
+1. **分配修复 subagent**：
 
-**输入**：问题 ID、文件（绝对路径）、行号、问题描述、修复建议、syntax_check_cmd
+```
+你是 fix-{类型} subagent，修复以下代码质量问题。
 
-**输出**：修改内容（diff 格式）+ 语法验证结果 + 是否引入新问题
+问题 ID：{ID}
+文件：{绝对路径}
+行号：{行}
+问题描述：{描述}
+修复建议：{建议}
 
-### 验证无回归（每次修复后）
+约束：
+- 只修改标注的问题，不做其他改动
+- 不改变函数签名和 API 接口
+- 修改后立即运行语法验证命令（{syntax_check_cmd}，来自 autoloop-plan.md）
 
-- 语法验证：按 `syntax_check_file_arg` 决定是否附加文件参数
-- 路由完整性（如修改了路由相关文件）：当 project_type ∈ {backend-api, fullstack} 且 main_entry_file ≠ N/A 时，[L1] 近似检查已有注册是否被破坏
-- 注意：语法检查 ≠ 循环依赖检测
+修复步骤：
+1. 读取文件
+2. 实施最小化修复
+3. 运行 {syntax_check_cmd}（必须通过才报告完成）
+4. 确认修复解决了问题
+5. 确认没有引入新问题
+
+输出：
+- 修改内容（diff 格式）
+- {syntax_check_cmd} 验证结果（必须通过）
+- 是否引入新问题（是/否，如是则描述）
+```
+
+2. **验证无回归**（每次修复后）：
+
+```bash
+# 语法验证（使用 autoloop-plan.md 中的 syntax_check_cmd）
+# plan 阶段应明确 syntax_check_file_arg: true/false。
+# - syntax_check_file_arg=true：  {syntax_check_cmd} {修改的文件}
+# - syntax_check_file_arg=false： {syntax_check_cmd}（不附加文件参数）
+
+# 如果路由文件被修改，检查主入口注册（按技术栈规范检查 {main_entry_file}）
+grep -n "{new_router_name}" {main_entry_file}
+
+# 如果修改了关键 import，检查循环依赖（按技术栈执行对应工具）
+{syntax_check_cmd}
+```
+
+3. **更新问题清单状态**：将已修复的问题状态更新为 "已修复"（使用 loop-protocol.md 统一状态枚举）。
 
 ### 批量修复的并行规则
 
@@ -161,23 +362,33 @@ Checkpoint（已修复 {N} 个问题）
 
 ## 最终验收扫描
 
-所有 P1 和 P2 修复完成后，重新运行三维度完整扫描（同第一轮派遣方式）。
+所有 P1 和 P2 修复完成后，重新运行三维度完整扫描：
+
+```
+最终扫描目标：确认所有问题已修复，无回归
+
+安全性重新扫描 → {N}/10（改进：{+X}）
+可靠性重新扫描 → {N}/10（改进：{+X}）
+可维护性重新扫描 → {N}/10（改进：{+X}）
+
+新发现问题（改进过程中引入的）：{N} 个
+```
 
 ### 终止判断
 
-终止条件为复合判定，完整规则见 `protocols/quality-gates.md` T6 复合判定规则。
+终止条件为复合判定（必须同时满足两个条件），完整规则见 `protocols/quality-gates.md` T6 复合判定规则。
 
 ```
-条件一：分数达标（各维度达到 protocols/quality-gates.md 门禁评估矩阵 T6 行规定的阈值）
-  安全性 {N}/10  ✓/✗
-  可靠性 {N}/10  ✓/✗
-  可维护性 {N}/10  ✓/✗
+条件一：分数达标
+  安全性 {N}/10 ≥ 9 ✓
+  可靠性 {N}/10 ≥ 8 ✓
+  可维护性 {N}/10 ≥ 8 ✓
 
-条件二：计数达标（各类别 P 计数满足 protocols/quality-gates.md T6 复合判定规则计数要求）
-  P1 问题数  ✓/✗
-  安全 P2 问题数  ✓/✗
-  可靠性 P2 问题数  ✓/✗
-  可维护性 P2 问题数  ✓/✗
+条件二：计数达标
+  P1 问题 = 0（所有维度）✓
+  安全 P2 问题 = 0 ✓
+  可靠性 P2 问题 ≤ 3 ✓
+  可维护性 P2 问题 ≤ 5 ✓
 
 两个条件必须同时满足 → 终止迭代，生成最终审计报告
 
@@ -212,9 +423,9 @@ Checkpoint（已修复 {N} 个问题）
 
 | 维度 | 初始 | 最终 | 目标 | 状态 |
 |------|------|------|------|------|
-| 安全性 | {初始}/10 | {最终}/10 | {阈值见 protocols/quality-gates.md 门禁评估矩阵 T6 行} | 达标/未达标 |
-| 可靠性 | {初始}/10 | {最终}/10 | {阈值见 protocols/quality-gates.md 门禁评估矩阵 T6 行} | 达标/未达标 |
-| 可维护性 | {初始}/10 | {最终}/10 | {阈值见 protocols/quality-gates.md 门禁评估矩阵 T6 行} | 达标/未达标 |
+| 安全性 | {初始}/10 | {最终}/10 | ≥9/10 | 达标/未达标 |
+| 可靠性 | {初始}/10 | {最终}/10 | ≥8/10 | 达标/未达标 |
+| 可维护性 | {初始}/10 | {最终}/10 | ≥8/10 | 达标/未达标 |
 
 **迭代轮次**：{N}
 **修复问题数**：{N}（P1:{N} P2:{N} P3:{N}）
@@ -222,7 +433,7 @@ Checkpoint（已修复 {N} 个问题）
 
 ## 修复明细
 
-| ID | 维度 | 严重级别 | 文件 | 问题 | 修复方案 | 状态 |
+| ID | 维度 | 优先级 | 文件 | 问题 | 修复方案 | 状态 |
 |----|------|--------|------|------|---------|------|
 
 ## 遗留问题
