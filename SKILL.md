@@ -49,6 +49,14 @@ description: >
 
 hooks 配置已内置于 `~/.claude/settings.json`，无需额外安装。非 Claude Code 环境（Codex/Gemini CLI）无法使用 hooks，回退到 MANDATORY 手动模式。
 
+**MCP Server 模式**（可选，需安装 `mcp` Python 包）：
+
+将 5 个工具脚本封装为 MCP tools，LLM 通过结构化工具调用自动获取参数 schema，无需记忆命令格式。
+- 安装：`bash ~/.claude/skills/autoloop/mcp-server/install.sh`
+- 注册：`claude mcp add autoloop python3 ~/.claude/skills/autoloop/mcp-server/server.py`
+- 提供 5 个 tools：`autoloop_init`、`autoloop_score`、`autoloop_tsv`、`autoloop_validate`、`autoloop_variance`
+- 纯文件模式仍为默认，MCP 是增强层，两者可共存
+
 **协议版本化**：当前版本 1.0.0，minor/major 变更后触发重基线。详见 `protocols/evolution-rules.md` 重基线规则。
 
 **结果验证**：协议变更必须声明预期目标（渐进式、≤20%幅度），验证窗口内未达标则触发回滚评估。详见 `protocols/evolution-rules.md` 结果验证。
