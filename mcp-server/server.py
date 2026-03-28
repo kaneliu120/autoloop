@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AutoLoop MCP Server — 将 5 个工具脚本封装为 MCP tools
+"""AutoLoop MCP Server — 将 7 个工具脚本封装为 MCP tools
 
 安装：pip install mcp
 启动：python3 server.py（由 Claude Code MCP 配置自动启动）
@@ -108,6 +108,35 @@ def autoloop_variance(command: str, scores: str = "", evidence: int = 0, tsv_pat
         return _run_script("autoloop-variance.py", ["check", tsv_path])
     else:
         return json.dumps({"error": f"未知命令: {command}，可选: compute / check"})
+
+
+@mcp.tool()
+def autoloop_state(work_dir: str, command: str, args: str = "") -> str:
+    """SSOT 状态管理 — init/update/query/add-iteration/add-finding/add-tsv-row
+
+    Args:
+        work_dir: 工作目录路径
+        command: 操作命令 - init|update|query|add-iteration|add-finding|add-tsv-row
+        args: 命令参数（JSON 字符串或其他格式，取决于 command）
+    """
+    cmd_args = [work_dir, command]
+    if args:
+        cmd_args.append(args)
+    return _run_script("autoloop-state.py", cmd_args)
+
+
+@mcp.tool()
+def autoloop_render(work_dir: str, file_type: str = "") -> str:
+    """从 autoloop-state.json 渲染可读文件 — plan/progress/findings/tsv 或全部
+
+    Args:
+        work_dir: 工作目录路径
+        file_type: 渲染目标文件类型（plan|progress|findings|tsv），留空则渲染全部
+    """
+    cmd_args = [work_dir]
+    if file_type:
+        cmd_args.extend(["--file", file_type])
+    return _run_script("autoloop-render.py", cmd_args)
 
 
 if __name__ == "__main__":
