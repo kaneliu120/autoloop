@@ -26,23 +26,50 @@ description: >
 
 ## 第一步：模板标准化
 
-### 派遣
+从用户提供的示例中提取模板结构。
 
-角色：planner（职责定义见 `protocols/agent-dispatch.md`，T4 兼任模板提取）
+运行 template-extractor subagent（调度方式见 `protocols/agent-dispatch.md` template-extractor 章节）：
 
-### 本次范围
+```
+你是 template-extractor subagent。
 
-- 用户提供的示例：{示例内容}
+任务：分析用户提供的示例，提取可复用的模板结构。
 
-### 执行流程
+示例内容：
+{用户提供的示例}
 
-1. 分析示例，识别固定部分和变量部分（用 `{{variable_name}}` 标记）
-2. 提取质量标准（什么让示例是"好的"）和常见错误（什么会让输出变差）
-3. 输出：模板结构 + 变量定义表 + 质量标准 + 常见错误
+要求：
+1. 识别固定部分（所有单元相同）和变量部分（每单元不同）
+2. 用 {{variable_name}} 标记变量位置
+3. 提取质量标准（什么让这个示例是"好的"）
+4. 识别常见错误（什么会让输出变差）
+
+输出：
+## 模板结构
+
+{提取的模板，变量用 {{name}} 标记}
+
+## 变量定义
+
+| 变量名 | 说明 | 取值规则 | 示例 |
+|--------|------|---------|------|
+| {{variable_1}} | {说明} | {规则} | {示例} |
+
+## 质量标准（可量化）
+
+1. {标准 1}：{如何判断 1-10 分}
+2. {标准 2}：{如何判断 1-10 分}
+3. {标准 3}：{如何判断 1-10 分}
+
+## 常见错误
+
+- {错误 1}：{如何避免}
+- {错误 2}：{如何避免}
+```
 
 在开始批量生成前，将模板展示给用户并自动进入第二步：
 
-```text
+```
 我提取了以下模板，如需调整请现在说明；否则将自动进入变量数据准备阶段：
 
 {模板预览}
@@ -61,71 +88,140 @@ description: >
 如果变量需要推断，使用规则生成。
 如果变量需要用户提供，列出清单请用户确认。
 
-生成变量数据表（写入 `autoloop-results.tsv`，TSV schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节）。
+生成状态跟踪行（写入 `autoloop-results.tsv`，每个生成单元一行，记录状态和分数；TSV schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节）：
 
-变量数据写入 `autoloop-findings.md`，不进 TSV。TSV 的 details 列使用 `key=value;key=value` 格式（如 `unit_id=001;quality=通过`），不记录变量键值对。
+```text
+（TSV 格式见 protocols/loop-protocol.md 统一 TSV Schema，13列）
+001  generate  待检查  score  —  —  baseline  待生成  无  —  001  {version}  待生成
+002  generate  待检查  score  —  —  baseline  待生成  无  —  002  {version}  待生成
+```
+
+变量数据写入 `autoloop-findings.md`，不进 TSV。TSV 的 details 列仅记录状态摘要（如"重试1次后通过"），不记录变量键值对。
 
 ---
 
 ## 第三步：并行批量生成
 
-### 派遣
+将所有生成单元分配给 generator subagents，并行执行（调度规范见 `protocols/agent-dispatch.md`）。
 
-角色：generator xN，每人负责一批单元（职责定义见 `protocols/agent-dispatch.md`）
+每批并行数量：最多 5 个（防止输出质量因并行过多下降）。
 
-### 本次范围
+每个 generator subagent 的指令：
 
-- 模板：{模板内容}
-- 变量数据：{每个单元的变量值}
-- 质量标准：{标准列表}
-- 常见错误：{错误列表}
+```
+你是 generator subagent，负责生成以下内容单元。
 
-### 执行流程
+模板：
+{模板内容}
 
-1. 每批最多 5 个 generator 并行（防止输出质量因并行过多下降）
-2. 每个 generator 严格按模板结构生成，变量自然融入内容
-3. 生成后自行检查是否满足所有质量标准
-4. 按角色定义的输出格式交付：UNIT-START/UNIT-END 包裹的内容 + 质量自评分
+本单元变量：
+- {{variable_1}}: {值}
+- {{variable_2}}: {值}
+
+质量标准：
+1. {标准 1}（满分 10 分）
+2. {标准 2}（满分 10 分）
+3. {标准 3}（满分 10 分）
+
+常见错误（必须避免）：
+- {错误 1}
+- {错误 2}
+
+要求：
+1. 严格按模板结构生成
+2. 变量值自然融入内容（不要机械地"填空"）
+3. 保持语调/风格一致
+4. 生成后自行检查是否满足所有质量标准
+
+输出格式：
+---UNIT-START-{unit_id}---
+{生成内容}
+---UNIT-END-{unit_id}---
+
+---QUALITY-{unit_id}---
+标准1得分: {N}/10 — {理由}
+标准2得分: {N}/10 — {理由}
+标准3得分: {N}/10 — {理由}
+综合得分: {N}/10
+存在问题: {如有}
+---QUALITY-END-{unit_id}---
+```
 
 ---
 
 ## 第四步：逐项质量评分
 
-### 派遣
+每个单元生成完成后，运行独立的 quality-checker subagent（调度方式见 `protocols/agent-dispatch.md` quality-checker 章节）。
 
-角色：scorer，独立于 generator（职责定义见 `protocols/agent-dispatch.md`）
+评分时必须同时输出分数、判据（命中哪个锚点区间）、证据（来源URL或文件行号）。缺少任一项的评分无效，该维度记为待检查。
 
-### 执行流程
+```
+你是 quality-checker subagent，对以下生成内容进行独立质量评分。
 
-1. 读取 `protocols/quality-gates.md` T4 专属门禁（通过率、平均分）
-2. 对每个生成内容独立评分，不受 generator 自评影响
-3. 分歧 > 2 分时以 scorer 评分为准
-4. 按门禁阈值判定：通过 / 需改进 / 重生成
+内容：
+{生成的内容}
+
+质量标准：
+1. {标准 1}：{评分说明}
+2. {标准 2}：{评分说明}
+3. {标准 3}：{评分说明}
+
+评分规则：
+- 8-10：优秀，直接通过
+- 7：及格，标注改进点
+- 5-6：需要改进，标注主要问题
+- 1-4：需要重新生成，说明原因
+
+注意：你的评分独立于生成者的自评。如果分歧 > 2 分，以你的评分为准。
+
+输出：
+得分: {N}/10（{通过/需改进/重生成}）
+主要问题（如有）：
+- {问题 1}
+- {问题 2}
+改进建议：{具体建议}
+```
 
 ---
 
 ## 重试机制
 
-重试上限见 `protocols/loop-protocol.md` 统一重试规则（默认 2 次）。对于评分低于 `protocols/quality-gates.md` T4 专属门禁中平均分阈值的单元，触发重试：
+重试上限见 `protocols/loop-protocol.md` 统一重试规则（默认 2 次）。对于评分低于 `protocols/quality-gates.md` T4 单元通过阈值的单元，触发重试：
 
 **第 1 次重试**：
-- 将 scorer 的问题反馈给 generator
+- 将 quality-checker 的问题反馈给 generator
 - 保留原模板，针对具体问题修改
+
+```
+上次生成有以下问题：
+{quality-checker 的反馈}
+
+请保留整体结构，重点改进：
+{具体改进点}
+```
 
 **第 2 次重试（最后一次）**：
 - 换一个不同的生成策略
 - 完全重新生成，不参考之前的版本
-- 如果仍低于阈值，标注为"需人工审查"，继续其他单元
+- 如果仍低于 `protocols/quality-gates.md` T4 单元通过阈值，标注为"需人工审查"，继续其他单元
 
 ---
 
 ## 批次进度追踪
 
-实时更新 `autoloop-results.tsv`（TSV schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节）。
+实时更新 `autoloop-results.tsv`（TSV schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节）：
+
+```
+（TSV 格式见 protocols/loop-protocol.md 统一 TSV Schema，13列）
+1  generate  通过    score  8.5  —  S01-template-gen  按模板生成  无  —  001  {version}  重试0次
+1  generate  通过    score  7.2  —  S01-template-gen  按模板生成  无  —  002  {version}  重试1次: 语调调整
+1  generate  待审查  score  6.0  —  S02-rewrite       完全重写    无  —  003  {version}  重试2次仍未达标
+1  generate  待检查  score  —    —  baseline          待生成      无  —  004  {version}  生成中
+```
 
 每完成 10% 输出进度：
 
-```text
+```
 进度：{完成数}/{总数} ({百分比}%)
   通过：{N} 个（{平均分}/10）
   待重试：{N} 个
@@ -147,13 +243,13 @@ description: >
 
 | 状态 | 数量 | 占比 |
 |------|------|------|
-| 一次通过（达标）| {N} | {%} |
+| 一次通过（≥7分）| {N} | {%} |
 | 重试后通过 | {N} | {%} |
 | 需人工审查 | {N} | {%} |
 | **总计** | {总N} | 100% |
 
-通过率：{X}%（目标阈值见 protocols/quality-gates.md T4 通过率门禁）
-平均得分：{X}/10（目标阈值见 protocols/quality-gates.md T4 平均分门禁）
+通过率：{X}%（目标阈值见 protocols/quality-gates.md T4 通过率章节）
+平均得分：{X}/10（目标阈值见 protocols/quality-gates.md T4 平均分章节）
 
 ### 质量分布
 
@@ -178,7 +274,7 @@ description: >
 
 ### 输出文件
 
-所有通过的内容已写入：{output_path}（来自 autoloop-plan.md）
+所有通过的内容已写入：{output_path}（来自 autoloop-plan.md，变量名见 protocols/loop-protocol.md）
 ```
 
 ---

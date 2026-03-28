@@ -2,7 +2,7 @@
 
 ## 概述
 
-本文档定义 AutoLoop T5（Deliver）的完整交付阶段，严格映射 CLAUDE.md 的强制开发流程。每个阶段有明确的输入、输出、质量门禁和通行条件。
+本文档定义 AutoLoop T5（Deliver）的完整交付阶段，严格映射 CLAUDE.md 的强制开发流程。每个阶段有明确的输入、输出、质量门禁和暂停条件。
 
 ---
 
@@ -12,7 +12,7 @@
 |-------------|--------------|------|
 | Phase 0: 分析 | 阶段 0: 分析 | planner + researcher 并行 |
 | Phase 0.5: 文档化 | 阶段 0.5: 方案文档化 | 必须人工确认 |
-| Phase 1: 开发 | 阶段 1: 开发 | backend + frontend + db 并行 |
+| Phase 1: 开发 | 阶段 1: 开发 | backend-dev + frontend-dev + db-migrator 并行 |
 | Phase 2: 审查 | 阶段 2: 审查 | code-reviewer 串行审查 |
 | Phase 3: 测试 | 阶段 3: 测试验证 | verifier 执行 |
 | Phase 4: 部署 | 阶段 4: 部署上线 | git push + {deploy_command} |
@@ -26,7 +26,7 @@
 - 功能需求描述（来自 autoloop-plan.md）
 - 代码库路径（绝对路径）
 - 技术栈信息
-- **T5 必须额外收集（在 plan 阶段）**：T5 所有参数以 `protocols/loop-protocol.md` 统一参数词汇表和激活矩阵为准（不在此处重复枚举，避免过时）
+- **T5 必须额外收集（在 plan 阶段）**：所有 T5 参数见 `protocols/loop-protocol.md` 统一参数词汇表（deploy_target、deploy_command、service_list、health_check_url、acceptance_url、doc_output_path、syntax_check_cmd、new_router_name、main_entry_file）
 
 ### 执行（并行）
 
@@ -58,12 +58,12 @@
 - [ ] 实施顺序已解决依赖关系冲突
 - [ ] 验收标准已明确（可测量的功能验收条件）
 
-### 通行条件
+### 暂停条件
 无（自动进入 Phase 0.5）
 
 ---
 
-## Phase 0.5: 文档化（暂停等待确认）
+## Phase 0.5: 文档化（人工确认点）
 
 ### 输入
 - Phase 0 的分析结果
@@ -74,7 +74,7 @@
 
 其中 `{doc_output_path}` 的值来自 `autoloop-plan.md` 的 `doc_output_path` 字段（唯一来源，见 `protocols/loop-protocol.md` 统一参数词汇表）。不得在此处硬编码任何路径。
 
-文档格式参见 `templates/delivery-template.md`
+文档须包含以下章节：问题描述、影响范围（修改文件列表+数据库变更+API变更）、具体方案、实施步骤、风险与缓解、验收标准、回滚方案
 
 ### 输出
 方案文档文件（完整，可独立阅读）
@@ -85,14 +85,14 @@
 - [ ] API 接口有明确定义（路径、方法、请求/响应 schema，有则必须，无新路由则标注"无"）
 - [ ] 有回滚方案
 
-### 通行条件
+### 暂停条件
 **必须人工确认才能进入 Phase 1。**
 
 输出暂停提示：
 ```
 方案文档已生成：{路径}
 
-请审阅后回复 "confirmed" 开始开发，或说明需要调整的内容。
+请审阅后回复 "用户确认" 开始开发，或说明需要调整的内容。
 ```
 
 ---
@@ -130,12 +130,12 @@
 
 ### 质量门禁
 - [ ] 所有修改文件语法验证通过（`{syntax_check_cmd}`，零错误）
-- [ ] [L1] 新路由已在主入口文件注册（`grep -n "{new_router_name}" {main_entry_file}`）（L1 近似检查，已知局限见 protocols/quality-gates.md 验证层级章节）
+- [ ] 新路由已在主入口文件注册（`grep -n "{new_router_name}" {main_entry_file}`）
 - [ ] 新文件已在模块导出文件声明
 - [ ] 迁移脚本有 downgrade 实现
 - [ ] 无静默失败（空 catch/except）/ 无类型逃逸（`any` / `# type: ignore`）滥用
 
-### 通行条件
+### 暂停条件
 任何文件语法验证失败 → 修复后重验证，不进入 Phase 2
 
 ---
@@ -164,7 +164,7 @@ code-reviewer subagent 对所有修改文件进行全量审查：
 - {文件 2}
 
 ### 问题清单
-| ID | 文件 | 行号 | 类型 | 严重级别 | 描述 | 修复建议 |
+| ID | 文件 | 行号 | 类型 | P级别 | 描述 | 修复建议 |
 
 ### 审查结论
 P1: {N}，P2: {N}，P3: {N}
@@ -172,11 +172,12 @@ P1: {N}，P2: {N}，P3: {N}
 ```
 
 ### 质量门禁
+- [ ] P1 问题 = 0（安全漏洞/数据丢失风险）
+- [ ] P2 问题 = 0（功能缺陷/错误处理缺失）
+- [ ] P3 问题已记录（不影响交付，但记入最终报告）
 
-门禁阈值见 `protocols/quality-gates.md` 门禁评估矩阵 T5 行。
-
-### 通行条件
-有 P1 或 P2 问题 → 返回 Phase 1 针对性修复（最多 3 轮修复-审查循环；T5 因含人工确认环节，允许此例外，见 protocols/loop-protocol.md 统一重试上限规则）
+### 暂停条件
+有 P1 或 P2 问题 → 返回 Phase 1 针对性修复（最多 3 轮修复-审查循环；T5 因含人工确认环节，允许此例外，见 loop-protocol.md 统一重试上限规则）
 
 ---
 
@@ -195,8 +196,7 @@ P1: {N}，P2: {N}，P3: {N}
 {syntax_check_cmd} {每个文件}        # syntax_check_file_arg=true 时附加文件参数
 # 或：{syntax_check_cmd}             # syntax_check_file_arg=false 时在项目根目录运行
 
-# 2. [L1] 路由注册验证（{new_router_name} = 本次新增的路由/模块名，在 plan 中收集）
-#    L1 近似检查，已知局限见 protocols/quality-gates.md 验证层级章节
+# 2. 路由注册验证（{new_router_name} = 本次新增的路由/模块名，在 plan 中收集）
 grep -n "{new_router_name}" {main_entry_file}
 
 # 3. 迁移状态检查（如有数据库迁移）
@@ -220,11 +220,11 @@ curl -X GET {API端点} \
 
 ### 质量门禁
 - [ ] 语法验证：全部文件通过，零错误（`{syntax_check_cmd}`）
-- [ ] [L1] 路由注册：grep 找到 `{new_router_name}` 注册语句（无新路由则 N/A）（L1 近似检查，已知局限见 protocols/quality-gates.md 验证层级章节）
+- [ ] 路由注册：grep 找到 `{new_router_name}` 注册语句（无新路由则 N/A）
 - [ ] 迁移状态检查：无冲突（无迁移则 N/A）
 - [ ] API 冒烟测试（如可执行）：HTTP 2xx
 
-### 通行条件
+### 暂停条件
 任何验证失败 → 修复后重验证，不进入 Phase 4
 
 ---
@@ -234,13 +234,12 @@ curl -X GET {API端点} \
 ### 输入
 - Phase 3 通过的验证结果
 
-### 执行（按 project_type 条件化）
+### 执行（人工或自动）
 
-> 以下变量在 plan 收集阶段定义（T5 参数以 `protocols/loop-protocol.md` 统一参数词汇表和激活矩阵为准）
-
-**Step 1: 提交代码（所有 project_type）**
+> 以下变量在 plan 收集阶段定义（T5需额外收集：deploy_target, deploy_command, service_list, health_check_url）
 
 ```bash
+# 1. 提交代码
 git add {所有修改文件（明确列出，不用 git add -A）}
 git status  # 确认只有预期的文件
 git commit -m "$(cat <<'EOF'
@@ -249,82 +248,56 @@ feat({模块}): {功能描述}
 Co-Authored-By: AutoLoop <noreply@autoloop>
 EOF
 )"
+
+# 2. 推送
 git push origin main
-```
 
-**Step 2: 线上部署（当 deploy_command ≠ N/A 时）**
-
-```bash
+# 3. 线上部署
 {deploy_command}
-```
+# deploy_command 示例（在 plan 中收集）：
+#   SIP 项目：gcloud compute ssh {deploy_target} --zone=... --command="cd /opt/sip && git pull && sudo bash deploy.sh"
+#   其他项目：ssh {deploy_target} "cd {project_path} && git pull && bash deploy.sh"
 
-- backend-api / fullstack / frontend-only / data-pipeline：通常需要远程部署
-- script：可选部署（本地脚本可能不需要远程部署）
-- library：发布（publish）替代部署（如 npm publish / twine upload）
-
-**Step 3: 服务健康检查（当 service_list ≠ N/A 时）**
-
-检查 service_list 中每个服务全部 active（服务名称在 plan 中的 service_list 定义）
-
-**Step 4: Health check（当 health_check_url ≠ N/A 时）**
-
-```bash
-curl {health_check_url}
-# 期望：HTTP 200
+# 4. 服务健康检查
+# 检查 service_list 中每个服务全部 active（服务名称在 plan 中的 service_list 定义）
 ```
 
 ### 输出
 - git commit hash
-- （当 deploy_command ≠ N/A 时）部署命令执行结果
-- （当 service_list ≠ N/A 时）服务状态（{service_list} 中全部 active）
-- （当 health_check_url ≠ N/A 时）Health check 响应
+- 部署命令执行结果
+- 服务状态（{service_list} 中全部 active）
+- Health check 响应（{health_check_url}）
 
 ### 质量门禁
 - [ ] git push 成功
-- [ ] （当 deploy_command ≠ N/A 时）`{deploy_command}` 执行无报错
-- [ ] （当 service_list ≠ N/A 时）`{service_list}` 中所有服务全部 active（systemctl status）
-- [ ] （当 health_check_url ≠ N/A 时）Health check 返回 HTTP 200
+- [ ] {deploy_command} 执行无报错
+- [ ] {service_list} 中所有服务全部 active（systemctl status）
+- [ ] Health check 返回 HTTP 200（{health_check_url}）
 
-### 通行条件
-（当 service_list ≠ N/A 时）服务未全部 active → 检查日志，修复后重部署
-（当 deploy_command = N/A 且 service_list = N/A 时）git push 成功即通过
+### 暂停条件
+服务未全部 active → 检查日志，修复后重部署
 
 ---
 
-## Phase 5: 线上验收（暂停等待确认）
+## Phase 5: 线上验收（人工确认点）
 
 ### 输入
 - 验收标准（来自 autoloop-plan.md）
-- （当 acceptance_url ≠ N/A 时）线上环境 URL
+- 线上环境 URL
 
-### 执行（按 project_type 条件化）
+### 执行
 
-**当 project_type ∈ {backend-api, fullstack, frontend-only} 且 acceptance_url ≠ N/A 时**：
+**自动验证（verifier subagent）**：
 
-自动验证（verifier subagent）：
-- 调用方式：`Agent(subagent_type="verifier", prompt="你是线上验收测试员。使用浏览器工具验证以下功能...")`
-- 可选工具：Chrome DevTools MCP（如果已配置）
+调用方式：`Agent(subagent_type="code-reviewer", prompt="你是线上验收测试员。使用浏览器工具验证以下功能...")`
+可选工具：Chrome DevTools MCP（如果已配置）
+
 - 访问相关页面，验证新功能是否可见
 - 执行功能操作，验证结果正确
 - 检查浏览器 Console 无错误
-- 检查相关 API 响应时间（如有性能要求则在 plan 中定义具体阈值）
+- 检查相关 API 响应时间（< 500ms 为正常）
 
-**当 project_type = script 时**：
-- CLI 执行验证：运行脚本并确认输出符合预期
-- 错误输入测试：传入无效参数确认有合理报错
-- 无需浏览器验收
-
-**当 project_type = data-pipeline 时**：
-- 批处理结果验证：抽样检查输出数据正确性
-- 日志检查：确认无异常错误
-- 无需浏览器验收
-
-**当 project_type = library 时**：
-- import/require 验证：确认发布后可正常导入
-- 公共 API 调用验证：关键接口返回正确结果
-- 无需浏览器验收
-
-**人工确认（暂停等待确认，所有 project_type 均需要）**：
+**人工确认（必须）**：
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -333,56 +306,30 @@ Phase 5 暂停：需要人工验收
 
 自动验证结果：{通过/有问题}
 
-（当 project_type ∈ {backend-api, fullstack, frontend-only} 且 acceptance_url ≠ N/A 时）
-请在浏览器（桌面 + 手机）访问 {acceptance_url}：
-
-（当 project_type = script 时）
-请运行脚本并确认输出符合预期：
-
-（当 project_type = data-pipeline 时）
-请检查批处理结果和日志：
-
-（当 project_type = library 时）
-请验证 import 和公共 API 调用：
+请在浏览器（桌面 + 手机）访问 {URL}：
 
 验收清单：
 □ {验收标准 1}
 □ {验收标准 2}
 □ {验收标准 3}
 
-（当有浏览器验收时）Console 无红色错误
+Console 无红色错误
 现有功能无回归
 
-全部确认后输入 "verified" 完成任务。
+全部确认后输入 "用户确认（线上验收）" 完成任务。
 如有问题，描述问题内容。
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-### 质量门禁（按 project_type 条件化）
-
-**所有 project_type**：
+### 质量门禁
 - [ ] 自动验证通过（或已解释例外）
-- [ ] 现有功能无回归
-
-**当 project_type ∈ {backend-api, fullstack, frontend-only} 且 acceptance_url ≠ N/A 时**：
 - [ ] 人工在浏览器（桌面）确认新功能正常
 - [ ] 人工在浏览器（手机）确认布局正常
 - [ ] Console 零红色错误
+- [ ] 现有功能无回归（核心路径手动测试）
 
-**当 project_type = script 时**：
-- [ ] CLI 执行输出符合预期
-- [ ] 错误输入有合理报错
-
-**当 project_type = data-pipeline 时**：
-- [ ] 批处理结果正确（抽样验证）
-- [ ] 日志无异常错误
-
-**当 project_type = library 时**：
-- [ ] import/require 验证通过
-- [ ] 公共 API 调用结果正确
-
-### 通行条件
-人工未确认 → 任务不算完成（所有 project_type 均需人工输入 "verified"）
+### 暂停条件
+人工未确认 → 任务不算完成
 
 ---
 

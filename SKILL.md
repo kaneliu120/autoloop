@@ -20,6 +20,33 @@ description: >
 
 **核心信念**：所有高质量输出都是迭代的产物，不是一次性生成的。
 
+## 核心机制（R4-R7 改进）
+
+**独立评分器**：executor（执行者）和 evaluator（评分者）必须是不同的 subagent。evaluator 盲评产出物，不知道执行过程和策略意图。详见 `protocols/agent-dispatch.md` 独立评分器章节。
+
+**Fail-Closed 评分**：缺证据的评分视为未通过。评分必须包含分数+判据+证据三项，缺任一项无效。详见 `protocols/quality-gates.md` 评分通用规范。
+
+**单策略隔离**：每轮 DECIDE 只选一个主策略，实现可归因的 A/B 验证。多策略并行结果不入策略效果库。详见 `protocols/loop-protocol.md` DECIDE 阶段。
+
+**评分置信度**：TSV 记录 score_variance 和 confidence，低置信（方差 ≥ 2.0 或证据 0 条）等同 fail-closed。详见 `protocols/quality-gates.md` 置信度计算。
+
+**跨维度影响面分析**：DECIDE 阶段必须分析策略对其他维度的依赖影响，VERIFY 必须验证所有受影响维度。详见 `protocols/loop-protocol.md` 影响面分析。
+
+**全局经验库**：跨任务的策略效果数据积累在 `protocols/experience-registry.md`，OBSERVE 阶段读取推荐策略，REFLECT 阶段写回经验。
+
+**确定性工具脚本（scripts/目录）**：Python stdlib工具消除LLM计算和格式化误差。
+
+- **MANDATORY**：每轮结束后必须运行 `python ${SKILL_DIR}/scripts/autoloop-score.py <findings路径>` 计算质量门禁
+- **MANDATORY**：写入TSV前必须运行 `python ${SKILL_DIR}/scripts/autoloop-tsv.py validate <tsv路径>` 校验格式
+- **MANDATORY**：任务初始化使用 `python ${SKILL_DIR}/scripts/autoloop-init.py <工作目录> <模板> <目标>` 创建Bootstrap文件
+- 无scripts/时LLM手动执行（降级模式），但会增加格式错误风险
+
+**协议版本化**：当前版本 1.0.0，minor/major 变更后触发重基线。详见 `protocols/evolution-rules.md` 重基线规则。
+
+**结果验证**：协议变更必须声明预期目标（渐进式、≤20%幅度），验证窗口内未达标则触发回滚评估。详见 `protocols/evolution-rules.md` 结果验证。
+
+**统一评审框架**：T6 三个 reviewer 在统一框架内展开，标准输出格式+聚合规则+冲突仲裁。详见 `protocols/agent-dispatch.md` T6 统一评审框架。
+
 ---
 
 ## 核心循环：OODA + 验证 + 进化 + 反思
@@ -50,7 +77,7 @@ REFLECT（反思）
 1. 本轮完成了什么（具体，可量化）
 2. 质量门禁当前得分（数字，不是"好/差"）
 3. 下一轮计划（具体行动，不是方向）
-4. 终止判断（执行中 / 已完成 / 暂停等待确认 / 暂停等待输入，终止原因见 protocols/loop-protocol.md 统一状态枚举）
+4. 终止判断（继续/完成/需要用户决策）
 5. 反思记录（问题登记 + 策略复盘 + 模式识别 + 经验沉淀）
 
 ---
@@ -73,7 +100,7 @@ REFLECT（反思）
 - 一致性（无内部矛盾的维度比例）
 - 完整性（有引用来源的关键陈述比例）
 
-**最大迭代**：默认 3 轮，可配置
+**最大迭代**：默认轮次见 protocols/parameters.md default_rounds.T1，可配置
 
 ---
 
@@ -88,12 +115,12 @@ REFLECT（反思）
 - 敏感性分析（不同权重下推荐是否变化）
 
 **质量门禁**（完整定义和具体计算方法见 `protocols/quality-gates.md`）：
-- 覆盖率（阈值见 protocols/quality-gates.md 门禁评估矩阵 T2 行）
-- 可信度（见 protocols/quality-gates.md 门禁评估矩阵 T2 行）
-- 偏见检查（见 protocols/quality-gates.md T2 专属门禁 — 偏见检查，含通过标准和计算方法）
-- 敏感性分析（见 protocols/quality-gates.md T2 专属门禁 — 敏感性分析，含通过标准）
+- 覆盖率（见 quality-gates.md T2 覆盖率门禁）
+- 可信度（见 quality-gates.md 可信度门禁）
+- 偏见检查（见 quality-gates.md T2 专属门禁 — 偏见检查，含通过标准和计算方法）
+- 敏感性分析（见 quality-gates.md T2 专属门禁 — 敏感性分析，含通过标准）
 
-**最大迭代**：默认 2 轮，可配置
+**最大迭代**：默认轮次见 protocols/parameters.md default_rounds.T2，可配置
 
 ---
 
@@ -105,11 +132,11 @@ REFLECT（反思）
 **核心机制**：
 - 定义基线（第一轮开始前测量）
 - 每轮改进后重新测量
-- 收益递减检测（连续无进展阈值见 `protocols/evolution-rules.md` 进化类型 3）
+- 收益递减检测（连续无进展轮次达到阈值则调整策略，见 protocols/parameters.md 迭代控制参数章节）
 
 **质量门禁**：用户定义的 KPI 达到目标值
 
-**最大迭代**：默认无上限，可配置
+**最大迭代**：默认轮次见 protocols/parameters.md default_rounds，可配置
 
 ---
 
@@ -143,9 +170,7 @@ REFLECT（反思）
 - 每个阶段有明确的输入/输出/质量门禁
 - 部署前所有门禁必须全绿
 
-**质量门禁**：见 `protocols/quality-gates.md` T5 行 及 `protocols/delivery-phases.md`
-
-**关键参数**：plan 阶段必须首先收集 `project_type`（枚举值见 `protocols/loop-protocol.md`），后续变量的必填/可选由激活矩阵决定
+**质量门禁**：见 `protocols/delivery-phases.md`
 
 **最大迭代**：每个阶段内部可迭代，阶段顺序不可跳过
 
@@ -167,9 +192,7 @@ REFLECT（反思）
 - 可靠性
 - 可维护性
 
-**关键参数**：plan 阶段必须首先收集 `project_type`（枚举值见 `protocols/loop-protocol.md`），决定哪些检查适用
-
-**最大迭代**：默认无上限，直到全部达标
+**最大迭代**：默认轮次见 protocols/parameters.md default_rounds.T6（以质量门禁为终止条件），直到全部达标
 
 ---
 
@@ -182,14 +205,12 @@ REFLECT（反思）
 - 第 1 轮：全面诊断（三个维度并行）
 - 第 2-N 轮：跨维度协同修复（一个修复可能同时改善多个维度）
 - 每 5 个修复后 checkpoint 重新评分
-- 三个维度全部达到 protocols/quality-gates.md 门禁评估矩阵 T7 行阈值才停止
+- 三个维度全部达标才停止（阈值见 protocols/quality-gates.md T7 门禁）
 
 **质量门禁**（具体阈值见 `protocols/quality-gates.md` T7 门禁）：
 - 架构分
 - 性能分
 - 稳定性分
-
-**关键参数**：plan 阶段必须首先收集 `project_type`（枚举值见 `protocols/loop-protocol.md`），决定哪些优化维度适用
 
 **最大迭代**：默认无上限，直到全部达标
 
@@ -200,7 +221,7 @@ REFLECT（反思）
 ### 并行调度（独立任务）
 以下情况必须并行：
 - 多个 researcher 搜索不同维度
-- 多个 scanner 或 code-reviewer 检查不同代码模块
+- 多个 reviewer 检查不同代码模块
 - 多个 generator 生成不同内容单元
 - frontend-dev 和 backend-dev 开发不同层
 
@@ -248,20 +269,21 @@ REFLECT（反思）
 
 | 模板 | 门禁维度 | 参考位置 |
 |------|---------|---------|
-| T1 Research | 覆盖率、可信度、一致性、完整性 | protocols/quality-gates.md 门禁评估矩阵 T1 行 |
-| T2 Compare | 覆盖率、可信度、偏见检查、敏感性分析 | protocols/quality-gates.md 门禁评估矩阵 T2 行 |
-| T3 Iterate | KPI 达目标值 | protocols/quality-gates.md 门禁评估矩阵 T3 行 |
-| T4 Generate | 通过率、平均分 | protocols/quality-gates.md 门禁评估矩阵 T4 行 |
+| T1 Research | 覆盖率、可信度、一致性、完整性 | quality-gates.md 知识类任务门禁 |
+| T2 Compare | 覆盖率、可信度、偏见检查、敏感性分析 | quality-gates.md T2 专属门禁 |
+| T3 Iterate | KPI 达目标值 | quality-gates.md T3 专属门禁 |
+| T4 Generate | 通过率、平均分 | quality-gates.md T4 专属门禁 |
 
 ### 工程类任务（T5/T6/T7）
 
 | 模板 | 门禁维度 | 参考位置 |
 |------|---------|---------|
-| T5 Deliver | 语法验证、安全性、服务健康、人工验收 | protocols/quality-gates.md 门禁评估矩阵 T5 行 + delivery-phases.md |
-| T6 Quality | 安全性、可靠性、可维护性（复合判定）| protocols/quality-gates.md 门禁评估矩阵 T6 行 |
-| T7 Optimize | 架构、性能、稳定性 | protocols/quality-gates.md 门禁评估矩阵 T7 行 |
+| T5 Deliver | 语法验证、安全性、服务健康、人工验收 | quality-gates.md 工程类任务门禁 + delivery-phases.md |
+| T6 Quality | 安全性、可靠性、可维护性（复合判定）| quality-gates.md T6 复合判定规则 |
+| T7 Optimize | 架构、性能、稳定性 | quality-gates.md 工程类任务门禁 |
 
 扣分规则、严重级别（P1/P2/P3）和检测命令见 `protocols/enterprise-standard.md`。
+所有扣分条目已客观化（可量化阈值或可 grep 验证的规则），不含主观判断词。
 
 ---
 
@@ -274,19 +296,24 @@ REFLECT（反思）
 | `autoloop-plan.md` | 任务计划：目标、类型、范围、质量门禁、预算 | 任务开始时创建，范围变更时更新 |
 | `autoloop-progress.md` | 进度追踪：每轮开始/结束记录，得分变化 | 每轮开始和结束各更新一次 |
 | `autoloop-findings.md` | 发现记录：调研结果、问题清单、修复记录 | 每个 subagent 返回后追加 |
-| `autoloop-results.tsv` | 结构化迭代日志：按模板粒度写入，见 `protocols/loop-protocol.md` 统一 TSV Schema 章节 | 所有模板，任务开始后创建 |
+| `autoloop-results.tsv` | 结构化迭代日志（15列）：所有模板每轮每维度写入一行，格式见 `protocols/loop-protocol.md` 统一 TSV Schema 章节 | 所有模板，任务开始后创建 |
+| `protocols/experience-registry.md` | 全局经验库：跨任务策略效果数据、协议变更追踪 | 每次任务 REFLECT 阶段更新 |
+
+**跨文件主键体系**：四个文件共享统一主键（iteration + strategy_id + dimension + problem_id），确保跨文件可追溯。详见 `protocols/loop-protocol.md` 跨文件主键规范。
 
 ---
 
 ## 进化规则（轮间调整）
 
+进化规则的完整定义见 `protocols/evolution-rules.md`，包含风险分级审批（低风险 AI 自动、高风险用户确认）和协议升级后重基线机制。
+
 ### 扩展范围（当发现新维度时）
 - 条件：subagent 发现了计划外的重要维度
 - 行动：将新维度加入 autoloop-plan.md，下一轮覆盖
-- 限制：扩展不超过初始范围的 50%（防止无限蔓延）
+- 限制：扩展条件和上限见 protocols/parameters.md 范围扩展控制章节
 
 ### 收窄焦点（当时间/预算紧张时）
-- 条件：已消耗 70% 预算但覆盖率 < 60%
+- 条件：见 protocols/parameters.md 收窄触发条件
 - 行动：聚焦最高优先级维度，降低次要维度的深度要求
 - 记录：在 autoloop-plan.md 中注明缩减内容和原因
 
@@ -296,7 +323,7 @@ REFLECT（反思）
 - 记录：在 autoloop-findings.md 中注明已尝试方法
 
 ### 优先级重排（当发现高优先级问题时）
-- 条件：发现 P1 级别问题（安全漏洞、数据丢失风险）
+- 条件：发现紧急 P1/P1 级别问题（安全漏洞、数据丢失风险）
 - 行动：立即提升优先级，暂停其他工作，先处理高优先级问题
 - 通知：向用户报告，等待确认才继续
 
@@ -304,22 +331,22 @@ REFLECT（反思）
 
 ## 终止条件
 
-### 正常终止（任务状态=已完成，终止原因=达标终止）
+### 正常终止（任务完成）
 - 所有质量门禁通过（数字达标，不是"差不多"）
 - autoloop-results.tsv 已生成（所有模板通用的结构化迭代日志，记录每轮得分变化；最终报告文件命名见 `protocols/loop-protocol.md` 统一输出文件命名章节）
 - 向用户提交最终报告
 
-### 预算耗尽（任务状态=已完成，终止原因=预算耗尽）
+### 预算终止（资源耗尽）
 - 达到最大迭代次数
 - 向用户报告当前状态、未达标维度、建议下一步
 - 不宣告失败，宣告"当前最优解"
 
-### 用户终止（任务状态=已完成，终止原因=用户终止）
+### 用户中断
 - 用户输入"stop"/"停止"/"够了"
 - 保存当前进度到 autoloop-progress.md
 - 提交中间结果，标注完成度
 
-### 无法继续（任务状态=已完成，终止原因=无法继续）
+### 无法继续（需要人工决策）
 - 发现无法自动解决的矛盾
 - 需要用户提供关键信息
 - 涉及不可逆操作（数据删除、生产部署）

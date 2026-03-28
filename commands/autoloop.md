@@ -91,7 +91,7 @@ T7 Optimize: 系统/代码库路径（必须）、优先方向（可选）
 
 - `autoloop-findings.md`（使用 `templates/findings-template.md`）
 - `autoloop-progress.md`（使用 `templates/progress-template.md`）
-- `autoloop-results.tsv`（TSV Schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节，写入表头行）
+- `autoloop-results.tsv`（TSV Schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节，写入13列表头行）
 
 Bootstrap 完成后**自动进入第一轮执行，不等待用户额外确认**。如果用户在计划摘要阶段提出修改，更新计划文件后再启动。
 
@@ -137,7 +137,7 @@ AutoLoop 第 {N} 轮完成
   → {具体行动 1}
   → {具体行动 2}
 
-终止判断：{继续 | 达标终止 | 预算耗尽 | 用户终止 | 无法继续}（终止层级见 protocols/quality-gates.md 概述章节）
+终止判断：{继续迭代 | 已达标，准备输出结果 | 需要用户决策：{原因}}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
