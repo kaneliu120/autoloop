@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AutoLoop MCP Server — 将 9 个工具脚本封装为 MCP tools
+"""AutoLoop MCP Server — 将 10 个工具脚本封装为 MCP tools
 
 安装：pip install mcp
 启动：python3 server.py（由 Claude Code MCP 配置自动启动）
@@ -119,9 +119,9 @@ def autoloop_state(work_dir: str, command: str, args: str = "") -> str:
         command: 操作命令 - init|update|query|add-iteration|add-finding|add-tsv-row
         args: 命令参数（JSON 字符串或其他格式，取决于 command）
     """
-    cmd_args = [work_dir, command]
+    cmd_args = [command, work_dir]
     if args:
-        cmd_args.append(args)
+        cmd_args.extend(args.split())
     return _run_script("autoloop-state.py", cmd_args)
 
 
@@ -166,6 +166,24 @@ def autoloop_finalize(work_dir: str, json_output: bool = False) -> str:
     if json_output:
         cmd_args.append("--json")
     return _run_script("autoloop-finalize.py", cmd_args)
+
+
+@mcp.tool()
+def autoloop_controller(work_dir: str, mode: str = "run") -> str:
+    """主循环控制器 — init/run/resume/status
+
+    Args:
+        work_dir: 工作目录路径
+        mode: 运行模式 - run（默认，启动/继续循环）| init（初始化，需配合 template/goal）| resume（从暂停恢复）| status（查看状态）
+    """
+    if mode == "init":
+        return _run_script("autoloop-controller.py", [work_dir, "--init"])
+    elif mode == "resume":
+        return _run_script("autoloop-controller.py", [work_dir, "--resume"])
+    elif mode == "status":
+        return _run_script("autoloop-controller.py", [work_dir, "--status"])
+    else:
+        return _run_script("autoloop-controller.py", [work_dir])
 
 
 if __name__ == "__main__":

@@ -13,51 +13,87 @@ import re
 import sys
 
 # ---------------------------------------------------------------------------
-# 门禁定义（SSOT — 来自 quality-gates.md）
-# 每个门禁: dimension, threshold, gate_type(hard/soft), unit, description
+# 门禁定义 — 从 gate-manifest.json（SSOT）加载
 # ---------------------------------------------------------------------------
 
-TEMPLATE_GATES = {
-    "T1": [
-        {"dim": "coverage",      "threshold": 85,   "unit": "%",   "gate": "hard", "label": "覆盖率"},
-        {"dim": "credibility",   "threshold": 80,   "unit": "%",   "gate": "hard", "label": "可信度"},
-        {"dim": "consistency",   "threshold": 90,   "unit": "%",   "gate": "soft", "label": "一致性"},
-        {"dim": "completeness",  "threshold": 85,   "unit": "%",   "gate": "soft", "label": "完整性"},
-    ],
-    "T2": [
-        {"dim": "coverage",         "threshold": 100,  "unit": "%",    "gate": "hard", "label": "覆盖率"},
-        {"dim": "credibility",      "threshold": 80,   "unit": "%",    "gate": "hard", "label": "可信度"},
-        {"dim": "bias_check",       "threshold": 0.15, "unit": "score","gate": "hard", "label": "偏见检查"},
-        {"dim": "sensitivity",      "threshold": 1,    "unit": "bool", "gate": "soft", "label": "敏感性分析"},
-    ],
-    "T3": [
-        {"dim": "kpi_target",  "threshold": None, "unit": "user_defined", "gate": "hard", "label": "KPI达标"},
-    ],
-    "T4": [
-        {"dim": "pass_rate",  "threshold": 95,  "unit": "%",    "gate": "hard", "label": "通过率"},
-        {"dim": "avg_score",  "threshold": 7.0, "unit": "/10",  "gate": "hard", "label": "平均分"},
-    ],
-    "T5": [
-        {"dim": "syntax",            "threshold": 0,  "unit": "errors",  "gate": "hard", "label": "语法验证"},
-        {"dim": "p1_p2_issues",      "threshold": 0,  "unit": "count",   "gate": "hard", "label": "P1/P2问题"},
-        {"dim": "service_health",    "threshold": 1,  "unit": "bool",    "gate": "soft", "label": "服务健康"},
-        {"dim": "user_acceptance",   "threshold": 1,  "unit": "bool",    "gate": "hard", "label": "人工验收"},
-    ],
-    "T6": [
-        {"dim": "security_score",       "threshold": 9.0,  "unit": "/10",  "gate": "hard", "label": "安全性"},
-        {"dim": "reliability_score",    "threshold": 8.0,  "unit": "/10",  "gate": "hard", "label": "可靠性"},
-        {"dim": "maintainability_score","threshold": 8.0,  "unit": "/10",  "gate": "hard", "label": "可维护性"},
-        {"dim": "p1_all",               "threshold": 0,    "unit": "count","gate": "hard", "label": "P1问题(全维度)"},
-        {"dim": "security_p2",          "threshold": 0,    "unit": "count","gate": "hard", "label": "安全P2问题"},
-        {"dim": "reliability_p2",       "threshold": 3,    "unit": "count","gate": "soft", "label": "可靠性P2问题"},
-        {"dim": "maintainability_p2",   "threshold": 5,    "unit": "count","gate": "soft", "label": "可维护性P2问题"},
-    ],
-    "T7": [
-        {"dim": "architecture",  "threshold": 8.0, "unit": "/10", "gate": "hard", "label": "架构"},
-        {"dim": "performance",   "threshold": 8.0, "unit": "/10", "gate": "hard", "label": "性能"},
-        {"dim": "stability",     "threshold": 8.0, "unit": "/10", "gate": "hard", "label": "稳定性"},
-    ],
+# manifest dimension → scorer internal dim 映射（处理命名差异）
+_MANIFEST_DIM_MAP = {
+    "security": "security_score",
+    "reliability": "reliability_score",
+    "maintainability": "maintainability_score",
+    "p1_count": "p1_all",
+    "syntax_errors": "syntax",
 }
+
+# manifest dimension → 中文标签
+_MANIFEST_LABEL_MAP = {
+    "coverage": "覆盖率",
+    "credibility": "可信度",
+    "consistency": "一致性",
+    "completeness": "完整性",
+    "bias_check": "偏见检查",
+    "sensitivity": "敏感性分析",
+    "kpi_target": "KPI达标",
+    "pass_rate": "通过率",
+    "avg_score": "平均分",
+    "syntax_errors": "语法验证",
+    "p1_p2_issues": "P1/P2问题",
+    "service_health": "服务健康",
+    "user_acceptance": "人工验收",
+    "security": "安全性",
+    "reliability": "可靠性",
+    "maintainability": "可维护性",
+    "p1_count": "P1问题(全维度)",
+    "security_p2": "安全P2问题",
+    "reliability_p2": "可靠性P2问题",
+    "maintainability_p2": "可维护性P2问题",
+    "architecture": "架构",
+    "performance": "性能",
+    "stability": "稳定性",
+}
+
+# manifest unit → scorer unit 映射
+_MANIFEST_UNIT_MAP = {
+    "%": "%",
+    "/10": "/10",
+    "bool": "bool",
+    "count": "count",
+    "user_defined": "user_defined",
+}
+
+
+def _load_gate_manifest():
+    """Load gate definitions from canonical manifest (SSOT)."""
+    manifest_path = os.path.join(os.path.dirname(__file__), "..", "references", "gate-manifest.json")
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _manifest_to_scorer_gates(manifest):
+    """Convert manifest templates to scorer's internal TEMPLATE_GATES format."""
+    result = {}
+    for tkey, tdef in manifest["templates"].items():
+        gates = []
+        for g in tdef["gates"]:
+            dim_raw = g["dimension"]
+            dim = _MANIFEST_DIM_MAP.get(dim_raw, dim_raw)
+            unit = _MANIFEST_UNIT_MAP.get(g["unit"], g["unit"])
+            gate_type = g["type"]  # hard/soft
+            threshold = g["threshold"]
+            label = _MANIFEST_LABEL_MAP.get(dim_raw, dim_raw)
+            gates.append({
+                "dim": dim,
+                "threshold": threshold,
+                "unit": unit,
+                "gate": gate_type,
+                "label": label,
+            })
+        result[tkey] = gates
+    return result
+
+
+_MANIFEST = _load_gate_manifest()
+TEMPLATE_GATES = _manifest_to_scorer_gates(_MANIFEST)
 
 # 模板别名映射（用户可能写 "T1 Research" 而非 "T1"）
 _TEMPLATE_ALIAS = {}
