@@ -55,7 +55,7 @@ OSCILLATION_WINDOW = _MANIFEST["oscillation"]["window"]        # 连续轮数
 OSCILLATION_BAND = _MANIFEST["oscillation"]["band"]            # ±分数波动带宽
 
 # 停滞检测阈值（从 manifest.stagnation_thresholds 取默认值）
-STAGNATION_CONSECUTIVE = 2      # 连续轮数改进不足（固定逻辑参数）
+STAGNATION_CONSECUTIVE = _MANIFEST.get("stagnation_consecutive", 2)  # 从 manifest 加载
 # 默认使用 T1 的 3% 相对阈值；运行时按模板动态查找
 STAGNATION_THRESHOLD_PCT = 0.03
 

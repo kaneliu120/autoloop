@@ -121,7 +121,8 @@ def autoloop_state(work_dir: str, command: str, args: str = "") -> str:
     """
     cmd_args = [command, work_dir]
     if args:
-        cmd_args.extend(args.split())
+        import shlex
+        cmd_args.extend(shlex.split(args))
     return _run_script("autoloop-state.py", cmd_args)
 
 
@@ -150,7 +151,8 @@ def autoloop_experience(work_dir: str, command: str, args: str = "") -> str:
     """
     cmd_args = [work_dir, command]
     if args:
-        cmd_args.extend(args.split())
+        import shlex
+        cmd_args.extend(shlex.split(args))
     return _run_script("autoloop-experience.py", cmd_args)
 
 
