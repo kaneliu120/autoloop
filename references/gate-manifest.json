@@ -69,6 +69,7 @@
     "T6": {"value": 0.3, "unit": "points", "type": "absolute"},
     "T7": {"value": 0.5, "unit": "points", "type": "absolute"}
   },
+  "stagnation_consecutive": 2,
   "oscillation": {
     "window": 3,
     "band": 0.5

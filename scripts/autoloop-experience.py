@@ -243,6 +243,15 @@ def cmd_write(registry_path, strategy_id, effect, score, context, status=None):
     with open(registry_path, 'w', encoding='utf-8') as f:
         f.write('\n'.join(lines))
 
+    # 自动晋升建议：检查同 strategy_id 的历史记录
+    all_strategies = _parse_strategy_table('\n'.join(lines))
+    same_id = [s for s in all_strategies if s.get('strategy_id') == strategy_id]
+    if len(same_id) >= 3:
+        keep_count = sum(1 for s in same_id if s.get('effect', '') == '保持')
+        if keep_count >= 2 and status == '观察':
+            print("PROMOTION_HINT: 策略 {} 已累计 {} 次使用（{} 次保持），建议从「观察」晋升为「推荐」".format(
+                strategy_id, len(same_id), keep_count))
+
     return True
 
 
