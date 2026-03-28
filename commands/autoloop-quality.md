@@ -38,7 +38,7 @@ description: >
 每轮修复开始前，在执行任何扫描或修复行动之前，必须先完成 OBSERVE Step 0：
 
 ```
-**Domain Pack 加载**：如果 `autoloop-plan.md` 指定了 `domain_pack`（如 `python-fastapi`），读取 `protocols/domain-packs/{pack名}.md`，用其检测命令替换 enterprise-standard.md 的通用命令，权重调整覆盖通用权重。未指定则使用通用规则。
+**Domain Pack 加载**：执行 domain pack 自动检测（见 domain-packs/README.md §加载机制）。扫描工作目录技术栈特征自动加载匹配 pack；如 plan 中手动指定 `domain_pack` 则使用指定值；`domain_pack: none` 显式禁用。加载后用 pack 检测命令替换 enterprise-standard.md 的通用命令，权重调整覆盖通用权重。
 
 OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
   读取 autoloop-findings.md 的反思章节（4层结构表）

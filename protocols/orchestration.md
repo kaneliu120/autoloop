@@ -160,6 +160,11 @@ T1 Research → T4 Generate
 2. **最大节点数**：单条 Pipeline 最多 5 个节点。超�� 5 个建议拆分为多条 Pipeline。
 3. **嵌套禁止**：Pipeline 节点不能包含另一个 Pipeline。
 4. **门禁继承**：每个节点使用对应模板的标准门禁。`gate_override` 只能放宽（如覆盖率从 85% 降到 70%），不能收紧。
+
+**gate_override 约束**:
+- 仅允许将 Hard Gate 降级为 Soft Gate（记录但不阻塞），不允许完全移除门禁
+- 必须在 pipeline plan 中声明 override 原因
+- 不允许 override 安全性维度的 Hard Gate（P1=0 规则不可降级）
 5. **经验独立**：每个节点独立产出经验条目到 `experience-registry.md`，Pipeline 级别仅记录整体执行效率。
 
 ---

@@ -82,11 +82,15 @@ def _count_info_points(body):
     if bullet_count >= 2:
         return bullet_count
 
-    # SSOT格式：统计有实质内容的段落行（排除来源行、空行、表格行）
+    # SSOT格式：统计有实质内容的段落行（排除来源行、元数据行、空行、表格行）
     para_count = sum(1 for line in lines
                      if line.strip()
                      and not line.strip().startswith("来源:")
                      and not line.strip().startswith("来源：")
+                     and not line.strip().startswith("策略:")
+                     and not line.strip().startswith("策略：")
+                     and not line.strip().startswith("ID:")
+                     and not line.strip().startswith("ID：")
                      and not line.strip().startswith("|")
                      and not line.strip().startswith("#")
                      and len(line.strip()) > 10)
