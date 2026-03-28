@@ -145,17 +145,9 @@
 
 **回滚步骤**：
 
-```bash
-# 1. Git 回滚
-git revert {commit_hash}
-git push origin main
-
-# 2. 线上重新部署（deploy_command 来自 autoloop-plan.md）
-{deploy_command}
-
-# 3. 数据库回滚（如有迁移，使用项目实际的迁移工具执行 downgrade）
-# 具体命令参见附录技术栈示例
-```
+1. Git 回滚：`git revert {commit_hash} && git push origin main`
+2. 线上重新部署：**执行命令见 delivery-phases.md §Phase 4 部署**
+3. 数据库回滚（如有迁移）：**执行命令见 delivery-phases.md §Phase 4 迁移回滚**
 
 **回滚预计耗时**：{N} 分钟
 
@@ -165,7 +157,7 @@ git push origin main
 
 | 时间 | 审阅者 | 意见 | 状态 |
 |------|--------|------|------|
-| {时间} | {审阅者} | {意见} | 待确认 / 已确认 / 需修改 |
+| {时间} | {审阅者} | {意见} | 待审查 / 通过 / 未通过 |
 
 ---
 
@@ -202,15 +194,9 @@ def downgrade():
     op.drop_table("examples")
 ```
 
-**迁移验证命令**：
-```bash
-python -m alembic current && python -m alembic check
-```
+**迁移验证命令**：`python -m alembic current && python -m alembic check`
 
-**语法检查命令**：
-```bash
-python3 -m py_compile {文件路径}
-```
+**语法检查命令**：`python3 -m py_compile {文件路径}`
 
 ---
 
@@ -233,17 +219,8 @@ import { exampleRouter } from './routes/example'
 app.use('/api/v1/examples', exampleRouter)
 ```
 
-**数据库迁移（Prisma）**：
-```bash
-npx prisma migrate dev --name add_examples
-```
+**数据库迁移（Prisma）**：`npx prisma migrate dev --name add_examples`
 
-**迁移验证命令**：
-```bash
-npx prisma migrate status
-```
+**迁移验证命令**：`npx prisma migrate status`
 
-**语法检查命令**：
-```bash
-npx tsc --noEmit
-```
+**语法检查命令**：`npx tsc --noEmit`

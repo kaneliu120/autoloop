@@ -117,7 +117,7 @@ T7 Optimize: 系统/代码库路径（必须）、优先方向（可选）
 
 - `autoloop-findings.md`（使用 `templates/findings-template.md`）
 - `autoloop-progress.md`（使用 `templates/progress-template.md`）
-- `autoloop-results.tsv`（TSV Schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节，写入13列表头行）
+- `autoloop-results.tsv`（TSV Schema 见 `protocols/loop-protocol.md` 统一 TSV Schema 章节，写入15列表头行）
 
 Bootstrap 完成后**自动进入第一轮执行，不等待用户额外确认**。如果用户在计划摘要阶段提出修改，更新计划文件后再启动。
 

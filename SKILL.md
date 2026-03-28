@@ -26,7 +26,7 @@ description: >
 
 **Fail-Closed 评分**：缺证据的评分视为未通过。评分必须包含分数+判据+证据三项，缺任一项无效。详见 `protocols/quality-gates.md` 评分通用规范。
 
-**单策略隔离**：每轮 DECIDE 只选一个主策略，实现可归因的 A/B 验证。多策略并行结果不入策略效果库。详见 `protocols/loop-protocol.md` DECIDE 阶段。
+**单策略隔离**：每轮 DECIDE 只选一个主策略（strategy_id 唯一），多策略并行结果不入策略效果库。策略的精确定义和判断标准见 `protocols/loop-protocol.md` §单策略隔离。
 
 **评分置信度**：TSV 记录 score_variance 和 confidence，低置信（方差 ≥ 2.0 或证据 0 条）等同 fail-closed。详见 `protocols/quality-gates.md` 置信度计算。
 

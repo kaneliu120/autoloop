@@ -14,6 +14,8 @@ description: >
 
 **Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再扫描当前状态。详见 `protocols/loop-protocol.md` OBSERVE Step 0 章节。
 
+- **经验库读取**: 读取 `protocols/experience-registry.md` 中与当前任务类型和目标维度匹配的条目，识别状态为「推荐」或「候选默认」的策略，传递到 DECIDE 阶段参考
+
 ---
 
 ## 调研维度生成规则
@@ -193,6 +195,7 @@ DECIDE：
   优先使用上轮标记为"保持"的策略
 
 ACT：
+  - **工单生成**: 按 `protocols/agent-dispatch.md` 对应角色模板生成委派工单，填充任务目标、输入数据、输出格式、质量标准、范围限制、当前轮次、上下文摘要
   执行搜索，整合到 autoloop-findings.md
 
 VERIFY：
@@ -331,3 +334,4 @@ REFLECT：
 - **策略复盘**：搜索策略/验证方法/整合方式的效果评估（保持 | 避免 | 待验证）（策略评价枚举见 protocols/loop-protocol.md 统一状态枚举）
 - **模式识别**：哪些来源一直提供高质量信息、哪些维度反复出现空白
 - **经验教训**：搜索关键词/数据源/分析方法的有效性总结
+- **经验写回**: 将本轮策略效果写入 `protocols/experience-registry.md`（策略ID、适用场景、效果评分、执行上下文，遵循效果记录表格式）

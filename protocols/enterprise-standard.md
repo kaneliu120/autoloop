@@ -2,7 +2,7 @@
 
 ## 概述
 
-本文档是 quality-gates.md 的评分细则组件，定义 T6/T7 各维度的评分计算方法。通过标准（目标分数）见 quality-gates.md 门禁矩阵。
+本文档是 quality-gates.md 的评分细则组件，定义 T6/T7 各维度的评分计算方法。通过标准见 quality-gates.md §门禁分类总览。
 
 本文档定义 AutoLoop T6（Quality）和 T7（Optimize）使用的企业级标准评分体系。所有评分规则是具体、可量化的，消除主观判断。
 
