@@ -132,6 +132,18 @@ iteration	phase	status	dimension	metric_value	delta	strategy_id	action_summary	s
 
 所有 4 个文件必须在第 1 轮 OBSERVE 开始前存在。创建后在 autoloop-plan.md 的"输出文件"表中将状态从"待创建"更新为"已创建"。
 
+### SSOT 可选模式
+
+当 `autoloop-plan.md` 设置 `ssot_mode: true` 时，启用结构化单一事实源模式：
+
+- **数据源**：`autoloop-state.json`（JSON 格式），包含 plan/iterations/findings/results 全部数据
+- **写操作**：所有状态变更通过 `scripts/autoloop-state.py` 写入 JSON，不直接编辑 MD 文件
+- **渲染**：每轮结束时运行 `scripts/autoloop-render.py` 从 JSON 生成 4 个可读 MD 文件
+- **读操作**：OBSERVE 阶段仍可读取 MD 文件（渲染后与 JSON 同步）
+- **向后兼容**：未设置 `ssot_mode` 时，行为完全不变，直接读写 4 个 MD 文件
+- **优势**：消除跨文件信息重复和不一致，支持 `query` 命令快速检索任意字段
+- **初始化**：使用 `autoloop-state.py init` 替代 `autoloop-init.py`，自动创建 JSON + 4 个 MD
+
 ---
 
 ## 概述

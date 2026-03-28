@@ -27,6 +27,8 @@ description: >
 每轮优化开始前，在执行任何诊断或修复行动之前，必须先完成 OBSERVE Step 0：
 
 ```
+**Domain Pack 加载**：如果 `autoloop-plan.md` 指定了 `domain_pack`（如 `python-fastapi`），读取 `protocols/domain-packs/{pack名}.md`，用其检测命令替换 enterprise-standard.md 的通用命令。未指定则使用通用规则。
+
 OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
   读取 autoloop-findings.md 的反思章节（4层结构表）
   获取：

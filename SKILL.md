@@ -57,6 +57,12 @@ hooks 配置已内置于 `~/.claude/settings.json`，无需额外安装。非 Cl
 - 提供 5 个 tools：`autoloop_init`、`autoloop_score`、`autoloop_tsv`、`autoloop_validate`、`autoloop_variance`
 - 纯文件模式仍为默认，MCP 是增强层，两者可共存
 
+**SSOT 可选模式**（结构化单一事实源）：
+
+在 `autoloop-plan.md` 中设置 `ssot_mode: true` 启用。所有状态写入 `autoloop-state.json`，每轮结束时 `autoloop-render.py` 生成 4 个可读 MD 文件。未启用时行为不变。
+- `autoloop-state.py init/update/query/add-iteration/add-finding/add-tsv-row`
+- `autoloop-render.py <工作目录>` — 从 JSON 渲染 plan/progress/findings/results.tsv
+
 **协议版本化**：当前版本 1.0.0，minor/major 变更后触发重基线。详见 `protocols/evolution-rules.md` 重基线规则。
 
 **结果验证**：协议变更必须声明预期目标（渐进式、≤20%幅度），验证窗口内未达标则触发回滚评估。详见 `protocols/evolution-rules.md` 结果验证。
