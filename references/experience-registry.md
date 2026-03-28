@@ -61,7 +61,7 @@
 - side_effects：已知副作用列表
 - use_count：累计使用次数
 - success_rate：产生正向效果的比例（use_count 中 delta > 0 的占比）
-- status：推荐 / 待验证 / 避免
+- status：推荐 / 候选默认 / 观察 / 已废弃（生命周期状态枚举）
 
 **扩展字段**：
 
@@ -110,7 +110,7 @@
 - use_count = 2-3 → confidence = 中
 - use_count ≥ 4 → confidence = 高
 
-**升格门槛**：策略从"待验证"升格为"推荐"必须满足：
+**升格门槛**：策略从"观察"升格为"推荐"必须满足：
 - confidence ≥ 中（即 use_count ≥ 2）
 - 连续2次 delta > 0
 
@@ -126,11 +126,11 @@ use_count = 1 时 success_rate 无统计意义，不作为升格依据。
 - 多策略并行轮次（strategy_id 为 `multi:...`）的结果标记为"混合归因"，不更新聚合指标，仅记录为参考数据
 - 此规则确保策略效果库中的数据可归因、可复现
 
-**状态转换规则**：
-- 新策略默认"待验证"
+**状态转换规则**（生命周期状态枚举：推荐 / 候选默认 / 观察 / 已废弃）：
+- 新策略默认"观察"
 - 升格为"推荐"必须满足：confidence ≥ 中（use_count ≥ 2）且连续 2 次 delta > 0
-- 连续 2 次 delta ≤ 0 → "避免"
-- "避免"策略在新上下文中 delta > 0 → 回到"待验证"
+- 连续 2 次 delta ≤ 0 → "已废弃"
+- "已废弃"策略在新上下文中 delta > 0 → 回到"观察"
 
 ### context-scoped 状态
 
@@ -143,7 +143,7 @@ use_count = 1 时 success_rate 无统计意义，不作为升格依据。
 | strategy_id | context_tags | status | evidence | last_validated |
 |-------------|-------------|--------|----------|----------------|
 | S01-parallel-scan | [python, backend, security] | 推荐 | 3次正向 | 2026-03-28 |
-| S01-parallel-scan | [typescript, frontend, performance] | 避免 | 2次负向 | 2026-03-28 |
+| S01-parallel-scan | [typescript, frontend, performance] | 已废弃 | 2次负向 | 2026-03-28 |
 
 **查询优先级**：
 1. 精确匹配：当前任务的 context_tags 与补充表的 context_tags 完全匹配 → 使用该行 status
@@ -151,14 +151,14 @@ use_count = 1 时 success_rate 无统计意义，不作为升格依据。
 3. 无匹配：使用全局 status（策略效果库表格中的 status 字段）
 
 **状态转换规则扩展**：
-- 上下文特定 status 的转换规则与全局规则相同（连续 2 次 delta > 0 → 推荐，连续 2 次 delta ≤ 0 → 避免）
+- 上下文特定 status 的转换规则与全局规则相同（连续 2 次 delta > 0 → 推荐，连续 2 次 delta ≤ 0 → 已废弃）
 - 但只基于该特定上下文的使用数据，不受其他上下文影响
 - 新上下文首次使用 → 继承全局 status，第二次使用后产生独立上下文 status
 
 ### 经验自动晋升链
 
 ```
-入库(自动,待验证,低置信) → 候选默认(success>=80%+use>=4+高置信) → 金丝雀验证(1次同类任务) → 升级(写入command,用户确认,patch+1)
+入库(自动,观察,低置信) → 推荐(连续2次delta>0+use>=2) → 候选默认(success>=80%+use>=4+高置信) → 金丝雀验证(1次同类任务) → 升级(写入command,用户确认,patch+1)
 ```
 **回滚**：升级后连续 2 次 delta <= 0 → 从 command 移除，回退到推荐，patch+1。
 
@@ -192,11 +192,11 @@ use_count = 1 时 success_rate 无统计意义，不作为升格依据。
 | 0-30d | ×1.0 | 完全有效 |
 | 31-60d | ×0.8 | 略微衰减 |
 | 61-90d | ×0.5 | 显著衰减 |
-| >90d | 降级 | status 自动从"推荐"降为"待验证" |
+| >90d | 降级 | status 自动从"推荐"降为"观察" |
 
 **衰减应用**：
 - 排序时：实际排序分 = success_rate × 衰减系数
-- 降级触发：>90d 未验证的"推荐"策略自动降为"待验证"，下次使用时需重新验证
+- 降级触发：>90d 未验证的"推荐"策略自动降为"观察"，下次使用时需重新验证
 - 重新验证：使用后 delta > 0 → last_validated_date 更新为当天，衰减重置
 - strategic 层级豁免：L1 经验的衰减周期为上表的 2 倍（60d/120d/180d）
 
@@ -264,8 +264,8 @@ OBSERVE 阶段读取顺序（写入 loop-protocol.md）：
 
 ## 经验淘汰机制
 
-- 连续 2 次在不同任务中验证无效（delta ≤ 0）→ status 改为"避免"
-- "避免"状态持续 5 次任务未被重新验证 → 标记为"废弃"并移至归档区
+- 连续 2 次在不同任务中验证无效（delta ≤ 0）→ status 改为"已废弃"
+- "已废弃"状态持续 5 次任务未被重新验证 → 移至归档区
 - 废弃经验不删除，保留在归档区供审计
 
 ---

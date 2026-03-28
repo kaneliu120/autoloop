@@ -15,46 +15,98 @@ import datetime
 TSV_HEADER = "iteration\tphase\tstatus\tdimension\tmetric_value\tdelta\tstrategy_id\taction_summary\tside_effect\tevidence_ref\tunit_id\tprotocol_version\tscore_variance\tconfidence\tdetails"
 
 # ---------------------------------------------------------------------------
-# T1-T7 质量门禁维度定义（来源：references/quality-gates.md）
+# T1-T7 质量门禁维度定义 — 从 gate-manifest.json（SSOT）加载
 # ---------------------------------------------------------------------------
 
-TEMPLATE_GATES = {
-    "T1": [
-        ("覆盖率", "≥ 85%", "Hard"),
-        ("可信度", "≥ 80%", "Hard"),
-        ("一致性", "≥ 90%", "Soft"),
-        ("完整性", "≥ 85%", "Soft"),
-    ],
-    "T2": [
-        ("覆盖率", "100%", "Hard"),
-        ("可信度", "≥ 80%", "Hard"),
-        ("偏见检查", "偏见分数 < 0.15", "Hard"),
-    ],
-    "T3": [
-        ("KPI 达目标值", "用户在 plan 中设定", "Hard"),
-    ],
-    "T4": [
-        ("通过率", "≥ 95%", "Hard"),
-        ("平均分", "≥ 7/10", "Hard"),
-    ],
-    "T5": [
-        ("P1/P2 问题", "= 0", "Hard"),
-    ],
-    "T6": [
-        ("安全性", "≥ 9/10", "Hard"),
-        ("可靠性", "≥ 8/10", "Hard"),
-        ("可维护性", "≥ 8/10", "Hard"),
-        ("P1 问题", "= 0", "Hard"),
-        ("安全 P2 问题", "= 0", "Hard"),
-        ("可靠性 P2 问题", "≤ 3", "Soft"),
-        ("可维护性 P2 问题", "≤ 5", "Soft"),
-    ],
-    "T7": [
-        ("架构", "≥ 8/10", "Hard"),
-        ("性能", "≥ 8/10", "Hard"),
-        ("稳定性", "≥ 8/10", "Hard"),
-    ],
+import json
+
+
+def _load_gate_manifest():
+    """Load gate definitions from canonical manifest (SSOT)."""
+    manifest_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "references", "gate-manifest.json")
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+# manifest dimension → 中文标签
+_MANIFEST_LABEL_MAP = {
+    "coverage": "覆盖率",
+    "credibility": "可信度",
+    "consistency": "一致性",
+    "completeness": "完整性",
+    "bias_check": "偏见检查",
+    "sensitivity": "敏感性分析",
+    "kpi_target": "KPI 达目标值",
+    "pass_rate": "通过率",
+    "avg_score": "平均分",
+    "syntax_errors": "语法验证",
+    "p1_p2_issues": "P1/P2 问题",
+    "service_health": "服务健康",
+    "user_acceptance": "人工验收",
+    "security": "安全性",
+    "reliability": "可靠性",
+    "maintainability": "可维护性",
+    "p1_count": "P1 问题",
+    "security_p2": "安全 P2 问题",
+    "reliability_p2": "可靠性 P2 问题",
+    "maintainability_p2": "可维护性 P2 问题",
+    "architecture": "架构",
+    "performance": "性能",
+    "stability": "稳定性",
 }
+
+
+def _format_threshold(gate):
+    """Convert manifest gate to human-readable threshold string."""
+    threshold = gate["threshold"]
+    unit = gate["unit"]
+    comparator = gate.get("comparator", ">=")
+
+    if threshold is None:
+        return "用户在 plan 中设定"
+    if unit == "bool":
+        return "True" if threshold else "False"
+    if unit == "%":
+        if comparator == ">=":
+            return f"≥ {threshold}%"
+        elif comparator == "==":
+            return f"{threshold}%"
+        elif comparator == "<=":
+            return f"≤ {threshold}%"
+        return f"{threshold}%"
+    if unit == "/10":
+        if comparator == ">=":
+            return f"≥ {threshold}/10"
+        return f"{threshold}/10"
+    if unit == "count":
+        if comparator == "==" and threshold == 0:
+            return "= 0"
+        elif comparator == "<=":
+            return f"≤ {threshold}"
+        return f"{threshold}"
+    return str(threshold)
+
+
+def _manifest_to_init_gates(manifest):
+    """Convert manifest templates to init's internal TEMPLATE_GATES format.
+
+    Returns dict: {"T1": [("覆盖率", "≥ 85%", "Hard"), ...], ...}
+    """
+    result = {}
+    for tkey, tdef in manifest["templates"].items():
+        gates = []
+        for g in tdef["gates"]:
+            dim_raw = g["dimension"]
+            label = _MANIFEST_LABEL_MAP.get(dim_raw, dim_raw)
+            threshold_str = _format_threshold(g)
+            gate_type = g["type"].capitalize()  # hard → Hard
+            gates.append((label, threshold_str, gate_type))
+        result[tkey] = gates
+    return result
+
+
+_MANIFEST = _load_gate_manifest()
+TEMPLATE_GATES = _manifest_to_init_gates(_MANIFEST)
 
 # ---------------------------------------------------------------------------
 # 资产模板路径

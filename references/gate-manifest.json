@@ -1,0 +1,82 @@
+{
+  "version": "1.0.0",
+  "templates": {
+    "T1": {
+      "name": "Research",
+      "gates": [
+        {"dimension": "coverage", "threshold": 85, "unit": "%", "type": "hard", "comparator": ">="},
+        {"dimension": "credibility", "threshold": 80, "unit": "%", "type": "hard", "comparator": ">="},
+        {"dimension": "consistency", "threshold": 90, "unit": "%", "type": "soft", "comparator": ">="},
+        {"dimension": "completeness", "threshold": 85, "unit": "%", "type": "soft", "comparator": ">="}
+      ]
+    },
+    "T2": {
+      "name": "Compare",
+      "gates": [
+        {"dimension": "coverage", "threshold": 100, "unit": "%", "type": "hard", "comparator": ">="},
+        {"dimension": "credibility", "threshold": 80, "unit": "%", "type": "hard", "comparator": ">="},
+        {"dimension": "bias_check", "threshold": 1, "unit": "bool", "type": "hard", "comparator": "=="},
+        {"dimension": "sensitivity", "threshold": 1, "unit": "bool", "type": "soft", "comparator": "=="}
+      ]
+    },
+    "T3": {
+      "name": "Iterate",
+      "gates": [
+        {"dimension": "kpi_target", "threshold": null, "unit": "user_defined", "type": "hard", "comparator": ">=", "note": "threshold set in plan"}
+      ]
+    },
+    "T4": {
+      "name": "Generate",
+      "gates": [
+        {"dimension": "pass_rate", "threshold": 90, "unit": "%", "type": "hard", "comparator": ">="},
+        {"dimension": "avg_score", "threshold": 7, "unit": "/10", "type": "hard", "comparator": ">="}
+      ]
+    },
+    "T5": {
+      "name": "Deliver",
+      "gates": [
+        {"dimension": "syntax_errors", "threshold": 0, "unit": "count", "type": "hard", "comparator": "=="},
+        {"dimension": "p1_p2_issues", "threshold": 0, "unit": "count", "type": "hard", "comparator": "=="},
+        {"dimension": "service_health", "threshold": 1, "unit": "bool", "type": "soft", "comparator": "=="},
+        {"dimension": "user_acceptance", "threshold": 1, "unit": "bool", "type": "hard", "comparator": "=="}
+      ]
+    },
+    "T6": {
+      "name": "Quality",
+      "gates": [
+        {"dimension": "security", "threshold": 9, "unit": "/10", "type": "hard", "comparator": ">="},
+        {"dimension": "reliability", "threshold": 8, "unit": "/10", "type": "hard", "comparator": ">="},
+        {"dimension": "maintainability", "threshold": 8, "unit": "/10", "type": "hard", "comparator": ">="},
+        {"dimension": "p1_count", "threshold": 0, "unit": "count", "type": "hard", "comparator": "=="},
+        {"dimension": "security_p2", "threshold": 0, "unit": "count", "type": "hard", "comparator": "=="},
+        {"dimension": "reliability_p2", "threshold": 3, "unit": "count", "type": "soft", "comparator": "<="},
+        {"dimension": "maintainability_p2", "threshold": 5, "unit": "count", "type": "soft", "comparator": "<="}
+      ]
+    },
+    "T7": {
+      "name": "Optimize",
+      "gates": [
+        {"dimension": "architecture", "threshold": 8, "unit": "/10", "type": "hard", "comparator": ">="},
+        {"dimension": "performance", "threshold": 8, "unit": "/10", "type": "hard", "comparator": ">="},
+        {"dimension": "stability", "threshold": 8, "unit": "/10", "type": "hard", "comparator": ">="}
+      ]
+    }
+  },
+  "stagnation_thresholds": {
+    "T1": {"value": 3, "unit": "%", "type": "relative"},
+    "T2": {"value": 3, "unit": "%", "type": "relative"},
+    "T3": {"value": 2, "unit": "%", "type": "relative"},
+    "T6": {"value": 0.3, "unit": "points", "type": "absolute"},
+    "T7": {"value": 0.5, "unit": "points", "type": "absolute"}
+  },
+  "oscillation": {
+    "window": 3,
+    "band": 0.5
+  },
+  "experience_status_enum": ["推荐", "候选默认", "观察", "已废弃"],
+  "strategy_effect_enum": ["保持", "避免", "待验证"],
+  "phase_enum": ["OBSERVE", "ORIENT", "DECIDE", "ACT", "VERIFY", "SYNTHESIZE", "EVOLVE", "REFLECT"],
+  "task_status_enum": ["准备开始", "进行中", "暂停等待确认", "已完成"],
+  "gate_status_enum": ["达标", "未达标", "豁免"],
+  "tsv_status_enum": ["通过", "未通过", "待检查", "待审查"]
+}

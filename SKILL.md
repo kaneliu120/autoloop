@@ -83,7 +83,7 @@ Run the OODA+ loop. Each iteration passes through 8 stages in order.
 |-------|-----------|--------|---------------|
 | OBSERVE | orchestrator | Read state + experience registry + prior REFLECT output | `references/loop-protocol.md` |
 | ORIENT | orchestrator | Gap analysis: current scores vs target gates | -- |
-| DECIDE | orchestrator | Select one strategy; filter `avoid` strategies, prefer `keep` strategies; run cross-dimension impact analysis | `references/experience-registry.md` |
+| DECIDE | orchestrator | Select one strategy; filter `已废弃` strategies, prefer `推荐` strategies; use per-round effect (`保持`/`避免`/`待验证`) from prior REFLECT; run cross-dimension impact analysis | `references/experience-registry.md` |
 | ACT | subagents | Execute via dispatched work orders (parallel when independent, serial when dependent) | `references/agent-dispatch.md` |
 | VERIFY | kpi-evaluator | Score output using `autoloop-score.py`; validate TSV with `autoloop-tsv.py`; compute variance with `autoloop-variance.py` | `references/quality-gates.md` |
 | SYNTHESIZE | orchestrator | Merge subagent outputs; detect and resolve contradictions | -- |
@@ -164,7 +164,7 @@ After termination, the REFLECT stage writes strategy effects to `references/expe
 - **template**: Which template type
 - **dimension**: Which quality dimension was targeted
 - **delta**: Score change attributed to this strategy
-- **verdict**: `keep` (positive effect), `avoid` (negative/neutral), or `neutral`
+- **verdict**: `保持` (positive effect), `避免` (negative/neutral), or `待验证` (insufficient data)
 - **context**: Brief description of when this strategy works
 
 Future OBSERVE stages read this registry to inform DECIDE. Detail: `references/experience-registry.md` effect recording section.

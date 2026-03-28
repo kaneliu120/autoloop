@@ -3,7 +3,7 @@
 
 用法:
   autoloop-experience.py <work_dir> query --template T{N} [--tags tag1,tag2]
-  autoloop-experience.py <work_dir> write --strategy-id S01-xxx --effect 保持|避免|待验证 --score N [--context "..."]
+  autoloop-experience.py <work_dir> write --strategy-id S01-xxx --effect 保持|避免|待验证 --score N [--status 推荐|候选默认|观察|已废弃] [--context "..."]
   autoloop-experience.py <work_dir> list
   autoloop-experience.py <work_dir> list --json
 """
@@ -153,8 +153,8 @@ def cmd_query(registry_path, template, tags):
                     effective_status = sc.get('status', effective_status)
                     break
 
-        # 只返回 推荐 或 候选默认 或 待验证
-        if effective_status in ('推荐', '候选默认', '待验证'):
+        # 只返回 推荐 或 候选默认 或 观察（lifecycle status 枚举）
+        if effective_status in ('推荐', '候选默认', '观察'):
             entry = dict(s)
             entry['effective_status'] = effective_status
             results.append(entry)
@@ -182,8 +182,23 @@ def _parse_tags(raw):
 # write 命令
 # ---------------------------------------------------------------------------
 
-def cmd_write(registry_path, strategy_id, effect, score, context):
-    """向策略效果库追加一行。"""
+def cmd_write(registry_path, strategy_id, effect, score, context, status=None):
+    """向策略效果库追加一行。
+
+    effect: 本轮策略评价（保持/避免/待验证） — per-round evaluation
+    status: 生命周期状态（推荐/候选默认/观察/已废弃） — lifecycle status
+           如果未指定，根据 effect 自动推断：新策略默认"观察"
+    """
+    # 验证 status（lifecycle enum）
+    valid_statuses = ('推荐', '候选默认', '观察', '已废弃')
+    if status is not None and status not in valid_statuses:
+        print(f"ERROR: --status 必须是 {'|'.join(valid_statuses)}", file=sys.stderr)
+        return False
+
+    # 如果未指定 status，新策略默认为"观察"
+    if status is None:
+        status = '观察'
+
     with open(registry_path, 'r', encoding='utf-8') as f:
         content = f.read()
 
@@ -204,7 +219,7 @@ def cmd_write(registry_path, strategy_id, effect, score, context):
     # 构建新行
     new_row = (
         f"| {strategy_id} | {template} | — | {context or '—'} "
-        f"| {score} | — | 1 | — | {effect} |"
+        f"| {score} | — | 1 | — | {status} |"
     )
 
     # 找到表格的最后一行（最后一个以 | 开头的行）
@@ -305,6 +320,7 @@ def main():
         effect = None
         score = None
         context = None
+        status = None
         args = sys.argv[3:]
         i = 0
         while i < len(args):
@@ -320,6 +336,9 @@ def main():
             elif args[i] == '--context' and i + 1 < len(args):
                 context = args[i + 1]
                 i += 2
+            elif args[i] == '--status' and i + 1 < len(args):
+                status = args[i + 1]
+                i += 2
             else:
                 i += 1
 
@@ -333,9 +352,9 @@ def main():
             print("ERROR: write 命令需要 --score 参数", file=sys.stderr)
             sys.exit(1)
 
-        ok = cmd_write(registry_path, strategy_id, effect, score, context)
+        ok = cmd_write(registry_path, strategy_id, effect, score, context, status)
         if ok:
-            print(f"OK: 已写入策略 {strategy_id} (效果={effect}, 分数={score})")
+            print(f"OK: 已写入策略 {strategy_id} (效果={effect}, 状态={status or '观察'}, 分数={score})")
         else:
             sys.exit(1)
 

@@ -38,11 +38,33 @@ DEFAULT_ROUNDS = {
     "T5": 1, "T6": 99, "T7": 99,
 }
 
-# parameters.md §五 振荡/停滞检测阈值
-OSCILLATION_WINDOW = 3          # 连续轮数
-OSCILLATION_BAND = 0.5          # ±分数波动带宽
-STAGNATION_CONSECUTIVE = 2      # 连续轮数改进不足
-STAGNATION_THRESHOLD_PCT = 0.03 # 3% 相对改进阈值
+# ---------------------------------------------------------------------------
+# 门禁清单加载 — 从 gate-manifest.json（SSOT）读取振荡/停滞阈值
+# ---------------------------------------------------------------------------
+
+def _load_gate_manifest():
+    """Load gate definitions from canonical manifest (SSOT)."""
+    manifest_path = os.path.join(os.path.dirname(__file__), "..", "references", "gate-manifest.json")
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+_MANIFEST = _load_gate_manifest()
+
+# 振荡检测阈值（来自 manifest.oscillation）
+OSCILLATION_WINDOW = _MANIFEST["oscillation"]["window"]        # 连续轮数
+OSCILLATION_BAND = _MANIFEST["oscillation"]["band"]            # ±分数波动带宽
+
+# 停滞检测阈值（从 manifest.stagnation_thresholds 取默认值）
+STAGNATION_CONSECUTIVE = 2      # 连续轮数改进不足（固定逻辑参数）
+# 默认使用 T1 的 3% 相对阈值；运行时按模板动态查找
+STAGNATION_THRESHOLD_PCT = 0.03
+
+def _get_stagnation_threshold(template_key):
+    """按模板获取停滞阈值，返回 (value, type)。type: 'relative'|'absolute'"""
+    stag = _MANIFEST.get("stagnation_thresholds", {}).get(template_key)
+    if stag:
+        return stag["value"] / 100 if stag["type"] == "relative" else stag["value"], stag["type"]
+    return STAGNATION_THRESHOLD_PCT, "relative"
 
 # ANSI 颜色
 C_RESET = "\033[0m"
@@ -505,16 +527,59 @@ def phase_verify(work_dir, state, round_num):
     # 1. 调用评分器
     info("运行评分器...")
     stdout, rc = run_tool("autoloop-score.py", [work_dir, "--json"], capture=True)
-    if rc == 0 and stdout.strip():
+    score_results = []
+    if rc in (0, 1) and stdout.strip():
         try:
             score_result = json.loads(stdout.strip())
             info(f"评分结果: {json.dumps(score_result, ensure_ascii=False, indent=2)}")
+            score_results = score_result.get("gates", [])
         except json.JSONDecodeError:
             info(f"评分输出:\n{stdout}")
     else:
         warn(f"评分器未返回 JSON 输出 (rc={rc})")
         if stdout.strip():
             print(stdout)
+
+    # FIX 2: 将评分写回 state.json iterations[-1].scores
+    if score_results:
+        info("写回评分到 state.json...")
+        for gate_result in score_results:
+            if "error" in gate_result:
+                continue
+            dim = gate_result.get("dimension", "")
+            value = gate_result.get("value")
+            if dim and value is not None:
+                _, wrc = run_tool("autoloop-state.py", [
+                    "update", work_dir,
+                    f"iterations[-1].scores.{dim}", str(value)
+                ], capture=True)
+                if wrc != 0:
+                    warn(f"写回评分失败: {dim}={value}")
+
+    # FIX 3: 更新 plan.gates 中的 current 值和状态
+    if score_results:
+        info("更新门禁状态...")
+        # 重新加载 state 以获取 gates 定义
+        state_fresh = load_state(work_dir)
+        plan_gates = get_gates(state_fresh)
+        for idx, gate_def in enumerate(plan_gates):
+            gate_dim = gate_def.get("dim", "")
+            # 在 score_results 中查找对应维度
+            for gate_result in score_results:
+                if gate_result.get("dimension") == gate_dim:
+                    current_val = gate_result.get("value")
+                    passed = gate_result.get("pass", False)
+                    if current_val is not None:
+                        run_tool("autoloop-state.py", [
+                            "update", work_dir,
+                            f"plan.gates[{idx}].current", str(current_val)
+                        ], capture=True)
+                        status_label = "达标" if passed else "未达标"
+                        run_tool("autoloop-state.py", [
+                            "update", work_dir,
+                            f"plan.gates[{idx}].status", status_label
+                        ], capture=True)
+                    break
 
     # 2. 调用验证器
     info("运行验证器...")
@@ -786,6 +851,17 @@ def run_loop(work_dir, start_phase=None, start_round=None):
 
     # 主循环
     while round_num <= max_rounds:
+        # FIX 1: 每轮开始前自动创建 iteration 记录
+        info(f"自动创建 Round {round_num} 迭代记录...")
+        _, rc = run_tool("autoloop-state.py", ["add-iteration", work_dir], capture=True)
+        if rc != 0:
+            warn(f"add-iteration 返回非零退出码 (rc={rc})，可能已存在")
+
+        # 更新 current_round
+        run_tool("autoloop-state.py", [
+            "update", work_dir, "plan.budget.current_round", str(round_num)
+        ], capture=True)
+
         for phase_idx in range(phase_start_idx, len(PHASES)):
             phase = PHASES[phase_idx]
 
@@ -817,6 +893,9 @@ def run_loop(work_dir, start_phase=None, start_round=None):
                 evolve_decision, evolve_reasons = phase_evolve(work_dir, state, round_num)
             elif phase == "REFLECT":
                 phase_reflect(work_dir, state, round_num)
+                # FIX 4: REFLECT 完成后自动渲染可读文件
+                info("REFLECT 后自动渲染...")
+                run_tool("autoloop-render.py", [work_dir])
 
             # 更新 checkpoint: 阶段完成
             checkpoint["last_completed_phase"] = phase
