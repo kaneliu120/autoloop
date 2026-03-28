@@ -10,6 +10,8 @@
 
 评分维度（Security / Reliability / Maintainability / Architecture / Performance / Stability）及其通过标准均为**技术栈无关**的通用标准。各维度下设"技术栈特定检测"子节，列出针对具体技术栈的检测命令示例。
 
+> **Domain Pack 扩展**：当 `autoloop-plan.md` 指定 `domain_pack`（如 `python-fastapi`）时，T6/T7 OBSERVE 阶段应读取 `protocols/domain-packs/{pack名}.md`，其中的检测命令替换本文档的通用命令，权重调整覆盖通用权重，新增检测项追加到扣分规则。详见 `protocols/domain-packs/README.md`。
+
 ---
 
 ## 安全性评分体系（Security）
