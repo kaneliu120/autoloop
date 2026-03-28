@@ -95,38 +95,7 @@ T6 Quality（单文件）：
 
 **触发场景**：T1 全程，T2 选项分析，T5 阶段 0（如需调研最佳实践）
 
-> 注：本模板在运行时由 command 层的工单生成环节读取并填充参数，此处作为模板定义存档。
-
-**标准指令模板**：
-
-```text
-你是 researcher subagent，负责以下信息收集任务。
-
-调研主题：{主题}
-调研维度：{具体维度}
-目标：{要回答的具体问题}
-
-信息来源要求：
-- 至少找到 3 个独立来源
-- 优先：官方文档 > 权威报告 > 技术媒体
-- 标注每个来源的可信度（计算方法见 quality-gates.md §可信度计算）
-
-输出格式：
-## 调研结果：{维度名}
-
-### 关键发现（按重要性排序）
-1. {发现}（来源：{URL}，可信度：{级别}）
-2. ...
-
-### 数据点
-- {指标}：{值}（来源：{URL}）
-
-### 信息缺口
-- {找不到的关键信息}
-
-### 相关发现（范围外但有价值）
-- {意外发现}
-```
+**模板**：指令含调研主题/维度/目标/来源要求(≥3独立源)/输出格式(关键发现+数据点+信息缺口+相关发现)。可信度计算引用 quality-gates.md。
 
 ---
 
@@ -136,43 +105,7 @@ T6 Quality（单文件）：
 
 **触发场景**：T5 阶段 0（技术方案设计），复杂任务开始前
 
-> 注：本模板在运行时由 command 层的工单生成环节读取并填充参数，此处作为模板定义存档。
-
-**标准指令模板**：
-
-```text
-你是 planner subagent，负责技术方案设计。
-
-功能需求：{详细描述}
-代码库路径：{codebase_path}
-技术栈：{tech_stack}
-
-任务：
-1. 读取以下关键文件，理解现有架构：
-   - {main_entry_file}（来自 plan，见 loop-protocol.md 统一参数词汇表）
-   - {相关模块文件路径}
-
-2. 制定实施方案
-
-输出：
-## 技术方案
-
-### 影响范围
-- 修改文件：{绝对路径列表}
-- 新建文件：{绝对路径列表}
-- 数据库变更：{变更说明，如无则"无"}
-- 新增端点/接口：{路径 + 方法 + 说明}
-
-### 接口定义
-（关键函数签名）
-
-### 实施顺序与依赖
-1. {步骤}（前置：无）
-2. {步骤}（前置：步骤 1）
-
-### 风险识别
-- {风险}：{影响}（缓解：{措施}）
-```
+**模板**：指令含功能需求/代码库路径/技术栈，读取 main_entry_file + 相关模块。输出：影响范围(修改/新建文件+DB变更+新端点) + 接口定义 + 实施顺序与依赖 + 风险识别。
 
 ---
 
@@ -182,35 +115,7 @@ T6 Quality（单文件）：
 
 **触发场景**：T5 阶段 1，T6/T7 修复时
 
-> 注：本模板在运行时由 command 层的工单生成环节读取并填充参数，此处作为模板定义存档。
-
-**标准指令模板**：
-
-```text
-你是 backend-dev subagent，负责后端实现。
-
-修改文件（绝对路径）：
-- {文件 1}：{改什么}
-- {文件 2}：{改什么}
-
-新建文件（绝对路径）：
-- {文件}：{实现什么功能}
-
-接口约定（必须遵守）：
-{tech_constraints}
-
-约束：
-- {不可修改的接口}
-- {不可修改的文件}
-
-验证步骤（每个文件修改后立即执行）：
-{syntax_check_cmd}
-
-输出：
-- 修改/新建的每个文件的具体内容
-- 语法验证结果（全部通过才算完成）
-- 入口文件注册确认（如有新路由/模块）
-```
+**模板**：指令含修改/新建文件(绝对路径)+改动说明、tech_constraints、约束(不可修改项)、syntax_check_cmd。输出：文件内容 + 语法验证结果 + 入口注册确认。
 
 ---
 
@@ -220,27 +125,7 @@ T6 Quality（单文件）：
 
 **触发场景**：T5 阶段 1，T6/T7 修复时（前端部分）
 
-> 注：本模板在运行时由 command 层的工单生成环节读取并填充参数，此处作为模板定义存档。
-
-**标准指令模板**：
-
-```text
-你是 frontend-dev subagent，负责前端实现。
-
-前端目录：{绝对路径}
-修改/新建文件（绝对路径）：
-{文件列表 + 改动说明}
-
-技术约定（必须遵守）：
-{tech_constraints}
-
-验证步骤：
-{syntax_check_cmd}
-
-输出：
-- 修改/新建文件的内容
-- 语法验证结果（必须通过）
-```
+**模板**：同 backend-dev 结构，额外含前端目录路径。输出：文件内容 + 语法验证结果。
 
 ---
 
@@ -250,31 +135,7 @@ T6 Quality（单文件）：
 
 **触发场景**：T5 阶段 1（有数据库变更时），T7（数据库结构优化时）
 
-> 注：本模板在运行时由 command 层的工单生成环节读取并填充参数，此处作为模板定义存档。
-
-**标准指令模板**：
-
-```text
-你是 db-migrator subagent，负责数据库迁移管理。
-
-代码库路径：{codebase_path}
-迁移验证命令：{migration_check_cmd}（来自 plan，见 loop-protocol.md 统一参数词汇表；迁移目录和配置文件在 plan 中定义）
-
-需要的数据库变更：
-{具体变更描述，包含 DDL}
-
-任务：
-1. 创建新的迁移版本
-2. 实现 upgrade()（使用 IF NOT EXISTS 防止重复执行）
-3. 实现 downgrade()（必须实现，支持回滚）
-4. 验证迁移脚本语法正确
-
-输出：
-- 迁移文件路径
-- upgrade() 实现
-- downgrade() 实现
-- 验证结果（{syntax_check_cmd}）
-```
+**模板**：指令含 codebase_path、migration_check_cmd、DDL 变更描述。必须实现 upgrade(IF NOT EXISTS) + downgrade(回滚)。输出：迁移文件路径 + 实现 + 验证结果。
 
 ---
 
@@ -284,39 +145,7 @@ T6 Quality（单文件）：
 
 **触发场景**：T5 阶段 2，T6 每轮扫描，T7 checkpoint
 
-> 注：本模板在运行时由 command 层的工单生成环节读取并填充参数，此处作为模板定义存档。
-
-**标准指令模板**：
-
-```text
-你是 code-reviewer subagent，负责代码审查。
-
-审查范围：{审查类型：安全/可靠性/可维护性/全量}
-代码库路径：{绝对路径}
-重点文件（绝对路径）：
-{文件列表，留空则全量扫描}
-
-审查清单：
-{从 quality-gates.md 对应部分提取}
-
-评分规则：
-{从 enterprise-standard.md 对应维度提取}
-
-输出格式：
-## 审查报告
-
-### 问题清单
-| ID | 文件 | 行号 | 类型 | 严重级别 | 描述 | 修复建议 |
-（严重级别：P1/P2/P3）
-
-### 评分
-{维度}得分：{N}/10
-扣分项：{列表}
-
-### 总结
-P1: {N} 个，P2: {N} 个，P3: {N} 个
-结论：{通过/需修复}
-```
+**模板**：指令含审查类型(安全/可靠性/可维护性/全量)、代码库路径、重点文件列表。审查清单引用 quality-gates.md，评分规则引用 enterprise-standard.md。输出：问题清单(ID/文件/行号/类型/P级别/描述/修复建议) + 维度评分 + P1/P2/P3 统计。
 
 ---
 
@@ -326,38 +155,7 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 **触发场景**：T4 全程
 
-> 注：本模板在运行时由 command 层的工单生成环节读取并填充参数，此处作为模板定义存档。
-
-**标准指令模板**：
-
-```text
-你是 generator subagent，负责内容生成。
-
-模板：
-{完整模板内容，变量用 {{name}} 标记}
-
-本单元变量：
-{{variable_1}}: {值}
-{{variable_2}}: {值}
-
-质量标准：
-1. {标准 1}：评分 {N/10}
-2. {标准 2}：评分 {N/10}
-
-注意避免：
-- {常见错误 1}
-- {常见错误 2}
-
-输出格式：
----UNIT-START-{unit_id}---
-{生成内容}
----UNIT-END---
-
----QUALITY---
-标准1得分: {N}/10 — {理由}
-综合得分: {N}/10
----QUALITY-END---
-```
+**模板**：指令含完整模板(变量用 {{name}} 标记)、本单元变量值、质量标准(N/10)、常见错误。输出格式：`---UNIT-START-{unit_id}---` 内容 `---UNIT-END---` + `---QUALITY---` 评分 `---QUALITY-END---`。
 
 ---
 
@@ -371,38 +169,9 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 注意：verifier 不是独立角色，是 code-reviewer 的角色化调用。T5 Phase 5 线上验收时可选用 Chrome DevTools MCP 工具（如已配置）。
 
-> 注：本模板在运行时由 command 层的工单生成环节读取并填充参数，此处作为模板定义存档。
+**模板**：指令含验证类型(编译/路由/线上验收)、代码库路径、验证步骤+期望结果。输出：每步通过/失败 + 总体结论。
 
-**标准指令模板**：
-
-```text
-你是 verifier subagent，负责验证。
-
-验证类型：{编译验证/路由验证/线上验收}
-代码库路径：{绝对路径}
-
-验证步骤：
-1. {具体命令或操作}
-2. {具体命令或操作}
-
-期望结果：
-1. {期望输出}
-2. {期望输出}
-
-输出：
-每步结果：{通过/失败+具体输出}
-总体结论：{通过/失败（失败步骤：{步骤名}，错误：{内容}）}
-```
-
-**T5 Phase 5 线上验收专用调度**：
-
-```text
-调用方式: Agent(subagent_type="code-reviewer", prompt="你是线上验收测试员。使用浏览器工具验证以下功能...")
-可选工具: Chrome DevTools MCP（如果已配置）
-输入: acceptance_url, 验收标准列表
-输出: 每项验收标准的通过/失败状态 + 截图证据（如可用）
-最终确认: 必须等待用户输入 '用户确认（线上验收）'
-```
+**T5 Phase 5 线上验收**：输入 acceptance_url + 验收标准列表，输出每项通过/失败 + 截图证据。最终确认须等待用户输入 `用户确认（线上验收）`。
 
 ---
 
@@ -416,32 +185,7 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 **适用模板**：T1, T2
 
-> 注：本模板在运行时由 command 层的工单生成环节读取并填充参数，此处作为模板定义存档。
-
-**标准指令模板**：
-
-```text
-你是 cross-verifier subagent，负责对以下调研发现进行交叉验证。
-
-待验证的发现（来自 autoloop-findings.md）：
-{发现列表}
-
-任务：
-1. 识别同一事实的不同说法（矛盾点）
-2. 对每个矛盾分析原因（时间差异/场景差异/方法论差异/真实争议）
-3. 给出处理建议（采用哪个/两者保留/需要进一步调研）
-
-输出格式：
-## 矛盾报告
-
-| 编号 | 维度 | 说法 A（来源） | 说法 B（来源） | 分析 | 处理建议 |
-|------|------|-------------|-------------|------|---------|
-
-验证状态汇总：
-- 已确认（多源一致）：{N} 条
-- 存在矛盾（多源冲突）：{N} 条
-- 未验证（单一来源）：{N} 条
-```
+**模板**：输入 findings.md 发现列表。任务：识别矛盾点 → 分析原因(时间/场景/方法论/真实争议) → 处理建议。输出：矛盾报告表(编号/维度/说法A+B/分析/建议) + 验证状态汇总(已确认/矛盾/未验证数)。
 
 ---
 
@@ -455,37 +199,7 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 **适用模板**：T2
 
-> 注：本模板在运行时由 command 层的工单生成环节读取并填充参数，此处作为模板定义存档。
-
-**标准指令模板**：
-
-```text
-你是 option-analyzer subagent，负责深度分析以下候选方案。
-
-选项名称：{选项名}
-对比主题：{主题}
-评估维度（必须全部覆盖）：{维度列表}
-分析角度：{正向分析/批判性分析}（同一选项分配两个不同角度确保偏见检查）
-
-要求：
-1. 每个维度有具体证据支撑（数据、引用、案例）
-2. 识别核心优势（最多 3 个）
-3. 识别核心劣势/风险（最多 3 个）
-4. 识别最适合/不适合的使用场景
-
-输出格式：
-## 选项分析：{选项名}
-
-### 维度评分
-| 维度 | 得分 (1-10) | 证据摘要 | 来源 |
-|------|------------|---------|------|
-
-### 核心优势 / 核心劣势 / 适用场景
-{内容}
-
-### 综合得分（加权前）
-总分：{X}/10，置信度：{见 quality-gates.md §置信度计算}（基于 {N} 个信息来源）
-```
+**模板**：指令含选项名/对比主题/评估维度/分析角度(正向或批判性，同一选项分配两角度确保偏见检查)。每维度需证据支撑，识别核心优势/劣势(各≤3) + 适用场景。输出：维度评分表 + 综合得分 + 置信度(引用 quality-gates.md)。
 
 ---
 
@@ -499,28 +213,7 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 **适用模板**：T2
 
-> 注：本模板在运行时由 command 层的工单生成环节读取并填充参数，此处作为模板定义存档。
-
-**标准指令模板**：
-
-```text
-你是 neutral-reviewer subagent，负责检查对比分析是否存在偏见。
-
-所有选项的分析结果：
-{所有 option-analyzer 输出}
-
-检查清单：
-1. 评分是否有明显异常（某选项在所有维度都 ≥9 或 ≤3）
-2. 证据质量是否均衡（某选项引用了更权威的来源）
-3. 是否存在选择性引用（只引用对某选项有利的信息）
-4. 评分标准是否一致（同等水平在不同选项中评分是否相同）
-
-输出：
-- 偏见风险评估：{低/中/高}
-- 需要重新评估的维度：{列表，如无则"无"}
-- 建议增补的对立证据：{列表，如无则"无"}
-- 结论：{通过偏见检查 / 需要补充分析}
-```
+**模板**：输入所有 option-analyzer 输出。检查：评分异常(全≥9或≤3) / 证据质量均衡性 / 选择性引用 / 评分标准一致性。输出：偏见风险(低/中/高) + 需重评维度 + 增补建议 + 结论(通过/需补充)。
 
 ---
 
@@ -534,37 +227,7 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 **适用模板**：T4
 
-> 注：本模板在运行时由 command 层的工单生成环节读取并填充参数，此处作为模板定义存档。
-
-**标准指令模板**：
-
-```text
-你是 template-extractor subagent，负责从示例中提取生成模板。
-
-用户提供的示例：
-{示例内容}
-
-任务：
-1. 识别固定部分（所有单元相同）和变量部分（每单元不同）
-2. 用 {{variable_name}} 标记变量位置
-3. 提取质量标准（什么让这个示例是"好的"，可量化为 1-10 分）
-4. 识别常见错误（什么会让输出变差）
-
-输出格式：
-## 模板结构
-{提取的模板，变量用 {{name}} 标记}
-
-## 变量定义
-| 变量名 | 说明 | 取值规则 | 示例 |
-|--------|------|---------|------|
-
-## 质量标准（可量化）
-1. {标准 1}：{如何判断 1-10 分}
-2. {标准 2}：{如何判断 1-10 分}
-
-## 常见错误
-- {错误 1}：{如何避免}
-```
+**模板**：输入用户示例。任务：识别固定/变量部分(用 {{name}} 标记) + 提取质量标准(1-10分) + 识别常见错误。输出：模板结构 + 变量定义表 + 质量标准 + 常见错误。
 
 ---
 
@@ -578,34 +241,7 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 **适用模板**：T4
 
-> 注：本模板在运行时由 command 层的工单生成环节读取并填充参数，此处作为模板定义存档。
-
-**标准指令模板**：
-
-```text
-你是 quality-checker subagent，对以下生成内容进行独立质量评分。
-
-内容：
-{生成的内容}
-
-质量标准：
-1. {标准 1}：{评分说明}
-2. {标准 2}：{评分说明}
-3. {标准 3}：{评分说明}
-
-评分规则：
-- 8-10：优秀，直接通过
-- 7：及格，标注改进点
-- 5-6：需要改进，标注主要问题
-- 1-4：需要重新生成，说明原因
-
-注意：你的评分独立于生成者的自评。分歧 > 2 分时，以你的评分为准。
-
-输出：
-得分: {N}/10（{通过/需改进/重生成}）
-主要问题（如有）：{列表}
-改进建议：{具体建议}
-```
+**模板**：输入生成内容 + 质量标准。评分规则：8-10通过 / 7及格标注改进 / 5-6需改进 / 1-4重生成。独立于生成者自评，分歧>2分以 checker 为准。输出：得分 + 主要问题 + 改进建议。
 
 ---
 
@@ -630,69 +266,22 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 ---
 
-### security-reviewer（安全审查专家）
+### T6 审查角色（三个并行，均通过 code-reviewer 角色化实现）
 
-**职责**：专注安全维度的代码审查（注入/XSS/路径穿越/敏感数据暴露）
+| 角色 | 职责 | 调用方式 |
+| ---- | ---- | -------- |
+| security-reviewer | 注入/XSS/路径穿越/敏感数据暴露 | `Agent(subagent_type="code-reviewer", prompt="你是 security-reviewer...")` |
+| reliability-reviewer | 静默失败/异常处理/超时/降级回退 | `Agent(subagent_type="code-reviewer", prompt="你是 reliability-reviewer...")` |
+| maintainability-reviewer | 入口注册/模块导出/类型规范/代码重复 | `Agent(subagent_type="code-reviewer", prompt="你是 maintainability-reviewer...")` |
 
-**触发场景**：T6 第一轮并行扫描（与 reliability-reviewer / maintainability-reviewer 并行）
-
-**调用方式**：`Agent(subagent_type="code-reviewer", prompt="你是 security-reviewer subagent...")`
-
-**适用模板**：T6
-
-使用 `autoloop-quality.md` 中定义的完整 Security Reviewer 指令模板（含审查清单和评分规则）。
-
----
-
-### reliability-reviewer（可靠性审查专家）
-
-**职责**：专注可靠性维度（静默失败/缺少异常处理/无超时/缺少降级回退）
-
-**触发场景**：T6 第一轮并行扫描
-
-**调用方式**：`Agent(subagent_type="code-reviewer", prompt="你是 reliability-reviewer subagent...")`
-
-**适用模板**：T6
-
-使用 `autoloop-quality.md` 中定义的完整 Reliability Reviewer 指令模板。
-
----
-
-### maintainability-reviewer（可维护性审查专家）
-
-**职责**：专注可维护性维度（入口注册/模块导出/类型规范/代码重复）
-
-**触发场景**：T6 第一轮并行扫描
-
-**调用方式**：`Agent(subagent_type="code-reviewer", prompt="你是 maintainability-reviewer subagent...")`
-
-**适用模板**：T6
-
-使用 `autoloop-quality.md` 中定义的完整 Maintainability Reviewer 指令模板。
-
----
+**触发场景**：T6 第一轮并行扫描。完整指令模板见 `commands/autoloop-quality.md`。
 
 ### T6 统一评审框架
 
-三个reviewer在统一框架内展开，不是各自独立评审后简单拼接。
+三个reviewer收到相同文件列表，输出统一格式：`| problem_id | 文件 | 行号 | 类型 | 优先级(P1/P2/P3) | 描述 | 修复建议 |`
 
-**输入统一**：三个reviewer收到相同的文件列表和评审范围。
-
-**输出统一**：每个reviewer必须输出标准格式：
-
-```text
-| problem_id | 文件 | 行号 | 类型 | 优先级(P1/P2/P3) | 描述 | 修复建议 |
-```
-
-**聚合规则**：
-1. 合并三个reviewer的问题清单，去重（同文件+同行号+同类型=重复）
-2. 重复问题取最高优先级
-3. 最终判定按 `quality-gates.md` T6复合判定规则执行
-
-**冲突仲裁**：
-- 同一处代码被不同维度评为不同优先级 → 取最高
-- 修复建议冲突（如安全要加校验 vs 性能要减校验）→ 安全优先，记录trade-off到findings
-- 分数差 > 2分 → 触发第三方仲裁evaluator重新评分
+**聚合**：合并去重(同文件+行号+类型) → 重复取最高优先级 → 按 `quality-gates.md` T6复合判定。
+**冲突仲裁**：不同优先级取最高；修复建议冲突安全优先(记录trade-off)；分数差>2分触发第三方仲裁。
 
 ---
 
@@ -708,79 +297,19 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 **适用模板**：T6
 
-> 注：本模板在运行时由 command 层的工单生成环节读取并填充参数，此处作为模板定义存档。
-
-**标准指令模板**：
-
-```text
-你是 fix-{类型} subagent，修复以下代码质量问题。
-
-问题 ID：{ID}
-文件：{绝对路径}
-行号：{行}
-问题描述：{描述}
-修复建议：{建议}
-当前轮次：第 {N} 轮
-上下文摘要：{前几轮已修复的问题摘要，避免冲突}
-
-约束：
-- 只修改标注的问题，不做其他改动
-- 不改变函数签名和 API 接口
-- 修改后立即运行语法验证命令（{syntax_check_cmd}）
-
-修复步骤：
-1. 读取文件
-2. 实施最小化修复
-3. 运行 {syntax_check_cmd}（必须通过才报告完成）
-4. 确认修复解决了问题且未引入新问题
-
-输出：
-- 修改内容（diff 格式）
-- 验证结果（必须通过）
-- 是否引入新问题（是/否，如是则描述）
-```
+**模板**：指令含问题ID/文件/行号/描述/建议/轮次/上下文摘要。约束：只改标注问题、不改函数签名/API、修改后立即 syntax_check_cmd。输出：diff + 验证结果 + 是否引入新问题。
 
 ---
 
-### architecture-diagnostic（架构诊断专家）
+### T7 诊断角色（三个并行，均通过 code-reviewer 角色化实现）
 
-**职责**：全面诊断系统架构问题（分层/耦合/API一致性/配置管理/代码复用）
+| 角色 | 职责 | 调用方式 |
+| ---- | ---- | -------- |
+| architecture-diagnostic | 分层/耦合/API一致性/配置管理/代码复用 | `Agent(subagent_type="code-reviewer", prompt="你是 architecture-diagnostic...")` |
+| performance-diagnostic | N+1查询/连接池/缓存/同步混用/查询效率 | `Agent(subagent_type="code-reviewer", prompt="你是 performance-diagnostic...")` |
+| stability-diagnostic | 外部依赖降级/错误处理/健康检查/超时 | `Agent(subagent_type="code-reviewer", prompt="你是 stability-diagnostic...")` |
 
-**触发场景**：T7 第一轮并行诊断（与 performance-diagnostic / stability-diagnostic 并行）
-
-**调用方式**：`Agent(subagent_type="code-reviewer", prompt="你是 architecture-diagnostic subagent...")`
-
-**适用模板**：T7
-
-使用 `autoloop-optimize.md` 中定义的完整 Architecture Diagnostic 指令模板。
-
----
-
-### performance-diagnostic（性能诊断专家）
-
-**职责**：全面诊断系统性能问题（N+1查询/连接池/缓存覆盖/异步函数中混用同步调用/查询效率）
-
-**触发场景**：T7 第一轮并行诊断
-
-**调用方式**：`Agent(subagent_type="code-reviewer", prompt="你是 performance-diagnostic subagent...")`
-
-**适用模板**：T7
-
-使用 `autoloop-optimize.md` 中定义的完整 Performance Diagnostic 指令模板。
-
----
-
-### stability-diagnostic（稳定性诊断专家）
-
-**职责**：全面诊断系统稳定性问题（外部依赖降级/错误处理/健康检查/超时配置）
-
-**触发场景**：T7 第一轮并行诊断
-
-**调用方式**：`Agent(subagent_type="code-reviewer", prompt="你是 stability-diagnostic subagent...")`
-
-**适用模板**：T7
-
-使用 `autoloop-optimize.md` 中定义的完整 Stability Diagnostic 指令模板。
+**触发场景**：T7 第一轮并行诊断。完整指令模板见 `commands/autoloop-optimize.md`。
 
 ---
 
@@ -796,40 +325,7 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 **适用模板**：T7
 
-> 注：本模板在运行时由 command 层的工单生成环节读取并填充参数，此处作为模板定义存档。
-
-**标准指令模板**：
-
-```text
-你是 optimization-fix subagent，负责以下优化问题修复。
-
-问题 ID：{ID}
-类型：{架构/性能/稳定性}
-描述：{问题描述}
-影响文件：{绝对路径列表}
-修复建议：{具体建议}
-当前轮次：第 {N} 轮
-上下文摘要：{前几轮已修复的问题摘要，避免冲突}
-
-约束（不可违反）：
-- 不改变 public API 签名（路由路径、请求/响应格式）
-- 不改变数据库 schema（除非方案中明确说明）
-- 修改后必须通过语法验证（{syntax_check_cmd}）
-
-执行步骤：
-1. 读取相关文件（读全，不要猜）
-2. 分析影响范围（修改这个会影响哪些调用者）
-3. 实施最小化修复
-4. 运行 {syntax_check_cmd} 验证
-5. 报告修改内容
-
-输出：
-- 修改文件列表
-- 每个文件的关键修改说明
-- 验证结果
-- 预期对三维度评分的影响
-- 是否需要测试关联功能
-```
+**模板**：指令含问题ID/类型(架构/性能/稳定性)/描述/影响文件/建议/轮次/上下文摘要。约束：不改 public API 签名、不改 DB schema(除非方案明确)、修改后 syntax_check_cmd。执行：读文件 → 分析影响 → 最小化修复 → 验证。输出：修改列表 + 说明 + 验证结果 + 三维度影响预估。
 
 ---
 
@@ -866,54 +362,4 @@ P1: {N} 个，P2: {N} 个，P3: {N} 个
 
 ---
 
-## 附录：技术栈示例
-
-本附录提供具体技术栈下的变量填充示例，供各模板参考。通用角色定义本身不依赖这些示例。
-
-### Python/FastAPI 技术栈
-
-| 变量 | 填充值 |
-|------|--------|
-| `{tech_stack}` | FastAPI + SQLAlchemy 2.0 async + PostgreSQL |
-| `{syntax_check_cmd}` | `python3 -m py_compile {文件路径}` |
-| `{main_entry_file}` | `{codebase_path}/backend/main.py` |
-| `{migration_check_cmd}` | `python -m alembic current && python -m alembic check`（迁移目录和配置文件在 plan 中定义）|
-| `{tech_constraints}` | 所有路由函数使用 async def；数据库操作使用 SQLAlchemy 2.0 async session；配置从 settings 获取；新路由在 main.py 中注册 |
-
-**planner 输出示例（影响范围）**：
-
-```text
-修改文件：/path/backend/api/items.py
-新建文件：/path/backend/models/item.py
-数据库变更：ALTER TABLE items ADD COLUMN tag VARCHAR(64)
-新增端点：POST /api/items/{id}/tag
-```
-
-### Node.js/TypeScript 技术栈
-
-| 变量 | 填充值 |
-|------|--------|
-| `{tech_stack}` | Node.js + Express/Fastify + TypeScript + PostgreSQL |
-| `{syntax_check_cmd}` | `npx tsc --noEmit` |
-| `{main_entry_file}` | `{codebase_path}/src/index.ts` 或 `app.ts` |
-| `{migration_check_cmd}` | `npx drizzle-kit check` 或 `npx knex migrate:status`（配置文件路径在 plan 中定义）|
-| `{tech_constraints}` | 使用 TypeScript，不使用 any；新路由在 index.ts/app.ts 中注册；异步操作使用 async/await |
-
-### Next.js/前端技术栈
-
-| 变量 | 填充值 |
-|------|--------|
-| `{tech_stack}` | Next.js App Router + TypeScript + TanStack Query v5 + Tailwind CSS v4 |
-| `{syntax_check_cmd}` | `cd {frontend_dir} && npx tsc --noEmit`（`{frontend_dir}` 见 loop-protocol.md 统一参数词汇表）|
-| `{main_entry_file}` | `{codebase_path}/app/layout.tsx` |
-| `{tech_constraints}` | 使用 TypeScript，不使用 any；API 调用通过 /api/* 路由；状态管理使用 TanStack Query v5 的 useQuery/useMutation；样式使用 Tailwind CSS v4 |
-
-### 通用/多语言技术栈
-
-| 变量 | 填充值（按实际情况替换） |
-|------|--------|
-| `{tech_stack}` | 从 plan.tech_stack 填入 |
-| `{syntax_check_cmd}` | 从 plan.syntax_check_cmd 填入（见 loop-protocol.md 统一参数词汇表）|
-| `{main_entry_file}` | 从 plan.main_entry_file 填入（见 loop-protocol.md 统一参数词汇表）|
-| `{migration_check_cmd}` | 从 plan.migration_check_cmd 填入（见 loop-protocol.md 统一参数词汇表），如无数据库则 N/A |
-| `{tech_constraints}` | 从 plan.tech_stack 推导或由 planner subagent 在方案中定义 |
+> **技术栈变量填充**：各技术栈的变量填充值见 `references/domain-pack-*.md` 和 `references/loop-protocol.md` 统一参数词汇表。通用规则：所有变量从 plan 中读取，不在调度时硬编码。

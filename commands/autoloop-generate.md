@@ -93,7 +93,7 @@ description: >
 生成状态跟踪行（写入 `autoloop-results.tsv`，每个生成单元一行，记录状态和分数；TSV schema 见 `references/loop-protocol.md` 统一 TSV Schema 章节）：
 
 ```text
-（TSV 格式见 references/loop-protocol.md 统一 TSV Schema，15列）
+（TSV 格式见 references/loop-data-schema.md 统一 TSV Schema，15列）
 001  generate  待检查  score  —  —  baseline  待生成  无  —  001  {version}  待生成
 002  generate  待检查  score  —  —  baseline  待生成  无  —  002  {version}  待生成
 ```
@@ -216,7 +216,7 @@ description: >
 实时更新 `autoloop-results.tsv`（TSV schema 见 `references/loop-protocol.md` 统一 TSV Schema 章节）：
 
 ```
-（TSV 格式见 references/loop-protocol.md 统一 TSV Schema，15列）
+（TSV 格式见 references/loop-data-schema.md 统一 TSV Schema，15列）
 1  generate  通过    score  8.5  —  S01-template-gen  按模板生成  无  —  001  {version}  重试0次
 1  generate  通过    score  7.2  —  S01-template-gen  按模板生成  无  —  002  {version}  重试1次: 语调调整
 1  generate  待审查  score  6.0  —  S02-rewrite       完全重写    无  —  003  {version}  重试2次仍未达标
@@ -290,7 +290,7 @@ description: >
 写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `assets/findings-template.md`：
 
 - **问题登记**：记录本批发现的模板缺陷、变量数据问题、质量评分异常
-- **策略复盘**：生成策略/模板参数/质量标准的效果评估（保持 | 避免 | 待验证）（策略评价枚举见 references/loop-protocol.md 统一状态枚举）
+- **策略复盘**：生成策略/模板参数/质量标准的效果评估（保持 | 避免 | 待验证）（策略评价枚举见 references/loop-data-schema.md 统一状态枚举）
 - **模式识别**：哪类变量值容易导致低分、哪些质量标准是瓶颈
 - **经验教训**：模板优化/生成提示词/质量评估方法的有效性总结
 - **经验写回**: 将本轮策略效果写入 `references/experience-registry.md`（策略ID、适用场景、效果评分、执行上下文，遵循效果记录表格式）

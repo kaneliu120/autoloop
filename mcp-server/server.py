@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AutoLoop MCP Server — 将 7 个工具脚本封装为 MCP tools
+"""AutoLoop MCP Server — 将 9 个工具脚本封装为 MCP tools
 
 安装：pip install mcp
 启动：python3 server.py（由 Claude Code MCP 配置自动启动）
@@ -137,6 +137,35 @@ def autoloop_render(work_dir: str, file_type: str = "") -> str:
     if file_type:
         cmd_args.extend(["--file", file_type])
     return _run_script("autoloop-render.py", cmd_args)
+
+
+@mcp.tool()
+def autoloop_experience(work_dir: str, command: str, args: str = "") -> str:
+    """经验库读写 — query（查询推荐策略）/ write（追加策略记录）/ list（列出所有策略）
+
+    Args:
+        work_dir: 工作目录路径
+        command: 操作命令 - query|write|list
+        args: 命令参数（空格分隔），例如 query: '--template T1 --tags web,api'；write: '--strategy-id S01-xxx --effect 保持 --score 8'；list: '--json'（可选）
+    """
+    cmd_args = [work_dir, command]
+    if args:
+        cmd_args.extend(args.split())
+    return _run_script("autoloop-experience.py", cmd_args)
+
+
+@mcp.tool()
+def autoloop_finalize(work_dir: str, json_output: bool = False) -> str:
+    """生成最终报告 — 从 autoloop-state.json 整合迭代轨迹、策略有效性、关键发现
+
+    Args:
+        work_dir: 工作目录路径
+        json_output: 是否输出 JSON 格式（默认 False，输出 Markdown 并写入 autoloop-report.md）
+    """
+    cmd_args = [work_dir]
+    if json_output:
+        cmd_args.append("--json")
+    return _run_script("autoloop-finalize.py", cmd_args)
 
 
 if __name__ == "__main__":
