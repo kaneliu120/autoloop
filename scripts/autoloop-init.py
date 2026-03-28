@@ -45,7 +45,7 @@ def create_plan(work_dir, task_id, template, goal):
 
 | 字段 | 值 |
 |------|-----|
-| 最大轮次 | 见 protocols/parameters.md |
+| 最大轮次 | 见 references/parameters.md |
 | 当前轮次 | 0 |
 | 预算耗尽策略 | 输出当前最优 |
 

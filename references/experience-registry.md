@@ -295,7 +295,7 @@ OBSERVE 阶段读取顺序（写入 loop-protocol.md）：
 
 ```text
 1. 当前任务的 findings.md（任务本地经验）
-2. protocols/experience-registry.md 全局策略效果库（跨任务经验）
+2. references/experience-registry.md 全局策略效果库（跨任务经验）
 3. 同模板 + context_tags重叠 的"推荐"策略（按 success_rate 降序）
    - context_tags重叠 = 当前任务的标签与策略的context_tags至少有2个相同标签
    - 无重叠标签的策略不推荐，避免跨上下文误迁移

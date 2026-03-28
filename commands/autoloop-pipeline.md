@@ -9,7 +9,7 @@
 ### Step 1: 确定 Pipeline 模式
 
 **用户已指定链**：直接解析节点序列。
-**用户描述目标**：推荐匹配的预定义 Pipeline（见 `protocols/orchestration.md` 预定义模板）。
+**用户描述目标**：推荐匹配的预定义 Pipeline（见 `references/orchestration.md` 预定义模板）。
 
 预定义 Pipeline 快速选择：
 ```
@@ -30,7 +30,7 @@ D) 自定义：手动指定节点序列
 
 ### Step 3: 初始化 Pipeline
 
-1. 在工作目录创建 `autoloop-pipeline-progress.md`（格式见 `protocols/orchestration.md`）
+1. 在工作目录创建 `autoloop-pipeline-progress.md`（格式见 `references/orchestration.md`）
 2. 为每个节点创建独立的 plan 文件 `autoloop-plan-node{N}.md`
 3. 创建标准运行时文件（findings/progress/results.tsv）
 
@@ -39,7 +39,7 @@ D) 自定义：手动指定节点序列
 ```text
 for each node in pipeline:
   1. [Handoff] 读取上游节点输出，映射为本节点输入
-     - 映射规则见 protocols/orchestration.md "输出→输入映射"表
+     - 映射规则见 references/orchestration.md "输出→输入映射"表
      - 首节点跳过此步
 
   2. [Execute] 调度对应模板的 command 执行

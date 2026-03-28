@@ -33,7 +33,7 @@
 
 ## 二、进化触发参数
 
-> 来源：原 `protocols/evolution-rules.md`
+> 来源：原 `references/evolution-rules.md`
 
 ### 2.1 范围扩展允许条件
 
@@ -73,7 +73,7 @@
 
 ## 三、范围扩展上限
 
-> 来源：原 `protocols/evolution-rules.md` 进化约束章节
+> 来源：原 `references/evolution-rules.md` 进化约束章节
 
 | 参数名 | 值 | 适用范围 | 说明 |
 |--------|----|---------|------|
@@ -87,7 +87,7 @@
 
 ## 四、流程回退限制
 
-> 来源：原 `protocols/delivery-phases.md` 回退机制章节
+> 来源：原 `references/delivery-phases.md` 回退机制章节
 
 | 参数名 | 值 | 适用范围 | 说明 |
 |--------|----|---------|------|
@@ -107,7 +107,7 @@
 
 ## 五、验证与矛盾解决参数
 
-> 来源：原 `protocols/loop-protocol.md` 矛盾解决规则
+> 来源：原 `references/loop-protocol.md` 矛盾解决规则
 
 | 参数名 | 值 | 适用范围 | 说明 |
 |--------|----|---------|------|

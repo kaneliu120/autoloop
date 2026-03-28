@@ -2,7 +2,7 @@
 
 > **使用说明**：本模板包含所有模板类型（T1-T7）的章节。根据实际模板类型只保留对应章节，删除其他模板的章节。例如：T1 Research 任务只保留"知识类（T1/T2）：核心发现"章节，删除 T3-T7 相关章节；T5 Deliver 任务只保留"交付类（T5）"章节，以此类推。
 >
-> 各模板质量门禁阈值以 `protocols/quality-gates.md` 为准，本报告中不复制具体数值，只记录实际得分和达标状态。
+> 各模板质量门禁阈值以 `references/quality-gates.md` 为准，本报告中不复制具体数值，只记录实际得分和达标状态。
 
 **任务 ID**：autoloop-{YYYYMMDD-HHMMSS}
 **模板**：T{N}: {名称}
@@ -77,8 +77,8 @@
 ### 生成类（T4）：批量结果
 
 **生成数量**：{N} 个
-**通过率**：{X}%（目标阈值见 protocols/quality-gates.md T4 门禁）
-**平均得分**：{N}/10（目标阈值见 protocols/quality-gates.md T4 门禁）
+**通过率**：{X}%（目标阈值见 references/quality-gates.md T4 门禁）
+**平均得分**：{N}/10（目标阈值见 references/quality-gates.md T4 门禁）
 
 输出文件：{路径}
 
@@ -176,5 +176,5 @@
 | 任务计划 | {路径}/autoloop-plan.md | 任务配置和变更记录 |
 | 发现记录 | {路径}/autoloop-findings.md | 完整的发现和问题清单 |
 | 进度追踪 | {路径}/autoloop-progress.md | 每轮迭代详细记录 |
-| 本报告 | {路径}/ | 最终报告（文件命名见 protocols/loop-protocol.md 统一输出文件命名章节）|
+| 本报告 | {路径}/ | 最终报告（文件命名见 references/loop-protocol.md 统一输出文件命名章节）|
 | 结构化数据 | {路径}/autoloop-results.tsv | 结构化迭代日志（所有模板通用）|

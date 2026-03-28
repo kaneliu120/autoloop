@@ -1,0 +1,10 @@
+# Runtime artifacts (generated during AutoLoop execution)
+autoloop-plan.md
+autoloop-progress.md
+autoloop-findings.md
+autoloop-results.tsv
+autoloop-state.json
+checkpoint.json
+
+# Context
+.context/

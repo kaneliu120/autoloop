@@ -3,7 +3,7 @@ name: autoloop-optimize
 description: >
   AutoLoop T7: 架构/性能/稳定性优化模板。三维度并行全面诊断，
   跨维度协同修复（一个修复改善多个维度），每 5 个修复 checkpoint 重新评分。
-  目标：达到 protocols/quality-gates.md T7 门禁矩阵要求。
+  目标：达到 references/quality-gates.md T7 门禁矩阵要求。
   触发：/autoloop:optimize 或任何需要系统级优化的任务。
 ---
 
@@ -16,11 +16,11 @@ description: >
 - 当前性能指标（如果有）
 - 优先优化方向（全部/指定方向）
 - 不可修改的部分（API 接口、数据库 schema 等）
-- 验证命令（`syntax_check_cmd`、`syntax_check_file_arg`，变量名见 `protocols/loop-protocol.md` 统一参数词汇表）
+- 验证命令（`syntax_check_cmd`、`syntax_check_file_arg`，变量名见 `references/loop-protocol.md` 统一参数词汇表）
 
-**Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再制定本轮优化计划。详见 `protocols/loop-protocol.md` OBSERVE Step 0 章节。
+**Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再制定本轮优化计划。详见 `references/loop-protocol.md` OBSERVE Step 0 章节。
 
-- **经验库读取**: 读取 `protocols/experience-registry.md` 中与当前任务类型和目标维度匹配的条目，识别状态为「推荐」或「候选默认」的策略，传递到 DECIDE 阶段参考
+- **经验库读取**: 读取 `references/experience-registry.md` 中与当前任务类型和目标维度匹配的条目，识别状态为「推荐」或「候选默认」的策略，传递到 DECIDE 阶段参考
 
 ---
 
@@ -29,7 +29,7 @@ description: >
 每轮优化开始前，在执行任何诊断或修复行动之前，必须先完成 OBSERVE Step 0：
 
 ```
-**Domain Pack 加载**：执行 domain pack 自动检测（见 domain-packs/README.md §加载机制）。扫描工作目录技术栈特征自动加载匹配 pack；如 plan 中手动指定 `domain_pack` 则使用指定值；`domain_pack: none` 显式禁用。加载后用 pack 检测命令替换 enterprise-standard.md 的通用命令。
+**Domain Pack 加载**：执行 domain pack 自动检测（见 domain-pack-spec.md §加载机制）。扫描工作目录技术栈特征自动加载匹配 pack；如 plan 中手动指定 `domain_pack` 则使用指定值；`domain_pack: none` 显式禁用。加载后用 pack 检测命令替换 enterprise-standard.md 的通用命令。
 
 OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
   读取 autoloop-findings.md 的反思章节（4层结构表）
@@ -40,17 +40,17 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
   - 经验教训：哪类优化最有效、哪些验证步骤能发现最多问题
 
   完成后再扫描当前系统状态并制定本轮优化策略
-  （完整规范见 protocols/loop-protocol.md OBSERVE Step 0 章节）
+  （完整规范见 references/loop-protocol.md OBSERVE Step 0 章节）
 ```
 
 ---
 
 ## 三维度评分标准
 
-> **评分标准和扣分规则完整定义见 `protocols/enterprise-standard.md`。**
+> **评分标准和扣分规则完整定义见 `references/enterprise-standard.md`。**
 > T7 诊断和评分必须覆盖 enterprise-standard.md 中的所有检查项和扣分映射，不得自定义缩水版。
 
-**目标分数**：质量门禁阈值见 `protocols/quality-gates.md` T7 行（架构、性能、稳定性各维度分数目标）。
+**目标分数**：质量门禁阈值见 `references/quality-gates.md` T7 行（架构、性能、稳定性各维度分数目标）。
 
 ---
 
@@ -278,7 +278,7 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 
 ### 修复 subagent 指令（按优先级）
 
-- **工单生成**: 按 `protocols/agent-dispatch.md` 对应角色模板生成委派工单，填充任务目标、输入数据、输出格式、质量标准、范围限制、当前轮次、上下文摘要
+- **工单生成**: 按 `references/agent-dispatch.md` 对应角色模板生成委派工单，填充任务目标、输入数据、输出格式、质量标准、范围限制、当前轮次、上下文摘要
 
 ```
 你是 optimization-fix subagent，负责以下性能/架构/稳定性问题修复。
@@ -295,7 +295,7 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 - 修改后必须通过语法验证（使用 autoloop-plan.md 中的 {syntax_check_cmd}）
 
 ### 语法验证命令（来自 autoloop-plan.md）
-使用 plan 阶段收集的 `syntax_check_cmd` 和 `syntax_check_file_arg`（变量名见 `protocols/loop-protocol.md` 统一参数词汇表）：
+使用 plan 阶段收集的 `syntax_check_cmd` 和 `syntax_check_file_arg`（变量名见 `references/loop-protocol.md` 统一参数词汇表）：
 - `syntax_check_file_arg=true`：`{syntax_check_cmd} {修改的文件}`
 - `syntax_check_file_arg=false`：`{syntax_check_cmd}`（不附加文件参数）
 - 不同技术栈对应的默认值由 plan 阶段收集，不在此处硬编码
@@ -454,7 +454,7 @@ Checkpoint（已完成 {N} 个修复）
 
 ## 终止条件
 
-达标判定见 `protocols/quality-gates.md` T7 行。
+达标判定见 `references/quality-gates.md` T7 行。
 
 ```
 全部达标（目标值以 quality-gates.md T7 行为准）：
@@ -469,15 +469,15 @@ Checkpoint（已完成 {N} 个修复）
 
 ## 每轮 REFLECT 执行规范
 
-每个 checkpoint（5 个修复后）完成后，在 EVOLVE 判断之后执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `protocols/loop-protocol.md` REFLECT 章节）：
+每个 checkpoint（5 个修复后）完成后，在 EVOLVE 判断之后执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `references/loop-protocol.md` REFLECT 章节）：
 
-写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `templates/findings-template.md`：
+写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `assets/findings-template.md`：
 
 - **问题登记**：记录本轮发现的架构/性能/稳定性问题、修复是否引入新问题、诊断遗漏、未能修复的遗留项
-- **策略复盘**：修复策略/优化方法/验证命令的效果评估（保持 | 避免 | 待验证），实际改进量 vs 预期改进量（策略评价枚举见 protocols/loop-protocol.md 统一状态枚举）
+- **策略复盘**：修复策略/优化方法/验证命令的效果评估（保持 | 避免 | 待验证），实际改进量 vs 预期改进量（策略评价枚举见 references/loop-protocol.md 统一状态枚举）
 - **模式识别**：反复出现的问题类型（说明有架构级根因）、修复→新问题的因果链、哪些问题有跨维度联动效应
 - **经验教训**：哪类优化最有效、哪些验证步骤能发现最多问题、架构/性能/稳定性三维度的系统性教训
-- **经验写回**: 将本轮策略效果写入 `protocols/experience-registry.md`（策略ID、适用场景、效果评分、执行上下文，遵循效果记录表格式）
+- **经验写回**: 将本轮策略效果写入 `references/experience-registry.md`（策略ID、适用场景、效果评分、执行上下文，遵循效果记录表格式）
 
 ---
 
