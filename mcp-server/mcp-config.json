@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "autoloop": {
+      "command": "python3",
+      "args": ["~/.claude/skills/autoloop/mcp-server/server.py"]
+    }
+  }
+}

@@ -194,3 +194,24 @@
 | `oscillation.window` | 3 轮 | 振荡检测 |
 | `oscillation.band` | ±0.5 分 | 振荡检测 |
 | `regression.threshold` | 跌破门禁阈值 | 回归检测 |
+| `routing.high_confidence_threshold` | 0.8 | 路由匹配 |
+| `routing.confirm_threshold` | 0.5 | 路由匹配 |
+| `routing.ambiguity_gap` | 0.2 | 路由匹配 |
+
+---
+
+## 八、路由匹配参数
+
+> 来源：入口命令 `commands/autoloop.md` 的置信度路由匹配机制
+
+| 参数名 | 值 | 说明 |
+|--------|----|------|
+| `routing.high_confidence_threshold` | 0.8 | 匹配得分 ≥ 此值时自动选择模板，无需用户确认 |
+| `routing.confirm_threshold` | 0.5 | 匹配得分在此值与 high_confidence 之间时，显示匹配结果请用户确认 |
+| `routing.ambiguity_gap` | 0.2 | Top 2 模板得分差距 < 此值时，视为歧义，展示多个选项 |
+
+**路由逻辑**：
+- 得分 ≥ `high_confidence_threshold`（0.8）且无歧义 → 自动匹配
+- 得分 ≥ `high_confidence_threshold`（0.8）但 Top 2 差距 < `ambiguity_gap`（0.2）→ 展示 Top 2-3 让用户选
+- 得分在 `confirm_threshold`（0.5）到 `high_confidence_threshold`（0.8）之间 → 请用户确认
+- 得分 < `confirm_threshold`（0.5）→ 展示全部模板
