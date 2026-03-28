@@ -159,6 +159,10 @@ def render_findings(state, work_dir):
             if f.get("source"):
                 lines.append("")
                 lines.append("来源: {}".format(f["source"]))
+            if f.get("strategy_id"):
+                lines.append("策略: {}".format(f["strategy_id"]))
+            if f.get("id"):
+                lines.append("ID: {}".format(f["id"]))
             lines.append("")
 
     if findings.get("problem_tracker"):

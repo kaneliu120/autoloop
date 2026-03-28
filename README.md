@@ -39,15 +39,6 @@ ln -s ~/Projects/autoloop ~/.claude/skills/autoloop
 
 AutoLoop 会询问你想做什么，自动选择模板并开始执行。
 
-### 直接指定模板
-
-```
-/autoloop:research  调研 LLM embedding 模型选型
-/autoloop:quality   对 backend/api/ 目录做企业级质量审查
-/autoloop:deliver   实现用户评论系统，从数据库到前端
-/autoloop:optimize  对 SIP 后端做性能诊断和优化
-```
-
 ### 配置向导
 
 ```
@@ -55,6 +46,16 @@ AutoLoop 会询问你想做什么，自动选择模板并开始执行。
 ```
 
 通过交互式向导精确配置任务参数（目标、范围、质量标准、预算），生成 `autoloop-plan.md` 后开始执行。
+
+**推荐流程**: 先用 `/autoloop` 或 `/autoloop:plan` 创建计划，再自动进入执行。
+直接调用模板命令（如 `/autoloop:research`）仅限已有 plan 的场景。
+
+```
+/autoloop:research  调研 LLM embedding 模型选型
+/autoloop:quality   对 backend/api/ 目录做企业级质量审查
+/autoloop:deliver   实现用户评论系统，从数据库到前端
+/autoloop:optimize  对 SIP 后端做性能诊断和优化
+```
 
 ---
 

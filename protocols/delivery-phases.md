@@ -274,6 +274,8 @@ git push origin main
 - [ ] {service_list} 中所有服务全部 active（systemctl status）
 - [ ] Health check 返回 HTTP 200（{health_check_url}）
 
+> 服务检查和健康检查的 N/A 豁免规则见 quality-gates.md §豁免规则。仅当两者均不存在时允许豁免。
+
 ### 暂停条件
 服务未全部 active → 检查日志，修复后重部署
 
