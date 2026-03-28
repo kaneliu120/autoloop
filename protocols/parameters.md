@@ -113,6 +113,48 @@
 |--------|----|---------|------|
 | `verification.conflict.score_diff` | > 2 | 全部模板 | 两个 subagent 对同一代码的评分差超过此值时，触发第三次验证或人工判断 |
 
+---
+
+## 六、模板级停滞检测参数
+
+> 来源：R7评审建议#3 — T3/T6/T7 需要独立停滞阈值
+
+### 6.1 停滞阈值（按模板独立）
+
+| 参数名 | 模板 | 值 | 说明 |
+|--------|------|----|------|
+| `stagnation.T3.threshold` | T3 Iterate | < 2%（相对值） | KPI 改善幅度低于当前值的 2% 视为停滞 |
+| `stagnation.T3.max_explore` | T3 Iterate | 3 轮 | 停滞后最多尝试 3 种新策略 |
+| `stagnation.T6.threshold` | T6 Quality | < 0.3 分（绝对值） | 安全/可靠/可维护任一维度改善 < 0.3 分视为停滞 |
+| `stagnation.T6.max_explore` | T6 Quality | 2 轮 | 停滞后最多尝试 2 种新策略 |
+| `stagnation.T7.threshold` | T7 Optimize | < 0.5 分（绝对值） | 架构/性能/稳定任一维度改善 < 0.5 分视为停滞 |
+| `stagnation.T7.max_explore` | T7 Optimize | 2 轮 | 停滞后最多尝试 2 种新策略 |
+
+**注**：T1/T2 使用通用停滞阈值 `evolution.switch.improvement_threshold`（< 3%），因为调研类任务的停滞特征与迭代优化类不同。
+
+### 6.2 统一停滞状态机
+
+```text
+正常迭代
+  ↓ 连续 2 轮改善 < 模板阈值
+[停滞检测] → 标记维度为"停滞"
+  ↓
+[策略切换] → 从 experience-registry 或策略矩阵选择新策略
+  ↓ 执行新策略
+[探索验证] → 新策略是否有效？
+  ├── 有效（改善 ≥ 阈值）→ 回到正常迭代
+  ├── 无效但未达 max_explore → 继续探索（换另一个策略）
+  └── 无效且达 max_explore → [终止评估]
+        ├── 距离门禁 ≤ 10% → 输出当前最优，标注未达标项
+        └── 距离门禁 > 10% → 上报用户，建议调整目标或追加预算
+```
+
+---
+
+## 七、验证与矛盾解决参数
+
+> 来源：原 `protocols/loop-protocol.md` 矛盾解决规则
+
 **矛盾解决规则**：
 
 | 矛盾类型 | 解决规则 |
@@ -146,3 +188,9 @@
 | `flow.rollback.max_per_phase` | 2 次 | 流程回退 |
 | `flow.rollback.phase2_exception` | 3 轮 | 流程回退 |
 | `verification.conflict.score_diff` | > 2 | 矛盾解决 |
+| `stagnation.T3.threshold` | < 2%（相对值） | 停滞检测 |
+| `stagnation.T3.max_explore` | 3 轮 | 停滞检测 |
+| `stagnation.T6.threshold` | < 0.3 分（绝对值） | 停滞检测 |
+| `stagnation.T6.max_explore` | 2 轮 | 停滞检测 |
+| `stagnation.T7.threshold` | < 0.5 分（绝对值） | 停滞检测 |
+| `stagnation.T7.max_explore` | 2 轮 | 停滞检测 |
