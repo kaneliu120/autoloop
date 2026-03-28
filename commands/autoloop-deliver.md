@@ -4,7 +4,7 @@ description: >
   AutoLoop T5: 全流程交付模板。从需求到生产的完整 7 阶段交付流程，
   严格映射 CLAUDE.md 强制开发流程。阶段 0.5（文档化）必须人工确认。
   每个阶段有明确质量门禁，不通过不进入下一阶段。
-  质量门禁阈值见 references/quality-gates.md T5 行。
+  质量门禁阈值见 references/quality-gates-engineering.md T5 行。
   触发：/autoloop:deliver 或任何需要端到端功能交付的任务。
 ---
 

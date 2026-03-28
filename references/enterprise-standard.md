@@ -46,6 +46,8 @@
 
 ### 技术栈特定检测
 
+> Node.js/TypeScript 和其他技术栈的检测命令见对应的 `references/domain-pack-*.md`。
+
 #### Python/FastAPI
 
 ```bash
@@ -67,34 +69,7 @@ grep -rn "allow_origins" {路径}
 grep -rn "def .*request\|Body(\|Query(\|Path(" {路径}
 ```
 
-#### Node.js/TypeScript
 
-```bash
-# SQL 注入检测（原始查询）
-grep -rn "query(\`\|query(\".*\${" {路径}
-
-# 命令注入检测
-grep -rn "exec(\|spawn(\|execSync(" {路径}
-
-# 敏感数据检测
-grep -rn "password\|secret\|apiKey\|token" {路径} | grep -i "console\|log\|res\.json"
-
-# CORS 检测
-grep -rn "cors\|origin" {路径} | grep -i "\\*"
-
-# XSS 检测
-grep -rn "dangerouslySetInnerHTML\|innerHTML" {路径}
-```
-
-#### 通用
-
-```bash
-# 硬编码密钥检测
-grep -rn "sk-\|pk_\|secret.*=.*['\"]" {路径}
-
-# 路径穿越检测
-grep -rn "\.\./\|path\.join\|open(" {路径}
-```
 
 ---
 
@@ -151,22 +126,6 @@ grep -rn "httpx.get\|httpx.post\|client.get" {路径} | grep -v "timeout"
 grep -rn "/health\|health_check\|healthcheck" {路径}
 ```
 
-#### Node.js/TypeScript
-
-```bash
-# 静默失败检测
-grep -rn "catch.*{}" {路径}
-grep -rn "\.catch(() =>" {路径}
-
-# HTTP 调用检测
-grep -rn "fetch(\|axios\.\|got(" {路径}
-
-# 超时检测
-grep -rn "fetch(\|axios\." {路径} | grep -v "timeout\|AbortController"
-
-# 健康检查检测
-grep -rn "/health\|healthCheck" {路径}
-```
 
 ---
 
@@ -228,21 +187,6 @@ grep -rn "http://\|https://" {路径} | grep -v ".md\|test\|#\|来源"
 awk '/^    def |^def /{if(lines>50)print FILENAME":"fn": "lines" lines"; fn=$0; lines=0} {lines++}' {文件}
 ```
 
-#### Node.js/TypeScript
-
-```bash
-# any 类型检测
-grep -rn ": any\b\|<any>\|as any" {路径}
-
-# ts-ignore 检测
-grep -rn "@ts-ignore\|@ts-expect-error" {路径}
-
-# 入口注册检测
-grep -n "import\|require" {main_entry_file}
-
-# 硬编码 URL 检测
-grep -rn "http://\|https://" {路径} | grep -v ".md\|test\|//"
-```
 
 ---
 
@@ -287,15 +231,6 @@ python3 -c "import {模块名}" 2>&1 | grep "circular\|ImportError"
 grep -rn "@router\.\(get\|post\|put\|delete\)" {路径} | grep -E "/[a-z]+[A-Z]"
 ```
 
-#### Node.js/TypeScript
-
-```bash
-# 路由层直接访问 DB 检测
-grep -rn "prisma\.\|db\.\|query(" {routes路径}
-
-# 循环依赖检测（使用 madge 或类似工具）
-npx madge --circular {路径}
-```
 
 ---
 
@@ -340,18 +275,6 @@ grep -rn "create_engine\|create_async_engine" {路径} | grep -v "pool_size\|Nul
 grep -rn "\.all()\|fetchall()" {路径}
 ```
 
-#### Node.js/TypeScript（Prisma/Drizzle）
-
-```bash
-# 同步混用检测
-grep -rn "\.sync\b\|readFileSync\|execSync" {路径}
-
-# N+1 查询检测（循环中含 DB 调用）
-grep -rn "for.*await.*find\|map.*await.*find" {路径}
-
-# 无分页检测
-grep -rn "findMany\|find(\)" {路径} | grep -v "take\|limit\|skip"
-```
 
 ---
 

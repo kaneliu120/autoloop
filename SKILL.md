@@ -228,11 +228,11 @@ Detail: `references/agent-dispatch.md`.
 | `autoloop-plan.md` | Task plan: goal, template, scope, gates, budget | Task start; scope changes |
 | `autoloop-progress.md` | Per-round start/end records, score progression | Round start and end |
 | `autoloop-findings.md` | Research results, issue lists, fix records | After each subagent return |
-| `autoloop-results.tsv` | Structured iteration log (15 columns per `references/loop-protocol.md` TSV schema) | VERIFY stage |
+| `autoloop-results.tsv` | Structured iteration log (15 columns per `references/loop-data-schema.md` TSV schema) | VERIFY stage |
 | `checkpoint.json` | Session recovery state | Every stage |
 | `references/experience-registry.md` | Cross-task strategy memory | REFLECT stage |
 
-**Cross-File Primary Keys**: Four files share unified keys (`iteration` + `strategy_id` + `dimension` + `problem_id`) for traceability. Detail: `references/loop-protocol.md` primary key specification.
+**Cross-File Primary Keys**: Four files share unified keys (`iteration` + `strategy_id` + `dimension` + `problem_id`) for traceability. Detail: `references/loop-data-schema.md` primary key specification.
 
 ---
 
@@ -245,7 +245,7 @@ Detail: `references/agent-dispatch.md`.
 | `autoloop-state.json` and markdown views are out of sync | Render was skipped or interrupted | Execute `python3 ${SKILL_DIR}/scripts/autoloop-render.py <work_dir>` to regenerate |
 | `experience-registry.md` is empty (first run) | No prior task history | Skip experience read in OBSERVE; use default strategies in DECIDE |
 | `checkpoint.json` is corrupted or unreadable | Crash during write | Execute `python3 ${SKILL_DIR}/scripts/autoloop-init.py <work_dir> <template> "<goal>"` to reinitialize |
-| TSV validation fails | Column count or format mismatch | Check `references/loop-protocol.md` TSV schema; fix the row; re-run `autoloop-tsv.py validate` |
+| TSV validation fails | Column count or format mismatch | Check `references/loop-data-schema.md` TSV schema; fix the row; re-run `autoloop-tsv.py validate` |
 | Score oscillation detected (3+ rounds) | Strategy is counterproductive or scope is too narrow | Log oscillation in findings; switch strategy in DECIDE; if persists, halt and report to user |
 | Subagent returns empty output | Scope too narrow or tool access failure | Widen scope or verify tool availability; retry once; if still empty, escalate to user |
 

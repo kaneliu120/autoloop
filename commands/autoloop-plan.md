@@ -53,9 +53,9 @@ description: >
 | T2 Compare | 见 parameters.md | 无限制 | 见 quality-gates.md T2 行 |
 | T3 Iterate | 见 parameters.md | 用户定义 | 见 quality-gates.md T3 章节 |
 | T4 Generate | 见 parameters.md | 无限制 | 见 quality-gates.md T4 章节 |
-| T5 Deliver | 见 parameters.md | 无限制 | 见 quality-gates.md T5 行 |
-| T6 Quality | 见 parameters.md | 无限制 | 见 quality-gates.md T6 行 |
-| T7 Optimize | 见 parameters.md | 无限制 | 见 quality-gates.md T7 行 |
+| T5 Deliver | 见 parameters.md | 无限制 | 见 quality-gates-engineering.md T5 行 |
+| T6 Quality | 见 parameters.md | 无限制 | 见 quality-gates-engineering.md T6 行 |
+| T7 Optimize | 见 parameters.md | 无限制 | 见 quality-gates-engineering.md T7 行 |
 
 向导在 Step 4/5 展示对应行的默认值，用户可调整。
 
@@ -205,12 +205,12 @@ description: >
 
 5. 部署目标（deploy_target）：
    {部署目标主机/环境，如: sip-server 或 prod-01}
-   变量名见 references/loop-protocol.md 统一参数词汇表
+   变量名见 references/loop-data-schema.md 统一参数词汇表
 
 6. 部署命令（deploy_command）：
    {完整的部署执行命令，如: gcloud compute ssh {host} --zone={zone} --command="cd {path} && git pull origin main && sudo bash deploy.sh"}
    如无远程部署：{本地命令，如 docker-compose up -d --build}
-   变量名见 references/loop-protocol.md 统一参数词汇表
+   变量名见 references/loop-data-schema.md 统一参数词汇表
 
 7. 服务列表（service_list）：
    {部署后需要检查的服务名称列表，如: [sip-backend, sip-worker, sip-scheduler, sip-frontend]}
@@ -218,44 +218,44 @@ description: >
    注意：service_list 和 health_check_url 至少须提供其中一项，否则 plan 不合法。
    - 如果 service_list 为 N/A，Phase 4 服务检查门禁自动标记为 N/A（跳过）。
    - 如果 health_check_url 为空，Phase 4 健康检查门禁自动标记为 N/A（跳过）。
-   变量名见 references/loop-protocol.md 统一参数词汇表
+   变量名见 references/loop-data-schema.md 统一参数词汇表
 
 8. 文档输出路径（doc_output_path）：
    {方案文档存放的目录绝对路径}
-   变量名见 references/loop-protocol.md 统一参数词汇表
+   变量名见 references/loop-data-schema.md 统一参数词汇表
 
 9. 健康检查 URL（health_check_url）：
    {如 https://example.com/api/health，或留空（此时 service_list 必须非空）}
-   变量名见 references/loop-protocol.md 统一参数词汇表
+   变量名见 references/loop-data-schema.md 统一参数词汇表
 
 10. 线上验收 URL（acceptance_url）：
     {验收时打开的线上地址，如 https://example.com}
-    变量名见 references/loop-protocol.md 统一参数词汇表
+    变量名见 references/loop-data-schema.md 统一参数词汇表
 
 11. 语法检查命令（syntax_check_cmd）：
     {语法检查命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
-    变量名见 references/loop-protocol.md 统一参数词汇表
+    变量名见 references/loop-data-schema.md 统一参数词汇表
 
 12. 语法检查是否接受单文件参数（syntax_check_file_arg）：
     {true = 如 python3 -m py_compile，接受单文件路径作为参数}
     {false = 如 npx tsc --noEmit，项目级验证，不接受文件参数}
-    变量名见 references/loop-protocol.md 统一参数词汇表
+    变量名见 references/loop-data-schema.md 统一参数词汇表
 
 13. 主入口文件（main_entry_file）：
     {主入口文件绝对路径，如 /project/backend/main.py}
-    变量名见 references/loop-protocol.md 统一参数词汇表
+    变量名见 references/loop-data-schema.md 统一参数词汇表
 
 14. 新路由变量名（new_router_name）：
     {本次新增的 router 变量名，如 comments_router，无新路由则填 N/A}
-    变量名见 references/loop-protocol.md 统一参数词汇表
+    变量名见 references/loop-data-schema.md 统一参数词汇表
 
 15. 前端目录（frontend_dir）：
     {前端代码目录绝对路径，如 /project/frontend；无前端则填 N/A}
-    变量名见 references/loop-protocol.md 统一参数词汇表
+    变量名见 references/loop-data-schema.md 统一参数词汇表
 
 16. 数据库迁移验证命令（migration_check_cmd）：
     {迁移状态验证命令，如 python -m alembic current && python -m alembic check；无迁移则填 N/A}
-    变量名见 references/loop-protocol.md 统一参数词汇表
+    变量名见 references/loop-data-schema.md 统一参数词汇表
 ```
 
 ### T6 Quality — 质量审查配置
@@ -278,15 +278,15 @@ description: >
 
 6. 语法检查命令（syntax_check_cmd）：
    {语法检查命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
-   变量名见 references/loop-protocol.md 统一参数词汇表
+   变量名见 references/loop-data-schema.md 统一参数词汇表
 
 7. 语法检查是否接受单文件参数（syntax_check_file_arg）：
    {true / false，规则见上方 T5 第12项说明}
-   变量名见 references/loop-protocol.md 统一参数词汇表
+   变量名见 references/loop-data-schema.md 统一参数词汇表
 
 8. 主入口文件（main_entry_file）：
    {主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
-   变量名见 references/loop-protocol.md 统一参数词汇表
+   变量名见 references/loop-data-schema.md 统一参数词汇表
 ```
 
 ### T7 Optimize — 优化配置
@@ -311,15 +311,15 @@ description: >
 
 5. 语法检查命令（syntax_check_cmd）：
    {语法检查命令，如 "python3 -m py_compile" 或 "npx tsc --noEmit"}
-   变量名见 references/loop-protocol.md 统一参数词汇表
+   变量名见 references/loop-data-schema.md 统一参数词汇表
 
 6. 语法检查是否接受单文件参数（syntax_check_file_arg）：
    {true / false，规则见上方 T5 第12项说明}
-   变量名见 references/loop-protocol.md 统一参数词汇表
+   变量名见 references/loop-data-schema.md 统一参数词汇表
 
 7. 主入口文件（main_entry_file）：
    {主入口文件绝对路径，如 /project/backend/main.py}
-   变量名见 references/loop-protocol.md 统一参数词汇表
+   变量名见 references/loop-data-schema.md 统一参数词汇表
 ```
 
 ---
@@ -405,7 +405,7 @@ T2 的 key_assumptions 必须以结构化列表记录，格式：
 
 T5/T6/T7 的所有规范变量名（deploy_target / deploy_command / service_list / service_count /
 health_check_url / acceptance_url / doc_output_path / syntax_check_cmd / syntax_check_file_arg /
-new_router_name / main_entry_file）均见 references/loop-protocol.md 统一参数词汇表，不得使用
+new_router_name / main_entry_file）均见 references/loop-data-schema.md 统一参数词汇表，不得使用
 同义词或自造变量名。
 
 ---

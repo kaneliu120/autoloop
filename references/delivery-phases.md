@@ -234,32 +234,16 @@ curl -X GET {API端点} \
 ### 输入
 - Phase 3 通过的验证结果
 
-### 执行（人工或自动）
-
-> 以下变量在 plan 收集阶段定义（T5需额外收集：deploy_target, deploy_command, service_list, health_check_url）
+### 执行
 
 ```bash
-# 1. 提交代码
-git add {所有修改文件（明确列出，不用 git add -A）}
-git status  # 确认只有预期的文件
-git commit -m "$(cat <<'EOF'
-feat({模块}): {功能描述}
-
-Co-Authored-By: AutoLoop <noreply@autoloop>
-EOF
-)"
-
+# 1. 提交代码（明确列出文件，不用 git add -A）
+git add {文件} && git status && git commit -m "feat({模块}): {描述}"
 # 2. 推送
 git push origin main
-
-# 3. 线上部署
+# 3. 线上部署��deploy_command 在 plan 中定义）
 {deploy_command}
-# deploy_command 示例（在 plan 中收集）：
-#   SIP 项目：gcloud compute ssh {deploy_target} --zone=... --command="cd /opt/sip && git pull && sudo bash deploy.sh"
-#   其他项目：ssh {deploy_target} "cd {project_path} && git pull && bash deploy.sh"
-
-# 4. 服务健康检查
-# 检查 service_list 中每个服务全部 active（服务名称在 plan 中的 service_list 定义）
+# 4. 服务健康检查（service_list 全部 active）
 ```
 
 ### 输出
@@ -302,25 +286,9 @@ git push origin main
 **人工确认（必须）**：
 
 ```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Phase 5 暂停：需要人工验收
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-自动验证结果：{通过/有问题}
-
-请在浏览器（桌面 + 手机）访问 {URL}：
-
-验收清单：
-□ {验收标准 1}
-□ {验收标准 2}
-□ {验收标准 3}
-
-Console 无红色错误
-现有功能无回归
-
-全部确认后输入 "用户确认（线上验收）" 完成任务。
-如有问题，描述问题内容。
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Phase 5 暂停：请在浏览器（桌面+手机）访问 {URL}，按验收清单逐项确认。
+Console 无红色错误 + 现有功能无回归后，输入 "用户确认（线上验收）"。
+如有问题描述问题内容。
 ```
 
 ### 质量门禁

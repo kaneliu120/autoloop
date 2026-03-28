@@ -2,158 +2,8 @@
 
 **协议版本**：1.0.0
 
-### 版本语义定义（唯一权威）
-
-| 级别 | 触发条件 | 示例 | 方向 |
-|------|---------|------|------|
-| major (X.0.0) | 循环流程结构变更 | 阶段增减、阶段顺序调整 | 仅递增 |
-| minor (0.X.0) | 门禁/维度/参数变更 | 新增评分维度、修改阈值、调整权重 | 仅递增 |
-| patch (0.0.X) | 校准数据变更 | 锚点样本、策略经验、评分校准 | 仅递增 |
-
-**不可递减规则**: 版本号只能递增，不可递减。回滚通过递增版本号实现（如 1.2.3 回滚 → 1.3.0）。
-回滚记录格式: `{新版本号} (rollback from {旧版本号}, reason: {原因})`
-
-> 变更记录见 evolution-rules.md。
-
-## 统一参数词汇表
-
-**规则**：所有 AutoLoop 文件（commands/、references/、assets/）中涉及下列概念时，必须使用下表中的变量名，不得自行发明同义词。
-
-| 变量名 | 类型 | 用途 | 收集时机 | 适用模板 |
-|--------|------|------|---------|---------|
-| deploy_target | string | 部署目标主机/环境（如 sip-server、prod-01）| plan | T5 |
-| deploy_command | string | 部署执行命令（完整命令，如 gcloud compute ssh ...）| plan | T5 |
-| service_list | string[] | 服务名称列表（如 [sip-backend, sip-worker]）| plan | T5 |
-| service_count | int | 服务数量（自动计算 = len(service_list)，不手动填写）| 自动 | T5 |
-| health_check_url | string | 健康检查 URL（如 https://example.com/api/health）| plan | T5 |
-| acceptance_url | string | 线上验收 URL（如 https://example.com）| plan | T5 |
-| doc_output_path | string | 方案文档输出目录（绝对路径）| plan | T5 |
-| syntax_check_cmd | string | 语法检查命令（如 python3 -m py_compile {file} 或 npx tsc --noEmit）| plan | T5/T6/T7 |
-| syntax_check_file_arg | boolean | 语法检查命令是否接受单文件参数（python3 -m py_compile → true；npx tsc --noEmit → false）| plan | T5/T6/T7 |
-| new_router_name | string | 本次新增的 router 变量名（如 comments_router；无新路由填 N/A）| plan | T5 |
-| main_entry_file | string | 主入口文件绝对路径（如 /project/backend/main.py 或 /project/src/app.ts）| plan | T5/T6 |
-| output_path | string | 输出目录绝对路径（默认 {工作目录}/autoloop-output/）| plan | T4 |
-| naming_pattern | string | 文件命名规则（如 {template_name}-{index}.md）| plan | T4 |
-| key_assumptions | list[{name, current_value, unit}] | T2 对比中的关键假设（结构化列表，每项含名称+当前值+单位，用于敏感性分析）| plan | T2 |
-| migration_check_cmd | string | 数据库迁移状态验证命令（如 python -m alembic current && python -m alembic check；无迁移填 N/A）| plan | T5 |
-| frontend_dir | string | 前端代码目录绝对路径（如 /project/frontend）| plan | T5 |
-
----
-
-## 统一状态枚举
-
-所有文件中涉及问题状态和策略评价时，必须使用下列枚举值，不得使用其他说法。
-
-**问题状态（Problem Status）**：
-```
-新发现 | 已修复 | 待处理 | 跨轮遗留
-```
-
-**策略评价（Strategy Rating）**：
-```
-保持 | 避免 | 待验证
-```
-
----
-
-## 统一输出文件命名规则（规范来源）
-
-所有文件在引用最终报告文件名时，必须引用本表，不得在其他文件中重新定义。
-
-| 模板 | 最终报告文件名 | 过程文件 |
-|------|--------------|---------|
-| T1 Research | `autoloop-report-{topic}-{date}.md` | plan + findings + progress + results.tsv |
-| T2 Compare | `autoloop-report-{topic}-{date}.md` | 同上 |
-| T3 Iterate | `autoloop-report-{topic}-{date}.md` | 同上 |
-| T4 Generate | `{output_path}/{naming_pattern}` (生成内容) + `autoloop-report-{topic}-{date}.md` (汇总报告) | 同上 |
-| T5 Deliver | `autoloop-delivery-{feature}-{date}.md` | 同上 |
-| T6 Quality | `autoloop-audit-{date}.md` | 同上 |
-| T7 Optimize | `autoloop-audit-{date}.md` | 同上 |
-
-其中 `{date}` = `YYYYMMDD`，`{topic}` / `{feature}` 从 plan 的一句话目标中提取（空格替换为 `-`，小写）。
-
----
-
-## 统一 TSV Schema（规范来源）
-
-所有模板写入 `autoloop-results.tsv` 时必须使用以下统一列结构，不得在其他文件中重新定义。
-
-```
-iteration	phase	status	dimension	metric_value	delta	strategy_id	action_summary	side_effect	evidence_ref	unit_id	protocol_version	score_variance	confidence	details
-```
-
-| 列 | 说明 | 示例 |
-|---|---|---|
-| iteration | 轮次编号（从 1 开始） | 1 |
-| phase | 阶段或子步骤标识 | scan / generate / compare |
-| status | 状态（检查结果枚举）：通过 / 未通过 / 待检查 / 待审查 | 通过 |
-| dimension | 评分维度名 | 安全性 / 覆盖率 / score |
-| metric_value | 指标值（数字或百分比） | 8.5 / 85% |
-| delta | 与上轮的变化（首轮填 — ） | +1.2 |
-| strategy_id | 本轮使用的策略标识（与 findings.md 策略评估表一致） | S01-sql-scan |
-| action_summary | 具体执行动作摘要 | 扫描全部SQL拼接并替换为参数化 |
-| side_effect | 对其他维度的影响（无副作用填"无"） | 可维护性-0.5 |
-| evidence_ref | 证据引用（findings.md 中的问题ID） | S001, R003 |
-| unit_id | T2选项名/T4单元编号（其他模板填 —） | 选项A / 001 / — |
-| protocol_version | 当前协议版本号 | 1.0.0 |
-| score_variance | 多evaluator评分方差（单evaluator填0） | 0.5 |
-| confidence | 评分置信度百分比 | 85% |
-| details | 补充说明 | 首轮基线采集 |
-
-**使用约定（各模板行粒度）**：
-
-- T1/T3/T5/T6/T7：每轮**每维度**一行，确保每个维度的分数变化和策略归因都可追踪
-- T2 Compare：每轮每选项每维度一行，`unit_id` = 选项名
-- T4 Generate：每生成单元一行，`unit_id` = 生成单元 ID（001/002/...），`dimension` = `score`
-- strategy_id 必须与 findings.md 中策略评估表的策略名一致
-- side_effect 字段强制填写（无副作用填"无"）
-- 首轮基线采集时，strategy_id 填"baseline"，action_summary 填"基线测量"
-
-额外的原始数据（变量值、证据来源等）写入 `autoloop-findings.md`，不放在 results.tsv。
-
-### 跨文件主键规范
-
-所有AutoLoop输出文件（results.tsv、findings.md、progress.md、plan.md）共享以下主键体系，确保跨文件可追溯、可join：
-
-| 主键 | 格式 | 定义时机 | 贯穿文件 |
-|------|------|---------|---------|
-| iteration | 整数（从1递增） | 每轮开始时自动递增 | 全部四文件 |
-| strategy_id | S{NN}-{简短描述} | DECIDE阶段命名 | 全部四文件 |
-| problem_id | {维度缩写}{NNN}（如S001） | findings发现时命名 | findings + results.tsv |
-| dimension | 与quality-gates.md维度名完全一致 | quality-gates.md定义 | results.tsv + findings |
-
-**引用规则**：
-- results.tsv 的 evidence_ref 必须引用 findings.md 中已定义的 problem_id
-- progress.md 每轮记录必须在标题中注明 iteration 编号
-- plan.md 策略历史的 strategy_id 必须与 findings.md 策略评估表一致
-- 任何文件中出现的 dimension 名称必须与 quality-gates.md 完全匹配，不得使用同义词
-
----
-
-## Bootstrap 规则（plan 完成后立即执行）
-
-**plan 向导完成后，立即创建以下文件（不等待第 1 轮 OBSERVE）：**
-
-```
-1. autoloop-plan.md         （已由向导创建）
-2. autoloop-findings.md     （包含：执行摘要、每轮发现记录、工程问题清单、信息缺口汇总、拓展方向、策略评估、模式识别、经验教训）
-3. autoloop-progress.md     （包含：质量门禁总览、基线记录、每轮 8 阶段迭代循环、任务完成记录、策略历史）
-4. autoloop-results.tsv     （写入表头行：iteration\tphase\tstatus\tdimension\tmetric_value\tdelta\tstrategy_id\taction_summary\tside_effect\tevidence_ref\tunit_id\tprotocol_version\tscore_variance\tconfidence\tdetails）
-```
-
-所有 4 个文件必须在第 1 轮 OBSERVE 开始前存在。创建后在 autoloop-plan.md 的"输出文件"表中将状态从"待创建"更新为"已创建"。
-
-### SSOT 可选模式
-
-当 `autoloop-plan.md` 设置 `ssot_mode: true` 时，启用结构化单一事实源模式：
-
-- **数据源**：`autoloop-state.json`（JSON 格式），包含 plan/iterations/findings/results 全部数据
-- **写操作**：所有状态变更通过 `scripts/autoloop-state.py` 写入 JSON，不直接编辑 MD 文件
-- **渲染**：每轮结束时运行 `scripts/autoloop-render.py` 从 JSON 生成 4 个可读 MD 文件
-- **读操作**：OBSERVE 阶段仍可读取 MD 文件（渲染后与 JSON 同步）
-- **向后兼容**：未设置 `ssot_mode` 时，行为完全不变，直接读写 4 个 MD 文件
-- **优势**：消除跨文件信息重复和不一致，支持 `query` 命令快速检索任意字段
-- **初始化**：使用 `autoloop-state.py init` 替代 `autoloop-init.py`，自动创建 JSON + 4 个 MD
+> 数据格式规范（参数词汇表、TSV Schema、文件命名、Bootstrap、SSOT）已移至 `references/loop-data-schema.md`���
+> 版本语义定义见 `references/loop-data-schema.md` 开头部分。
 
 ---
 
@@ -165,113 +15,29 @@ iteration	phase	status	dimension	metric_value	delta	strategy_id	action_summary	s
 
 ## 三层架构职责定义
 
-AutoLoop 的所有文件分属三个层次，每层有明确的身份、职责边界和依赖方向。三层职责不可混用。
+| 层 | 身份 | 包含 | 不包含 | 依赖方向 |
+| -- | ---- | ---- | ------ | -------- |
+| Protocol（制度） | 规则/标准/枚举唯一真源 | 门禁阈值、流程参数、枚举、评分方法论 | 执行步骤、工单格式 | 无向上依赖（最上层） |
+| Command（编排） | 调度器/施工方案 | 流程步骤、工单生成、角色调度、结果收集 | 阈值数值、评判标准 | 读取 Protocol，输出到 Template |
+| Template（格式） | 报告格式/交付物 | 章节标题、表头、占位符 | 条件逻辑、bash 命令 | 被 Command 填充（最下层） |
 
-### Protocol 层（制度层）
-
-- **身份**：公司制度 — 规则、标准、枚举的唯一真源
-- **包含**：质量门禁阈值、流程控制参数、生命周期枚举、严重级别定义、角色定义、进化规则、评分方法论
-- **不包含**：执行步骤、角色调度指令、工单格式、具体执行上下文
-- **依赖方向**：不依赖 commands 和 templates（最上层，无向上依赖）
-- **修改权限**：仅通过 REFLECT 进化机制修改，需用户确认
-
-### Command 层（编排层）
-
-- **身份**：施工方案/调度器 — 编排执行流程并生成派工单
-- **三步职责**：
-  1. **编排逻辑** — 定义流程步骤、执行顺序、阶段划分
-  2. **工单生成** — 读取 protocol + 当前上下文 → 组装派工单（含格式要求和执行说明）
-  3. **结果收集** — 收回 subagent 产出，传递到下一步
-- **包含**：执行流程、角色调度指令、工单格式示例、给 subagent 的上下文说明、阶段间衔接逻辑
-- **不包含**：规则定义、阈值数值、评判标准、评分权重 — 这些必须引用 protocol，不可在 command 中独立定义
-- **依赖方向**：读取 protocols（向上依赖），输出使用 templates（向下引用）
-
-### Template 层（格式层）
-
-- **身份**：报告格式 — 纯输出结构，给用户看的交付物
-- **包含**：章节标题、表头、占位符、格式说明
-- **不包含**：条件逻辑、执行步骤、bash 命令、规则引用
-- **依赖方向**：被 commands 引用填充（最下层）
-
-### 三层关系图
-
-```
-Protocol（制度）← 唯一规则源，不依赖任何层
-    ↑ 读取
-Command（编排）← 读取制度 + 上下文 → 生成工单 → 调度执行
-    ↓ 填充
-Template（格式）← 被填充后成为交付物
-```
-
-### 边界判定规则
-
-> 当不确定某内容应放哪一层时，问：**"这个内容变了，是'制度变了'还是'做法变了'？"**
-
-- **制度变了**（如阈值从 85% 改为 90%，状态枚举新增一项）→ 放 **protocol**
-- **做法变了**（如先做 A 再做 B 改成先做 B 再做 A，工单格式调整）→ 放 **command**
-- **格式变了**（如报告标题措辞、表头列名）→ 放 **template**
+**边界判定**：制度变了(阈值/枚举) → protocol；做法变了(步骤顺序/工单) → command；格式变了(标题/表头) → template。
 
 ---
 
 ## 状态机
 
 ```
-[准备开始]
-  ↓ Bootstrap：创建 plan + findings + progress + results.tsv
-[OBSERVE] ←─────────────────────────────────────────────┐
-  ↓ Step 0（Round 2+）：读取 findings.md 反思章节           │
-  ↓ 扫描现状                                              │
-[ORIENT]                                                 │
-  ↓ 分析差距，制定策略                                    │
-[DECIDE]                                                 │
-  ↓ 确定本轮行动计划                                      │
-[ACT]                                                    │
-  ↓ 调度 subagents 执行                                  │
-[VERIFY]                                                 │
-  ↓ 核查输出质量                                         │
-[SYNTHESIZE]                                             │
-  ↓ 整合输出，解决矛盾                                    │
-[EVOLVE]                                                 │
-  ↓ 判断终止 or 进入下一轮                                │
-[REFLECT]                                                │
-  ↓ 写入 findings.md 4层结构表 ──── 继续 ─────────────────┘
-    ↓ 终止
-  [已完成]
-      ↓
-  生成最终报告
-
-[暂停等待确认]  ← 从 EVOLVE / Phase 0.5 / Phase 5 进入
-  ↓ 等待人工输入（"用户确认" / "用户确认（线上验收）" / 修改意见）
-  ↓ 收到输入后恢复到下一阶段
+Bootstrap → OBSERVE → ORIENT → DECIDE → ACT → VERIFY → SYNTHESIZE → EVOLVE → REFLECT → OBSERVE(下一轮) / 已完成
+                                                                                          ↕
+                                                                                   [暂停等待确认]
 ```
 
-**暂停等待确认状态**：当需要人工确认时（T5 Phase 0.5 文档确认、T5 Phase 5 线上验收、以及任何 blocking gate），状态机进入暂停等待确认。系统在此状态停止自动推进，等待用户输入。用户输入 `用户确认`（Phase 0.5）或 `用户确认（线上验收）`（Phase 5）后，恢复到下一阶段。用户提出修改意见时，先处理修改，再自动恢复。
-
-> 注：本文档的「用户确认」指任务执行中的阻塞门禁。协议修订的审批规则见 `evolution-rules.md` §风险分级审批。
-
-**状态不可逆**：不能从 ACT 回退到 DECIDE（当轮的决策在 ACT 开始后锁定）。
-
-### 阶段转换约束
-
-合法转换路径（严格顺序，不可跳跃、不可逆）：
-
-| 当前阶段 | 合法下一阶段 | 约束 |
-|---------|------------|------|
-| OBSERVE | ORIENT | — |
-| ORIENT | DECIDE | — |
-| DECIDE | ACT | 决策锁定后不可回退 |
-| ACT | VERIFY | — |
-| VERIFY | SYNTHESIZE | — |
-| SYNTHESIZE | EVOLVE | — |
-| EVOLVE | REFLECT | — |
-| REFLECT | OBSERVE (下一轮) / 已完成 | 终止需满足终止条件 |
-
-**不可逆规则**: ACT 开始后，DECIDE 的选择不可修改。如需调整策略，必须完成当前轮次后在下一轮 DECIDE 中调整。
-
-**阶段标准枚举**: `OBSERVE`, `ORIENT`, `DECIDE`, `ACT`, `VERIFY`, `SYNTHESIZE`, `EVOLVE`, `REFLECT`
-**错误处理**：任何阶段发生错误 → 写入 progress.md → 尝试恢复 → 如无法恢复则进入已完成状态 并说明原因。
-
----
+**核心规则**：
+- **不可逆**：ACT 开始后 DECIDE 锁定，需调整策略必须完成当轮后在下一轮 DECIDE 调整
+- **暂停点**：EVOLVE / Phase 0.5 / Phase 5 可进入暂停等待确认状态，等待用户输入后恢复
+- **错误处理**：任何阶段错误 → 写入 progress.md → 尝试恢复 → 无法恢复则终止并说明原因
+- **阶段枚举**: `OBSERVE`, `ORIENT`, `DECIDE`, `ACT`, `VERIFY`, `SYNTHESIZE`, `EVOLVE`, `REFLECT`
 
 ## OBSERVE — 观察
 
@@ -325,15 +91,7 @@ Template（格式）← 被填充后成为交付物
 5. **上一轮有什么意外发现？** — 从 findings.md 读取上轮追加的内容（第1轮：无，填写"无历史发现"）
 
 ### 输出
-OBSERVE Summary（写入 progress.md 当前轮次区块）：
-
-```markdown
-### 观察（第 N 轮）
-- 维度差距：{每个维度：当前值 / 目标值 / 差距}
-- 剩余预算：{X}%（已用 N 轮 / 最大 M 轮）
-- 本轮观察重点：{最需要解决的 1-2 个维度}
-- 上轮遗留：{如有未完成项}
-```
+写入 progress.md：维度差距(当前/目标/差距) + 剩余预算% + 本轮重点(1-2维度) + 上轮遗留。
 
 ---
 
@@ -363,15 +121,7 @@ OBSERVE Summary（写入 progress.md 当前轮次区块）：
 | **跨维度回归**：本轮改善维度 A 但维度 B 跌破门禁阈值 | 视为回归，下轮优先修复 B，策略标记为"有副作用" |
 
 ### 输出
-ORIENT Summary：
-
-```markdown
-### 定向（第 N 轮）
-- 主要差距原因：{原因分析}
-- 本轮策略：{策略名称 + 一句话说明}
-- 范围调整：{扩展/收窄/不变 + 原因}
-- 预期改善：{本轮预计能提升多少分}
-```
+写入 progress.md：主要差距原因 + 本轮策略(名称+说明) + 范围调整 + 预期改善分数。
 
 ---
 
@@ -393,25 +143,7 @@ ORIENT Summary：
 **优先选用"保持"策略**：本轮 DECIDE 优先使用 findings.md 反思章节中标记为"保持"的策略；排除标记为"避免"的策略。
 
 ### 行动计划格式
-
-```markdown
-### 决策（第 N 轮）
-
-本轮行动：
-
-| # | 行动 | 执行者 | 输入 | 期望输出 | 可并行？ |
-|---|------|--------|------|---------|---------|
-| 1 | {具体行动} | {agent 类型} | {文件/信息} | {具体产出} | {是/否} |
-| 2 | {具体行动} | {agent 类型} | {文件/信息} | {具体产出} | {是} |
-
-执行顺序：
-- 并行：行动 2 + 行动 3（独立）
-- 串行：行动 1 完成后执行行动 4（4 依赖 1 的输出）
-
-Fallback 策略：
-- 行动 1 失败 → {备用方案}
-- 行动 2 无结果 → {备用方案}
-```
+写入 progress.md 表格：行动编号 | 行动 | 执行者 | 输入 | 期望输出 | 可并行？ + 执行顺序(并行/串行) + Fallback 策略。
 
 **单策略隔离原则**：每轮 DECIDE 阶段只选择一个主策略执行，实现可归因的 A/B 验证。多策略并行无法归因分数变化，会导致策略效果库积累伪相关。
 
@@ -456,18 +188,7 @@ side_effect字段使用强化：不允许未经验证直接填"无"，必须在V
 6. 输出格式（明确的结构）
 
 ### 执行记录
-
-每个 subagent 完成后，记录到 progress.md：
-
-```markdown
-### 行动记录（第 N 轮）
-
-| # | 执行者 | 任务 | 状态 | 结果摘要 |
-|---|--------|------|------|---------|
-| 1 | researcher | 调研{维度} | 完成 | 发现{N}个关键信息点 |
-| 2 | code-reviewer | 审查{文件} | 完成 | 发现{N}个P1问题 |
-| 3 | backend-dev | 修复{问题} | 失败 | 原因：{错误信息} |
-```
+每个 subagent 完成后记录到 progress.md 表格：# | 执行者 | 任务 | 状态 | 结果摘要。
 
 ### 统一重试上限规则
 
@@ -509,24 +230,7 @@ subagent 失败时的处理流程：
 - 内容类：检查前几轮的结论是否仍然成立
 
 ### 验证输出格式
-
-```markdown
-### 验证（第 N 轮）
-
-得分更新：
-| 维度 | 上轮 | 本轮 | 变化 | 目标 | 状态 |
-|------|------|------|------|------|------|
-| {维度 1} | {分} | {分} | {+/-} | {目标} | 达标/未达标 |
-
-本轮改进详情：
-- {改进 1}：{具体改善了什么}
-- {改进 2}：...
-
-新发现的问题（如有）：
-- {问题}：{描述，将在下轮处理}
-
-验证结论：{本轮质量可信 / 部分结果待确认}
-```
+写入 progress.md：得分更新表(维度/上轮/本轮/变化/目标/状态) + 改进详情 + 新发现问题 + 验证结论。
 
 ---
 
@@ -599,23 +303,7 @@ AutoLoop 有四种终止路径，按优先级排列：
 ```
 
 ### 进化输出
-
-```markdown
-### 进化决策（第 N 轮结束）
-
-终止判断：{继续 / 达标终止 / 预算终止 / 无法继续}
-
-如继续：
-- 下一轮重点：{维度}
-- 策略调整：{调整内容 + 原因}
-- 范围变更：{变更内容 + 原因}
-- 预计达标轮次：{估计}
-
-如终止：
-- 终止原因：{具体原因}
-- 未达标维度：{列表 + 差距}
-- 建议后续行动：{用户可以做什么}
-```
+写入 progress.md：终止判断(继续/达标/预算/无法继续) + 继续时(下轮重点+策略调整+范围变更+预计轮次) 或 终止时(原因+未达标维度+建议后续行动)。
 
 ---
 
@@ -703,48 +391,4 @@ AutoLoop 有四种终止路径，按优先级排列：
 
 ## 循环日志格式
 
-每次完整循环在 `autoloop-progress.md` 产生标准格式日志：
-
-```markdown
----
-
-## 迭代循环 #{N}
-**开始时间**：{ISO 8601}
-**状态**：{进行中 → 完成}
-
-### 观察
-{OBSERVE 输出}
-
-### 定向
-{ORIENT 输出}
-
-### 决策
-{DECIDE 输出}
-
-### 行动记录
-{ACT 输出}
-
-### 验证
-{VERIFY 输出}
-
-### 整合（SYNTHESIZE）
-发现的矛盾：{矛盾列表，无则填"无"}
-解决的矛盾：{解决方式，无则填"无"}
-合并的数据：{追加到 findings.md 的条数 + 其他更新文件}
-新洞察：{整合后才显现的模式或规律，无则填"无"}
-
-### 进化决策
-{EVOLVE 输出}
-
-### 反思（REFLECT）
-- **问题登记**: {本轮新发现 N 个，修复 M 个，遗留 K 个} — 已写入 findings.md 第 1 层表
-- **策略复盘**: {本轮策略} — 效果评分 {1-5}/5，{保持/避免/待验证} — 已写入 findings.md 第 2 层表
-- **模式识别**: {新发现的模式 / 无新模式} — 已写入 findings.md 第 3 层
-- **经验教训**: {本轮最重要的一条经验} — 已写入 findings.md 第 4 层
-- **下轮指导**: {基于反思，下轮应该重点做什么、避免做什么}
-
-**结束时间**：{ISO 8601}
-**耗时**：{分钟}
-
----
-```
+每次完整循环在 `autoloop-progress.md` 产生标准格式日志，包含：迭代编号、开始/结束时间、状态、以及各阶段输出（观察/定向/决策/行动记录/验证/整合/进化决策/反思）。反思部分须记录问题登记数、策略复盘评分、模式识别、经验教训、下轮指导，并标注已写入 findings.md 对应层。
