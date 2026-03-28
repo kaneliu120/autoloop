@@ -128,7 +128,7 @@ grep -rn "logging\.\|logger\." {路径} --include="*.py" | head -5
 
 | 检测项 | 通用扣分 | 本 pack 扣分 | 调整原因 |
 |--------|---------|-------------|---------|
-| async 混用同步调用 | -2/处 | -3/处 | FastAPI 全异步架构，同步混用直接阻塞事件循环 |
+| async 混用同步调用 | -2/处 | -3/处 | FastAPI 全异步架构，同步混用导致事件循环无法处理其他请求 |
 | SQLAlchemy session 泄漏 | — | -2/处（P1） | 未正确关闭 session = 连接池耗尽 |
 | Pydantic model 缺失 | — | -1/处（P2） | FastAPI 的类型安全核心，无 model = 无验证 |
 

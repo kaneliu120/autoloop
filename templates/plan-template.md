@@ -6,7 +6,7 @@
 |------|-----|
 | 任务 ID | autoloop-{YYYYMMDD-HHMMSS} |
 | 模板 | T{N}: {名称} |
-| 状态 | 准备开始 / 进行中 / 完成 / 预算耗尽 / 用户中断 |
+| 状态 | 准备开始 / 进行中 / 暂停等待确认 / 已完成 |
 | 创建时间 | {ISO 8601} |
 | 最后更新 | {ISO 8601} |
 | 工作目录 | {绝对路径} |
@@ -83,6 +83,7 @@
 - service_count：{自动计算，= len(service_list)；service_list=N/A 时填 0}
 - health_check_url：{健康检查 URL，如 https://example.com/api/health；不适用则留空}
 - acceptance_url：{线上验收 URL，如 https://example.com}
+- migration_check_cmd：{数据库迁移检查命令，如 `alembic check` / `prisma migrate status` / N/A}
 - doc_output_path：{方案文档输出目录绝对路径}
 
 **T6 Quality**：

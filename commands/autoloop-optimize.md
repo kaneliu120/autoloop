@@ -20,6 +20,8 @@ description: >
 
 **Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再制定本轮优化计划。详见 `protocols/loop-protocol.md` OBSERVE Step 0 章节。
 
+- **经验库读取**: 读取 `protocols/experience-registry.md` 中与当前任务类型和目标维度匹配的条目，识别状态为「推荐」或「候选默认」的策略，传递到 DECIDE 阶段参考
+
 ---
 
 ## 每轮 OBSERVE 执行规范（Round 2+ 强制）
@@ -276,6 +278,8 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 
 ### 修复 subagent 指令（按优先级）
 
+- **工单生成**: 按 `protocols/agent-dispatch.md` 对应角色模板生成委派工单，填充任务目标、输入数据、输出格式、质量标准、范围限制、当前轮次、上下文摘要
+
 ```
 你是 optimization-fix subagent，负责以下性能/架构/稳定性问题修复。
 
@@ -473,6 +477,7 @@ Checkpoint（已完成 {N} 个修复）
 - **策略复盘**：修复策略/优化方法/验证命令的效果评估（保持 | 避免 | 待验证），实际改进量 vs 预期改进量（策略评价枚举见 protocols/loop-protocol.md 统一状态枚举）
 - **模式识别**：反复出现的问题类型（说明有架构级根因）、修复→新问题的因果链、哪些问题有跨维度联动效应
 - **经验教训**：哪类优化最有效、哪些验证步骤能发现最多问题、架构/性能/稳定性三维度的系统性教训
+- **经验写回**: 将本轮策略效果写入 `protocols/experience-registry.md`（策略ID、适用场景、效果评分、执行上下文，遵循效果记录表格式）
 
 ---
 

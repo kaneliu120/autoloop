@@ -28,6 +28,8 @@ TSV_COLUMNS = [
     "unit_id", "protocol_version", "score_variance", "confidence", "details"
 ]
 
+PHASES = ["OBSERVE", "ORIENT", "DECIDE", "ACT", "VERIFY", "SYNTHESIZE", "EVOLVE", "REFLECT"]
+
 
 def now_iso():
     return datetime.datetime.now().isoformat(timespec="seconds")
@@ -35,6 +37,18 @@ def now_iso():
 
 def task_id_now():
     return "autoloop-{}".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+
+
+def validate_phase_transition(current, target):
+    """验证阶段转换合法性（参照 loop-protocol.md §阶段转换约束）"""
+    if current not in PHASES or target not in PHASES:
+        return False, "未知阶段: {} → {}".format(current, target)
+    ci, ti = PHASES.index(current), PHASES.index(target)
+    if ti == ci + 1:
+        return True, ""
+    if target == "OBSERVE" and current == "REFLECT":
+        return True, "进入下一轮"
+    return False, "非法转换: {} → {}（必须按顺序推进）".format(current, target)
 
 
 def initial_state(template, goal, work_dir):
@@ -276,6 +290,16 @@ def cmd_update(work_dir, field_path, value_str):
         sys.exit(1)
 
     new_value = _auto_convert(value_str)
+
+    if field_path.endswith("phase"):
+        if isinstance(old_value, str) and isinstance(new_value, str):
+            ok, msg = validate_phase_transition(old_value, new_value)
+            if not ok:
+                print("ERROR: 阶段转换验证失败: {}".format(msg))
+                sys.exit(1)
+            if msg:
+                print("INFO: {}".format(msg))
+
     set_by_path(state, field_path, new_value)
 
     state["plan"]["change_log"].append({
@@ -426,6 +450,10 @@ def cmd_add_iteration(work_dir):
 def cmd_add_finding(work_dir, finding_json):
     """添加新发现到当前轮次"""
     state = load_state(work_dir)
+
+    if not state["iterations"]:
+        print("ERROR: 尚未创建迭代，请先执行 add-iteration")
+        sys.exit(1)
 
     try:
         finding = json.loads(finding_json)

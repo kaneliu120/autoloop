@@ -9,6 +9,8 @@
 - `evolution-rules.md`：定义经验分发后的协议变更审批流程
 - `findings-template.md`：策略评估表中的 strategy_id 与本库的策略效果表对应
 
+> 版本语义定义见 loop-protocol.md §版本语义定义（唯一权威）。
+
 ---
 
 ## 经验沉淀流程

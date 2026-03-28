@@ -128,19 +128,13 @@
 
 以下为通用结构，具体命令以 `autoloop-plan.md` 中收集的参数为准：
 
-```bash
-# 语法验证（使用 autoloop-plan.md 中的 syntax_check_cmd）
-# syntax_check_file_arg=true:  {syntax_check_cmd} {每个修改文件}
-# syntax_check_file_arg=false: {syntax_check_cmd}（项目级，不附加文件名）
-
-# 安全性验证（按 enterprise-standard.md 安全性检测命令执行，针对实际技术栈）
-# 可靠性验证（按 enterprise-standard.md 可靠性检测命令执行，针对实际技术栈）
-# 可维护性验证（按 enterprise-standard.md 可维护性检测命令执行，针对实际技术栈）
-
-# 路由注册验证（如有新路由，使用 autoloop-plan.md 中的 new_router_name 和 main_entry_file）
-grep -n "include_router.*{new_router_name}" {main_entry_file}
-# 其他框架按 delivery-phases.md Phase 3 中的路由注册验证规则执行
-```
+| 检测类型 | 命令来源 | 说明 |
+|---------|---------|------|
+| 语法验证 | `autoloop-plan.md` 中的 `syntax_check_cmd` | `syntax_check_file_arg=true` 时附加文件名，`false` 时项目级执行 |
+| 安全性验证 | `enterprise-standard.md` §安全性检测 | 针对实际技术栈执行 |
+| 可靠性验证 | `enterprise-standard.md` §可靠性检测 | 针对实际技术栈执行 |
+| 可维护性验证 | `enterprise-standard.md` §可维护性检测 | 针对实际技术栈执行 |
+| 路由注册验证 | `delivery-phases.md` §Phase 3 | 使用 `autoloop-plan.md` 中的 `new_router_name` 和 `main_entry_file` |
 
 ---
 

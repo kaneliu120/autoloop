@@ -87,7 +87,7 @@ find {路径}/app -name "layout.tsx" | awk -F/ '{print NF, $0}' | sort -rn | hea
 ### 性能检测（T7）
 
 ```bash
-# 同步阻塞
+# 同步调用检测
 grep -rn "readFileSync\|execSync\|writeFileSync" {路径} --include="*.ts" --include="*.tsx"
 
 # N+1 查询
