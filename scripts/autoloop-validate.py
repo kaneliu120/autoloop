@@ -12,6 +12,16 @@ import os
 import re
 import sys
 
+_val_dir = os.path.dirname(os.path.abspath(__file__))
+if _val_dir not in sys.path:
+    sys.path.insert(0, _val_dir)
+from autoloop_kpi import plan_gate_is_exempt  # noqa: E402
+from autoloop_strategy_multi import (  # noqa: E402
+    is_multi_strategy_id,
+    parse_multi_strategy_components,
+    validate_multi_strategy_id,
+)
+
 # --- 常量 ---
 
 STATE_FILE = "autoloop-state.json"
@@ -29,7 +39,6 @@ PHASES = [
 
 STRATEGY_RE = re.compile(r"^S\d{2}-.+$")
 PROBLEM_RE = re.compile(r"^[A-Z]\d{3}$")
-MULTI_STRATEGY_RE = re.compile(r"^multi:\{.+\}$")
 
 MD_FILES = {
     "results": "autoloop-results.tsv",
@@ -39,12 +48,22 @@ MD_FILES = {
 }
 
 
+def _validation_strict_default():
+    """AUTOLOOP_VALIDATE_STRICT=1 时 validate 将部分警告升级为错误。"""
+    return os.environ.get("AUTOLOOP_VALIDATE_STRICT", "").strip().lower() in (
+        "1", "true", "yes",
+    )
+
+
 # ============================================================
 # SSOT JSON 模式验证
 # ============================================================
 
-def validate_json(work_dir):
-    """从 autoloop-state.json 执行全部验证，返回 (errors, warnings) 列表"""
+def validate_json(work_dir, strict=False):
+    """从 autoloop-state.json 执行全部验证，返回 (errors, warnings) 列表
+
+    strict: 门禁契约缺失、阶段产物缺失等按错误计（亦可用环境变量开启）。
+    """
     path = os.path.join(work_dir, STATE_FILE)
     with open(path, "r", encoding="utf-8") as f:
         state = json.load(f)
@@ -55,12 +74,16 @@ def validate_json(work_dir):
     _check_top_level_structure(state, errors)
     _check_primary_key_consistency(state, errors)
     _check_dimension_consistency(state, errors, warnings)
+    _check_plan_gates_contract(state, warnings, errors, strict)
+    _check_phase_artifacts(work_dir, state, errors, warnings, strict)
+    _check_findings_canonical_fields(state, warnings)
     _check_tsv_completeness(state, errors)
     _check_iteration_sequence(state, errors)
     _check_phase_sequence(state, errors, warnings)
     _check_gate_status(state, errors, warnings)
     _check_budget(state, errors, warnings)
     _check_version_consistency(state, errors)
+    _check_side_effect_vs_handoff(state, errors, warnings, strict)
 
     return errors, warnings
 
@@ -96,25 +119,47 @@ def _check_primary_key_consistency(state, errors):
         if sid and STRATEGY_RE.match(sid):
             known_strategy_ids.add(sid)
 
+    def _check_sid_defined(label, idx, sid):
+        if STRATEGY_RE.match(sid):
+            if sid not in known_strategy_ids:
+                errors.append(
+                    "{} {}: strategy_id '{}' 未在 findings/strategy_history 中定义".format(
+                        label, idx, sid
+                    )
+                )
+            return
+        if is_multi_strategy_id(sid):
+            ok_m, msg = validate_multi_strategy_id(sid)
+            if not ok_m:
+                errors.append("{} {}: {}".format(label, idx, msg))
+                return
+            for comp in parse_multi_strategy_components(sid):
+                if comp not in known_strategy_ids:
+                    errors.append(
+                        "{} {}: multi 子策略 '{}' 未在 findings/strategy_history 中定义".format(
+                            label, idx, comp
+                        )
+                    )
+            return
+        errors.append(
+            "{} {}: strategy_id 格式错误: '{}' (期望 SNN-描述 或合法 multi:{{...}})".format(
+                label, idx, sid
+            )
+        )
+
     # 检查每个 iteration 的 strategy_id
     for i, it in enumerate(state.get("iterations", []), start=1):
         sid = it.get("strategy", {}).get("strategy_id", "")
         if not sid or sid in ("—", "baseline", ""):
             continue
-        if STRATEGY_RE.match(sid) and sid not in known_strategy_ids:
-            errors.append(
-                "轮次 {}: strategy_id '{}' 未在 findings/strategy_history 中定义".format(i, sid)
-            )
+        _check_sid_defined("轮次", i, sid)
 
     # 检查 results_tsv 中的 strategy_id
     for row_idx, row in enumerate(state.get("results_tsv", []), start=1):
         sid = row.get("strategy_id", "").strip()
         if not sid or sid in ("—", "baseline", ""):
             continue
-        if STRATEGY_RE.match(sid) and sid not in known_strategy_ids:
-            errors.append(
-                "TSV 行 {}: strategy_id '{}' 未在 findings/strategy_history 中定义".format(row_idx, sid)
-            )
+        _check_sid_defined("TSV 行", row_idx, sid)
 
 
 def _check_dimension_consistency(state, errors, warnings):
@@ -126,36 +171,254 @@ def _check_dimension_consistency(state, errors, warnings):
         elif isinstance(d, str):
             plan_dims.add(d)
 
-    # 也从 gates 收集
+    # 也从 gates 收集（dim 与 dimension 与 scorer 对齐）
     for g in state.get("plan", {}).get("gates", []):
-        dim = g.get("dimension", "")
+        dim = g.get("dim") or g.get("dimension", "")
         if dim:
             plan_dims.add(dim)
 
     if not plan_dims:
-        # 没有定义维度则跳过此检查
         return
 
-    # 收集 iterations 中使用的所有维度
+    non_exempt_gate_dims = set()
+    for g in state.get("plan", {}).get("gates", []) or []:
+        if plan_gate_is_exempt(g):
+            continue
+        d = g.get("dim") or g.get("dimension", "")
+        if d:
+            non_exempt_gate_dims.add(d)
+
     used_dims = set()
     for it in state.get("iterations", []):
         for dim in it.get("scores", {}):
             used_dims.add(dim)
 
-    # 检查 iterations 中是否使用了未定义的维度
     undefined = used_dims - plan_dims
     for dim in sorted(undefined):
         errors.append(
             "维度 '{}' 在 iterations.scores 中使用但未在 plan.dimensions/gates 中定义".format(dim)
         )
 
-    # 检查定义了但未使用的维度（仅警告）
     unused = plan_dims - used_dims
     if unused and state.get("iterations"):
         for dim in sorted(unused):
+            if non_exempt_gate_dims and dim not in non_exempt_gate_dims:
+                continue
             warnings.append(
                 "维度 '{}' 已定义但未在任何 iteration.scores 中使用".format(dim)
             )
+
+
+# gate-manifest 原始 dimension，映射后与 scorer 内部键不同；若 plan.gates 仍用原名易导致 split verdict
+_MANIFEST_RAW_SCORER_DIMS = frozenset({
+    "syntax_errors", "p1_count", "security", "reliability", "maintainability",
+})
+
+
+def _check_plan_gates_contract(state, warnings, errors, strict):
+    """plan.gates 与 scorer 契约：建议含 manifest_dimension，避免使用 manifest 原始名作为 dim。"""
+    gates = state.get("plan", {}).get("gates", [])
+    if not gates:
+        return
+    for i, g in enumerate(gates):
+        if plan_gate_is_exempt(g):
+            continue
+        dim = g.get("dim") or g.get("dimension", "")
+        if "manifest_dimension" not in g:
+            msg = (
+                "plan.gates[{}] 缺少 manifest_dimension（旧版 state，建议重新 init 或迁移，见 references/loop-data-schema.md §迁移）".format(i)
+            )
+            (errors if strict else warnings).append(msg)
+        if g.get("dimension") and not g.get("dim"):
+            msg = (
+                "plan.gates[{}] 仅含 dimension，缺少 canonical 键 dim（见 loop-data-schema.md §plan.gates）".format(i)
+            )
+            (errors if strict else warnings).append(msg)
+        if dim in _MANIFEST_RAW_SCORER_DIMS:
+            msg = (
+                "plan.gates[{}].dim='{}' 为 gate-manifest 原始名，与 autoloop-score 内部键不一致，可能导致分裂判定".format(i, dim)
+            )
+            (errors if strict else warnings).append(msg)
+
+
+def _side_effect_text_covers_dimension(side_effect_lower, dim):
+    """末行 side_effect 是否体现维度 dim（strict 交叉校验用）。"""
+    d = str(dim).strip().lower()
+    if not d:
+        return True
+    if d in side_effect_lower:
+        return True
+    for token in d.split("_"):
+        if len(token) >= 3 and token in side_effect_lower:
+            return True
+    return False
+
+
+def _check_side_effect_vs_handoff(state, errors, warnings, strict):
+    """P-03: handoff 声明跨维影响时，末行 TSV side_effect 不应为空/无。"""
+    handoff = state.get("plan", {}).get("decide_act_handoff") or {}
+    if not isinstance(handoff, dict):
+        return
+    impacted = handoff.get("impacted_dimensions")
+    if impacted is None:
+        impacted = handoff.get("target_dimensions")
+    if not impacted:
+        return
+    if isinstance(impacted, str) and not impacted.strip():
+        return
+    if isinstance(impacted, list) and not impacted:
+        return
+    rows = state.get("results_tsv") or []
+    if not rows:
+        return
+    last = rows[-1]
+    se = (last.get("side_effect") or "").strip().lower()
+    if se in ("无", "—", "-", "", "none", "n/a"):
+        msg = (
+            "末行 results_tsv.side_effect 为「{}」但 plan.decide_act_handoff 声明了 impacted_dimensions/"
+            "target_dimensions；请填写实际跨维影响或移除 handoff 中的声明".format(
+                last.get("side_effect") or "空"
+            )
+        )
+        (errors if strict else warnings).append(msg)
+        return
+
+    dims = impacted if isinstance(impacted, list) else [impacted]
+    missing = [d for d in dims if not _side_effect_text_covers_dimension(se, d)]
+    if missing:
+        msg = (
+            "末行 side_effect 未覆盖 handoff 声明的维度（须含各维标识或下划线分段 token≥3）: {}".format(
+                ", ".join(str(x) for x in missing)
+            )
+        )
+        (errors if strict else warnings).append(msg)
+
+
+def _check_phase_artifacts(work_dir, state, errors, warnings, strict):
+    """按当前末轮 phase 核对最小产物；strict 下缺失为 error，非 strict 下为 warn（见 loop-data-schema §阶段产物）。"""
+    iterations = state.get("iterations", [])
+    if not iterations:
+        return
+    last = iterations[-1]
+    phase = (last.get("phase") or "").strip()
+    if phase not in PHASES:
+        return
+    phase_idx = PHASES.index(phase)
+
+    def _emit(msg):
+        (errors if strict else warnings).append(msg)
+
+    # ACT 及之后：须有 DECIDE 交接或本轮 strategy_id（canonical）
+    act_idx = PHASES.index("ACT")
+    if phase_idx >= act_idx:
+        handoff = state.get("plan", {}).get("decide_act_handoff") or {}
+        sid_h = ""
+        if isinstance(handoff, dict):
+            sid_h = (handoff.get("strategy_id") or "").strip()
+        strat = last.get("strategy") or {}
+        sid_it = (strat.get("strategy_id") or "").strip() if isinstance(strat, dict) else ""
+        def _phase_sid_ok(s):
+            if not s:
+                return False
+            if STRATEGY_RE.match(s):
+                return True
+            return bool(
+                is_multi_strategy_id(s) and validate_multi_strategy_id(s)[0]
+            )
+
+        ok = _phase_sid_ok(sid_h) or _phase_sid_ok(sid_it)
+        if not ok:
+            _emit(
+                "末轮 phase={} 但缺少有效 strategy_id（应设置 plan.decide_act_handoff.strategy_id "
+                "或 iterations[-1].strategy.strategy_id；格式 SNN-描述 或 multi:{{SNN+SNN}}）".format(
+                    phase
+                )
+            )
+
+    # VERIFY 之后：须有 scores（防后期阶段空转）
+    verify_idx = PHASES.index("VERIFY")
+    late_post_verify = {"SYNTHESIZE", "EVOLVE", "REFLECT"}
+    if phase in late_post_verify and phase_idx > verify_idx and not last.get("scores"):
+        _emit(
+            "末轮 phase={} 但 iterations[-1].scores 为空（应先完成 VERIFY 写回评分）".format(phase)
+        )
+
+    # REFLECT：建议有结构化 reflect（供 experience write）；strict 下要求 strategy_id + effect（E-01）
+    if phase == "REFLECT":
+        ref = last.get("reflect")
+        if strict:
+            if not isinstance(ref, dict):
+                errors.append(
+                    "末轮 phase=REFLECT 但 iterations[-1].reflect 非 JSON 对象（strict 要求 dict）"
+                )
+            else:
+                sid = (ref.get("strategy_id") or "").strip()
+                eff = (ref.get("effect") or "").strip()
+                if not sid or not eff:
+                    errors.append(
+                        "末轮 phase=REFLECT 时 strict 要求 iterations[-1].reflect 含非空 "
+                        "strategy_id 与 effect（供经验库 write）"
+                    )
+                else:
+                    dval = ref.get("delta", None)
+                    has_delta = dval is not None and dval != ""
+                    has_likert = ref.get("rating_1_to_5") not in (None, "")
+                    sc = ref.get("score")
+                    leg_likert = isinstance(sc, int) and 1 <= sc <= 5
+                    if not (has_delta or has_likert or leg_likert):
+                        errors.append(
+                            "末轮 REFLECT strict 要求 reflect 含 delta、rating_1_to_5 "
+                            "或 legacy Likert（score 为 1–5 整数）之一"
+                        )
+        elif not isinstance(ref, dict) or not any(
+            (ref.get(k) not in (None, "", [], {}))
+            for k in ("strategy_id", "effect", "lesson_learned", "score", "dimension", "context")
+        ):
+            _emit(
+                "末轮 phase=REFLECT 但 iterations[-1].reflect 为空或非结构化（建议 JSON：strategy_id/effect/...）"
+            )
+
+    # checkpoint.json 与 SSOT 末轮 phase 不一致时提示（常见于手工改 state 未同步断点）
+    ck_path = os.path.join(work_dir, "checkpoint.json")
+    if os.path.isfile(ck_path):
+        try:
+            with open(ck_path, "r", encoding="utf-8") as f:
+                ck = json.load(f)
+            ck_phase = (ck.get("current_phase") or "").strip()
+            if ck_phase and ck_phase in PHASES and ck_phase != phase:
+                msg = (
+                    "checkpoint.current_phase={} 与 iterations[-1].phase={} 不一致（请同步 checkpoint 或 state）".format(
+                        ck_phase, phase
+                    )
+                )
+                (errors if strict else warnings).append(msg)
+        except (OSError, ValueError, TypeError):
+            pass
+
+
+def _check_findings_canonical_fields(state, warnings):
+    """findings.rounds[].findings[]：推荐 summary 为短摘要；空条目与 summary+content 并存仅 warn。"""
+    rounds = state.get("findings", {}).get("rounds", [])
+    for ri, rnd in enumerate(rounds):
+        for fi, fnd in enumerate(rnd.get("findings", [])):
+            if not isinstance(fnd, dict):
+                continue
+            summ = fnd.get("summary")
+            cont = fnd.get("content")
+            desc = fnd.get("description")
+            has_s = summ not in (None, "")
+            has_c = cont not in (None, "")
+            has_d = desc not in (None, "")
+            if not (has_s or has_c or has_d):
+                warnings.append(
+                    "findings.rounds[{}].findings[{}] 无 summary/content/description，"
+                    "渲染与评分可能跳过该条".format(ri, fi)
+                )
+            elif has_s and has_c:
+                warnings.append(
+                    "findings.rounds[{}].findings[{}] 同时含 summary 与 content，"
+                    "建议以 summary 为 canonical 短摘要、content 为详述".format(ri, fi)
+                )
 
 
 def _check_tsv_completeness(state, errors):
@@ -245,7 +508,9 @@ def _check_gate_status(state, errors, warnings):
     latest_scores = latest.get("scores", {})
 
     for gate in gates:
-        dim = gate.get("dimension", "")
+        if plan_gate_is_exempt(gate):
+            continue
+        dim = gate.get("dim") or gate.get("dimension", "")
         gate_current = gate.get("current")
 
         if gate_current is None or not dim:
@@ -275,7 +540,8 @@ def _check_budget(state, errors, warnings):
     budget = state.get("plan", {}).get("budget", {})
     max_rounds = budget.get("max_rounds", 0)
     current_round = budget.get("current_round", 0)
-    n_iterations = len(state.get("iterations", []))
+    iters = state.get("iterations") or []
+    n_iterations = len(iters)
 
     if max_rounds and max_rounds > 0:
         if n_iterations > max_rounds:
@@ -283,13 +549,15 @@ def _check_budget(state, errors, warnings):
                 "预算超支: 已执行 {} 轮，预算上限 {} 轮".format(n_iterations, max_rounds)
             )
 
-    # current_round 应与 iterations 数量一致
-    if n_iterations > 0 and current_round != n_iterations:
-        warnings.append(
-            "budget.current_round={} 与实际 iterations 数量 {} 不一致".format(
-                current_round, n_iterations
+    # OODA 轮次号：与末条 iteration.round 粗对齐（允许 ±1：add-iteration 先增 round、controller 稍后写 budget）
+    if n_iterations > 0:
+        last_r = iters[-1].get("round")
+        if last_r is not None and abs(last_r - current_round) >= 2:
+            warnings.append(
+                "budget.current_round={} 与 iterations[-1].round={} 偏差过大（≥2）".format(
+                    current_round, last_r
+                )
             )
-        )
 
 
 def _check_version_consistency(state, errors):
@@ -342,15 +610,35 @@ def validate_markdown(work_dir):
         it = row.get("iteration", "").strip()
         dim = row.get("dimension", "").strip()
 
-        # strategy_id 格式校验
+        # strategy_id 格式校验（P3-06 multi: 须含 ≥2 个 SNN-子策略）
         if sid and sid not in ("—", "baseline"):
-            if not STRATEGY_RE.match(sid) and not MULTI_STRATEGY_RE.match(sid):
+            if STRATEGY_RE.match(sid):
+                if sid not in f_strategies:
+                    errors.append(
+                        "行{}: strategy_id '{}' 在 findings.md 中未定义".format(ln, sid)
+                    )
+            elif is_multi_strategy_id(sid):
+                ok_m, msg = validate_multi_strategy_id(sid)
+                if not ok_m:
+                    errors.append("行{}: {}".format(ln, msg))
+                else:
+                    for comp in parse_multi_strategy_components(sid):
+                        if comp not in f_strategies:
+                            errors.append(
+                                "行{}: multi 子策略 '{}' 在 findings.md 中未定义".format(
+                                    ln, comp
+                                )
+                            )
+                    sef = row.get("side_effect", "").strip()
+                    if "混合" not in sef and "归因" not in sef:
+                        warnings.append(
+                            "行{}: multi: 建议 side_effect 注明混合归因（loop-protocol）".format(ln)
+                        )
+            else:
                 errors.append(
-                    "行{}: strategy_id 格式错误: '{}' (期望 S{{NN}}-{{描述}})".format(ln, sid)
-                )
-            elif STRATEGY_RE.match(sid) and sid not in f_strategies:
-                errors.append(
-                    "行{}: strategy_id '{}' 在 findings.md 中未定义".format(ln, sid)
+                    "行{}: strategy_id 格式错误: '{}' (期望 SNN-描述 或 multi:{{...}})".format(
+                        ln, sid
+                    )
                 )
 
         # evidence_ref -> problem_id 存在性
@@ -430,12 +718,12 @@ def _extract_dimensions_from_gates(work_dir):
 # 统一入口
 # ============================================================
 
-def validate(work_dir):
+def validate(work_dir, strict=False):
     """自动选择验证模式: SSOT JSON 优先，markdown 回退。返回 (errors, warnings, mode)"""
     json_path = os.path.join(work_dir, STATE_FILE)
 
     if os.path.exists(json_path):
-        errors, warnings = validate_json(work_dir)
+        errors, warnings = validate_json(work_dir, strict=strict)
         return errors, warnings, "json"
     else:
         errors, warnings = validate_markdown(work_dir)
@@ -483,18 +771,21 @@ def format_json_output(errors, warnings, mode):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("用法: autoloop-validate.py <工作目录> [--json]")
+        print("用法: autoloop-validate.py <工作目录> [--json] [--strict]")
         print("  验证 autoloop 数据一致性（SSOT JSON 优先，markdown 回退）")
+        print("  --strict  契约/阶段产物问题计为错误；亦可设 AUTOLOOP_VALIDATE_STRICT=1")
         sys.exit(1)
 
     work_dir = sys.argv[1]
     use_json_output = "--json" in sys.argv
+    strict_cli = "--strict" in sys.argv
+    strict = strict_cli or _validation_strict_default()
 
     if not os.path.isdir(work_dir):
         print("ERROR: 目录不存在: {}".format(work_dir))
         sys.exit(1)
 
-    errs, warns, mode = validate(work_dir)
+    errs, warns, mode = validate(work_dir, strict=strict)
 
     if use_json_output:
         print(format_json_output(errs, warns, mode))

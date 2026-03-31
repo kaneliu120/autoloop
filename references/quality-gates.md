@@ -23,7 +23,7 @@ AutoLoop 使用 4 种不同语义的评分概念，不可混用：
 | 质量得分 | quality_score | 连续值 | 0-10（保留1位小数） | 维度的当前质量水平 | TSV的metric_value列；门禁评估矩阵的阈值比较 |
 | 置信度 | confidence | 百分比 | 0-100%（整数） | 评分本身的可信程度 | TSV的confidence列；fail-closed判定 |
 | 严重度 | severity | 枚举 | P1 / P2 / P3 | 发现问题的影响程度 | enterprise-standard.md扣分规则；门禁计数条件 |
-| 门禁状态 | gate_status | 枚举 | 通过 / 未通过 / 豁免 | 门禁的最终判定 | 门禁评估矩阵；终止条件判断 |
+| 门禁状态 | gate_status | 枚举 | **达标 / 未达标 / 豁免**（与 `gate-manifest.json` 的 `gate_status_enum` 一致；SSOT JSON 中 `plan.gates[].status` 使用此三词） | 门禁的最终判定 | 门禁评估矩阵；终止条件判断 |
 
 **混用禁止规则**：
 - quality_score 不可用于表示置信度（"这个评分质量高"应该用 confidence）
@@ -83,11 +83,13 @@ AutoLoop 使用 4 种不同语义的评分概念，不可混用：
 
 低置信评分与缺证据评分同等处理：视为未通过，必须在下轮补充证据或增加evaluator后重新评分。
 
+**与脚本对齐**：TSV 末行 `score_variance` / `confidence` 的 fail-closed 规则由 `autoloop-variance.py check`、`autoloop-controller.py` 的 EVOLVE 与 `autoloop_kpi.results_tsv_last_row_fail_closed` 共用。SSOT 模式下 `autoloop-score.py --json` 的 `overall_pass` 亦会纳入末行 fail-closed（`gates_pass` 与 `overall_pass` 分列），避免「score 脚本通过、EVOLVE 仍拒收敛」的双口径误解。
+
 ### 跨模型评分一致性机制
 
 多 LLM evaluator 时：
 - **结构化 rubric**：prompt 必须含本文档锚点表全文
-- **盲评**：各 evaluator 独立评分，互不可见；T6/T7 建议 >= 2 模型
+- **盲评**：各 evaluator 独立评分，互不可见；T7/T8 建议 >= 2 模型
 - **晚聚合**：全部完成后统一聚合（VERIFY 阶段结束时），过程中不交换信息
 - **去偏**：T2 不同 evaluator 以不同顺序评估选项；维度 >= 5 时同理
 
@@ -109,30 +111,33 @@ AutoLoop 使用 4 种不同语义的评分概念，不可混用：
 | T1 Research | 完整性 | ≥ 85% | Soft | 记录到 progress.md + findings.md，不阻塞终止 |
 | T2 Compare | 覆盖率 | 100% | Hard | 整轮不通过，所有选项所有维度必须有内容 |
 | T2 Compare | 可信度 | ≥ 80% | Hard | 整轮不通过，下轮必须补充独立来源 |
-| T2 Compare | 偏见检查 | 每选项偏见分数 < 0.15 | Hard | 整轮不通过，触发第 3 个独立 option-analyzer |
+| T2 Compare | 偏见检查 | 所有选项通过（bool） | Hard | 整轮不通过，触发第 3 个独立 option-analyzer |
 | T2 Compare | 敏感性分析 | key_assumptions ±20% 后推荐第1位不变 | Soft | 记录到 progress.md + findings.md，不阻塞终止 |
-| T3 Iterate | KPI 达目标值 | 用户在 plan 中设定的目标阈值 | Hard | 整轮不通过，继续迭代优化 |
-| T4 Generate | 通过率 | ≥ 95% | Hard | 整轮不通过，下轮必须修复未通过内容项 |
-| T4 Generate | 平均分 | ≥ 7/10 | Hard | 整轮不通过，下轮必须提升内容质量 |
-| T5 Deliver | 语法验证 | 零错误 | Hard | 整轮不通过，下轮必须修复语法错误 |
-| T5 Deliver | P1/P2 问题 | = 0 | Hard | 整轮不通过，下轮必须修复安全/可靠性问题 |
-| T5 Deliver | 人工验收 | 用户输入"用户确认（线上验收）" | Hard | 整轮不通过，等待用户线上验收确认 |
-| T5 Deliver | 服务健康检查 | service_list 全部 active + health 200 | Soft | 记录到 progress.md，N/A 可跳过，不阻塞终止 |
-| T6 Quality | 安全性分数 | ≥ 9/10 | Hard | 整轮不通过，下轮必须提升安全性评分 |
-| T6 Quality | 可靠性分数 | ≥ 8/10 | Hard | 整轮不通过，下轮必须提升可靠性评分 |
-| T6 Quality | 可维护性分数 | ≥ 8/10 | Hard | 整轮不通过，下轮必须提升可维护性评分 |
-| T6 Quality | P1 问题（所有维度） | = 0 | Hard | 整轮不通过，P1 必须在下轮全部修复 |
-| T6 Quality | 安全 P2 问题 | = 0 | Hard | 整轮不通过，安全 P2 必须在下轮全部修复 |
-| T6 Quality | 可靠性 P2 问题 | ≤ 3 | Soft | 记录到 progress.md + findings.md，不阻塞终止 |
-| T6 Quality | 可维护性 P2 问题 | ≤ 5 | Soft | 记录到 progress.md + findings.md，不阻塞终止 |
-| T7 Optimize | 架构 | ≥ 8/10 | Hard | 整轮不通过，下轮必须解决架构问题 |
-| T7 Optimize | 性能 | ≥ 8/10 | Hard | 整轮不通过，下轮必须解决性能问题 |
-| T7 Optimize | 稳定性 | ≥ 8/10 | Hard | 整轮不通过，下轮必须解决稳定性问题 |
+| T5 Iterate | KPI 达目标值 | 用户在 plan 中设定的目标阈值 | Hard | 整轮不通过，继续迭代优化 |
+| T6 Generate | 通过率 | ≥ 90% | Hard | 整轮不通过，下轮必须修复未通过内容项 |
+| T6 Generate | 平均分 | ≥ 7/10 | Hard | 整轮不通过，下轮必须提升内容质量 |
+| T4 Deliver | 语法验证 | 零错误 | Hard | 整轮不通过，下轮必须修复语法错误 |
+| T4 Deliver | P1/P2 问题 | = 0 | Hard | 整轮不通过，下轮必须修复安全/可靠性问题 |
+| T4 Deliver | 人工验收 | 用户输入"用户确认（线上验收）" | Hard | 整轮不通过，等待用户线上验收确认 |
+| T4 Deliver | 服务健康检查 | service_list 全部 active + health 200 | Soft | 记录到 progress.md，N/A 可跳过，不阻塞终止 |
+| T7 Quality | 安全性分数 | ≥ 9/10 | Hard | 整轮不通过，下轮必须提升安全性评分 |
+| T7 Quality | 可靠性分数 | ≥ 8/10 | Hard | 整轮不通过，下轮必须提升可靠性评分 |
+| T7 Quality | 可维护性分数 | ≥ 8/10 | Hard | 整轮不通过，下轮必须提升可维护性评分 |
+| T7 Quality | P1 问题（所有维度） | = 0 | Hard | 整轮不通过，P1 必须在下轮全部修复 |
+| T7 Quality | 安全 P2 问题 | = 0 | Hard | 整轮不通过，安全 P2 必须在下轮全部修复 |
+| T7 Quality | 可靠性 P2 问题 | ≤ 3 | Soft | 记录到 progress.md + findings.md，不阻塞终止 |
+| T7 Quality | 可维护性 P2 问题 | ≤ 5 | Soft | 记录到 progress.md + findings.md，不阻塞终止 |
+| T8 Optimize | 架构 | ≥ 8/10 | Hard | 整轮不通过，下轮必须解决架构问题 |
+| T8 Optimize | 性能 | ≥ 8/10 | Hard | 整轮不通过，下轮必须解决性能问题 |
+| T8 Optimize | 稳定性 | ≥ 8/10 | Hard | 整轮不通过，下轮必须解决稳定性问题 |
 
-### 判定规则
-- 所有硬门禁通过 + 软门禁全部记录 → gate_status = 通过
-- 任一硬门禁未通过 → gate_status = 未通过（不论软门禁状态）
-- 软门禁未通过但硬门禁全部通过 → gate_status = 通过（软门禁问题记录为遗留项）
+### 判定规则（rollup 与 `plan.gates[].status`）
+
+以下用语与上文「门禁状态 gate_status」词汇表一致：**达标 / 未达标 / 豁免**。`autoloop-results.tsv` 的 `status` 列属于**检查结果**枚举（通过 / 未通过 / 待检查 / 待审查），与 SSOT 中每条门禁的 `plan.gates[].status` **不同层**，不得混写。
+
+- 所有硬门禁 **status = 达标**（或豁免）且软门禁未达标项已记入 progress / findings → **本轮硬门禁路径视为可进入成功终止判定**（软门禁遗留单独跟踪）
+- 任一硬门禁 **status = 未达标** → **本轮门禁 rollup：未达标**（不论软门禁是否已记录）
+- 软门禁 **status = 未达标** 但硬门禁均达标或豁免 → **硬门禁路径仍视为达标**；软门禁问题记为跨轮遗留项
 
 ### 豁免规则
 - **豁免 (Exempt)**: 该维度不适用于当前任务（如纯前端项目的数据库迁移检查）
@@ -141,7 +146,7 @@ AutoLoop 使用 4 种不同语义的评分概念，不可混用：
 
 ---
 
-## 知识类任务门禁（T1/T2/T3/T4）
+## 知识类任务门禁（T1/T2/T5/T6）
 
 ### 覆盖率（Coverage）
 
@@ -159,7 +164,7 @@ AutoLoop 使用 4 种不同语义的评分概念，不可混用：
 **通过标准**：
 - T1 Research：≥ 85%
 - T2 Compare：100%（所有选项的所有维度都必须有内容）
-- T4 Generate：每个生成单元都完成 = 100%
+- T6 Generate：每个生成单元都完成 = 100%
 
 **覆盖率评分锚点**：
 
@@ -256,6 +261,59 @@ AutoLoop 使用 4 种不同语义的评分概念，不可混用：
 
 ---
 
+### T1 成稿深度补充检查（市场 / 行业主题）
+
+> 本节是 **T1 Research** 在市场 / 行业模式下的补充检查项，用于指导是否需要继续补证或改写。  
+> 它**不替代**上文四个门禁阈值，也不单独改变 Hard / Soft Gate 判定；其作用是避免“门禁过了，但成稿仍像提纲或资料堆砌”。
+
+#### 薄稿判定原则
+
+出现以下任一情况，应视为“结构正确但深度不足”：
+
+- 章节只有总括性判断，没有足够可核对数据块。
+- 有平均值但缺少结构拆分，如区域、产品、公司或时间维度。
+- 结论写得很满，但读者无法顺着前文证据复核到接近同一判断。
+- 来源很多，但没有与章节形成对应关系，读者难以回溯。
+- 专项模块只列岗位或方向名，没有拆到工作包、自动化边界和保留的人类任务。
+
+#### 检查项
+
+1. **强制章节完整**
+   - 是否包含：标题 / 主题 / 目标、市场规模与增长、需求侧、价值链与利润池、竞争格局、监管、技术、商业模式、风险、综合判断、数据来源。
+2. **每章三要素齐备**
+   - 每章是否同时具备：`数据`、`分析`、`结论`。
+3. **专项方向模块完整**
+   - 若题目含“行业 + 方向/主题”，是否增设专项模块，且该模块也具备：`数据`、`分析`、`结论`。
+4. **交叉验证痕迹充分**
+   - 关键判断是否有多源支撑；无法交叉验证的判断是否被降级为风险或争议点。
+5. **读者版边界合规**
+   - 最终报告中是否移除了内部运行、门禁、方法论显性标题、系统痕迹和模板提示语。
+6. **章节证据密度足够**
+   - 每章是否至少具备若干可核对数据块，而不是只有抽象概括。
+7. **结构拆分充分**
+   - 是否至少在若干关键章节中体现了区域、产品、公司、时间等交叉维度，而不是只给行业平均值。
+8. **来源组织可回溯**
+   - `数据来源` 是否按章节组织，或至少明显对应到章节，而不是纯 bibliography。
+9. **证据边界明确**
+   - 是否区分“直接证据”“组织信号”“分析推断”；无法强推之处是否明确写出边界。
+10. **专项模块工作包化**
+   - 对 AI / 自动化 / 岗位替代性等专项方向，是否拆到工作包层，而不是只停留在岗位名称。
+
+#### 使用方式
+
+- 若任一检查项失败，T1 在下一轮应优先补**章节深度**而非继续机械扩充维度数量。
+- 建议在 `autoloop-progress.md` 中记录本轮哪些章节缺：
+  - 数据
+  - 分析
+  - 结论
+  - 结构拆分
+  - 公司 / 区域实例
+  - 来源对应
+  - 证据边界
+- 对市场 / 行业主题，只有当四个正式门禁达标且本补充检查通过时，才建议进入最终成稿。
+
+---
+
 ## T2 专属门禁
 
 ### 偏见检查（Bias Check）
@@ -273,7 +331,7 @@ AutoLoop 使用 4 种不同语义的评分概念，不可混用：
 偏见检查通过 = 所有选项均满足上述条件
 ```
 
-**通过标准**：所有选项的偏见分数 < 0.15（差异 ≥ 1.5 分须运行第三次独立评估，以多数结论为准）
+**通过标准**：所有选项的偏见分数 < 0.15（差异 ≥ 1.5 分须运行第三次独立评估，以多数结论为准）。gate-manifest.json 中 bias_check 为 bool 类型（`unit: "bool"`），表示评审 subagent 预计算后写入 `true/false` 到 state.json。
 
 ---
 
@@ -309,7 +367,7 @@ AutoLoop 使用 4 种不同语义的评分概念，不可混用：
 
 用户在 plan 中定义的维度和权重优先于以上默认值。
 
-## T3 专属门禁
+## T5 专属门禁
 
 ### KPI 目标（KPI Target）
 
@@ -322,11 +380,11 @@ AutoLoop 使用 4 种不同语义的评分概念，不可混用：
 通过 = 测量值 达到或优于 plan.md 中设定的目标阈值
 ```
 
-**要求**：plan 必须明确写出 KPI 名称、测量方法和目标阈值（例："API 响应时间 < 200ms"、"覆盖率 ≥ 90%"）。当 KPI 定义缺失时，在 OBSERVE 阶段暂停（进入暂停等待确认状态），要求用户提供 KPI 定义、目标值和测量方法后继续。
+**要求**：plan 必须明确写出 KPI 名称、测量方法和目标阈值（例："API 响应时间 < 200ms"、"覆盖率 ≥ 90%"）。当 KPI 定义缺失（`plan.gates` 中无 `threshold=null` 行带有效 `target`）时，`autoloop-controller.py` 在 **OBSERVE** 阶段**暂停循环**并写入 checkpoint，要求用户补全 KPI 后 `--resume` 继续。
 
 ---
 
-## T4 专属门禁
+## T6 专属门禁
 
 ### 通过率（Pass Rate）
 
@@ -339,7 +397,7 @@ AutoLoop 使用 4 种不同语义的评分概念，不可混用：
 通过率 = 通过质检的内容数 / 总生成数 × 100%
 ```
 
-**通过标准**：≥ 95%
+**通过标准**：≥ 90%（SSOT: gate-manifest.json，T6 Generate）
 
 ### 平均分（Average Score）
 
@@ -356,11 +414,11 @@ AutoLoop 使用 4 种不同语义的评分概念，不可混用：
 
 ---
 
-> T3 迭代任务评分锚点：详见 `references/enterprise-standard.md` 对应维度。
-> T4 生成任务评分锚点：详见 `references/enterprise-standard.md` 对应维度。
+> T5 迭代任务评分锚点：详见 `references/enterprise-standard.md` 对应维度。
+> T6 生成任务评分锚点：详见 `references/enterprise-standard.md` 对应维度。
 ---
 
 
 ---
 
-> 工程类任务门禁（T5/T6/T7）、门禁评估矩阵、T6 复合判定规则、豁免规则见 `references/quality-gates-engineering.md`。
+> 工程类任务门禁（T4/T7/T8）、门禁评估矩阵、T7 复合判定规则、豁免规则见 `references/quality-gates-engineering.md`。

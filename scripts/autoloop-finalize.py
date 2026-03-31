@@ -24,12 +24,18 @@ def load_state(work_dir):
 def extract_plan_summary(state):
     """提取计划摘要。"""
     plan = state.get("plan", {})
+    budget = plan.get("budget", {})
+    meta = state.get("metadata", {})
+    max_r = budget.get("max_rounds")
+    if not max_r:
+        max_r = plan.get("max_iterations", "未知")
+    created = meta.get("created_at") or plan.get("created_at", "未知")
     return {
         "task_id": plan.get("task_id", "未知"),
         "template": plan.get("template", "未知"),
         "goal": plan.get("goal", "未知"),
-        "created_at": plan.get("created_at", "未知"),
-        "max_iterations": plan.get("max_iterations", "未知"),
+        "created_at": created,
+        "max_iterations": max_r,
         "dimensions": plan.get("dimensions", []),
     }
 
@@ -67,7 +73,10 @@ def extract_key_findings(state):
         for f in rnd.get("findings", []):
             key.append({
                 "dimension": f.get("dimension", "—"),
-                "summary": f.get("summary", f.get("description", "—")),
+                "summary": f.get(
+                    "summary",
+                    f.get("description", f.get("content", "—")),
+                ),
                 "source": f.get("source", "—"),
             })
     return key

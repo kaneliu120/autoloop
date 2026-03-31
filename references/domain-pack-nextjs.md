@@ -3,7 +3,7 @@
 ## 适用范围
 
 - 技术栈：Next.js 14+ (App Router) / TypeScript / React 18+ / Tailwind CSS
-- 适用模板：T6 Quality / T7 Optimize
+- 适用模板：T7 Quality / T8 Optimize
 
 ---
 
@@ -68,7 +68,7 @@ grep -rn "export default\|export {" {路径}/app --include="*.tsx" | head -20
 npx tsc --noEmit 2>&1 | tail -5
 ```
 
-### 架构检测（T7）
+### 架构检测（T8）
 
 ```bash
 # Server/Client Component 边界违反
@@ -84,7 +84,7 @@ npx madge --circular {路径}/app 2>/dev/null || echo "madge not installed"
 find {路径}/app -name "layout.tsx" | awk -F/ '{print NF, $0}' | sort -rn | head -5
 ```
 
-### 性能检测（T7）
+### 性能检测（T8）
 
 ```bash
 # 同步调用检测
@@ -103,7 +103,7 @@ grep -rn "'use client'" {路径} --include="*.tsx" -l | xargs grep -l "import.*l
 grep -rn "<img " {路径} --include="*.tsx" | grep -v "next/image\|Image"
 ```
 
-### 稳定性检测（T7）
+### 稳定性检测（T8）
 
 ```bash
 # 健康检查

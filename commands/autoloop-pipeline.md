@@ -13,9 +13,9 @@
 
 预定义 Pipeline 快速选择：
 ```
-A) Research-to-Deliver: T1→T2→T5→T6（调研→对比→交付→审查）
-B) Quality-then-Optimize: T6→T7（审查→优化）
-C) Research-to-Report: T1→T4（调研→批量生成）
+A) Research-to-Deliver: T1→T2→T4→T7（调研→对比→交付→审查）
+B) Quality-then-Optimize: T7→T8（审查→优化）
+C) Research-to-Report: T1→T6（调研→批量生成）
 D) 自定义：手动指定节点序列
 ```
 
@@ -45,11 +45,12 @@ for each node in pipeline:
   2. [Execute] 调度对应模板的 command 执行
      - T1 → /autoloop:research
      - T2 → /autoloop:compare
-     - T3 → /autoloop:iterate
-     - T4 → /autoloop:generate
-     - T5 → /autoloop:deliver
-     - T6 → /autoloop:quality
-     - T7 → /autoloop:optimize
+     - T3 → /autoloop:design
+     - T4 → /autoloop:deliver
+     - T5 → /autoloop:iterate
+     - T6 → /autoloop:generate
+     - T7 → /autoloop:quality
+     - T8 → /autoloop:optimize
 
   3. [Gate Check] 节点完成后检查门禁
      - 全部通过 → 提取输出字段，更新 pipeline-progress.md，继续下一节点
@@ -93,9 +94,9 @@ Pipeline 完成摘要：
 | 上游模板 | 下游模板 | 传递字段 | 说明 |
 |---------|---------|---------|------|
 | T1 | T2 | `key_conclusions` → 候选选项列表 | T1 发现 → T2 对比 |
-| T2 | T5 | `recommendation` → 需求描述 | T2 推荐 → T5 实现 |
-| T5 | T6 | 代码路径 → 扫描目标 | T5 交付 → T6 审查 |
-| T6 | T7 | `remaining_issues` → 优化起点 | T6 遗留 → T7 优化 |
+| T2 | T4 | `recommendation` → 需求描述 | T2 推荐 → T4 实现 |
+| T4 | T7 | 代码路径 → 扫描目标 | T4 交付 → T7 审查 |
+| T7 | T8 | `remaining_issues` → 优化起点 | T7 遗留 → T8 优化 |
 
 ### 手动映射（Pipeline 配置中指定）
 

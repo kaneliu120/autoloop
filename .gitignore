@@ -5,6 +5,18 @@ autoloop-findings.md
 autoloop-results.tsv
 autoloop-state.json
 checkpoint.json
+references/experience-audit.md
 
 # Context
 .context/
+
+# macOS
+.DS_Store
+
+# Python packaging (editable install / misconfigured name)
+*.egg-info/
+build/
+dist/
+
+# Local virtual environment
+.venv/

@@ -45,7 +45,7 @@ from autoloop_kpi import (  # noqa: E402
 )
 
 # 默认轮次从 gate-manifest.json 加载（SSOT），回退到硬编码值
-_FALLBACK_ROUNDS = {"T1": 3, "T2": 2, "T3": 99, "T4": 99, "T5": 7, "T6": 99, "T7": 99}
+_FALLBACK_ROUNDS = {"T1": 3, "T2": 2, "T4": 5, "T5": 99, "T6": 99, "T7": 99, "T8": 99}
 
 # ---------------------------------------------------------------------------
 # 门禁清单加载 — 从 gate-manifest.json（SSOT）读取振荡/停滞阈值
@@ -445,7 +445,7 @@ def _metadata_append_audit_structured(work_dir, record):
 def get_current_scores(state):
     """从 iterations[-1].scores 获取最新评分。
 
-    T3：新轮 add-iteration 后 scores 常为空，ORIENT/停滞窗口用 plan.gates[].current 数值回填 kpi 等维（VERIFY 前仍可对 gap 与历史一致）。
+    T5：新轮 add-iteration 后 scores 常为空，ORIENT/停滞窗口用 plan.gates[].current 数值回填 kpi 等维（VERIFY 前仍可对 gap 与历史一致）。
     """
     iters = state.get("iterations", [])
     if not iters:
@@ -453,7 +453,7 @@ def get_current_scores(state):
     sc = iters[-1].get("scores") or {}
     if sc:
         return sc
-    if get_template(state) != "T3":
+    if get_template(state) != "T5":
         return {}
     merged = {}
     for g in get_gates(state):
@@ -479,19 +479,19 @@ def get_max_rounds(state):
     if max_r > 0:
         return max_r
     tmpl = get_template(state)
-    # T4：parameters.md 约定可按生成单元数 items×2 推导预算，上限为 manifest default_rounds（P-04）
-    if tmpl == "T4":
+    # T6：parameters.md 约定可按生成单元数 items×2 推导预算，上限为 manifest default_rounds（P-04）
+    if tmpl == "T6":
         plan = state.get("plan", {}) or {}
         tp = plan.get("template_params") or {}
         raw_items = plan.get("generation_items", tp.get("items", tp.get("generation_item_count")))
         try:
             n = int(raw_items)
             if n > 0:
-                cap = int(DEFAULT_ROUNDS.get("T4", 99))
+                cap = int(DEFAULT_ROUNDS.get("T6", 99))
                 return min(max(n * 2, 1), cap)
         except (TypeError, ValueError):
             pass
-    # T5 与 delivery-phases.md 七阶段对齐；manifest default_rounds 亦为 7
+    # T4 与 delivery-phases.md 七阶段对齐；manifest default_rounds 亦为 7
     return DEFAULT_ROUNDS.get(tmpl, 5)
 
 
@@ -558,12 +558,12 @@ def detect_stagnation(score_history, gates, template_key=None):
 
     停滞：同一维度连续 N 轮改进低于模板特定阈值（平台期）。
     回归：同一维度连续 N 轮分数下降。
-    T4/T5 不适用。
+    T6/T4 不适用。
     返回: (results, eligible_dims)
         results: [(dim, recent_scores, signal_type), ...]，signal_type 为 'stagnating' | 'regressing'
         eligible_dims: 参与本窗口停滞/回归判定的维度集合（已达标 / KPI 已满足者已排除）
     """
-    if template_key in ("T4", "T5"):
+    if template_key in ("T6", "T4"):
         return [], set()
 
     # "连续 N 轮改善 < 阈值"需要 N+1 个数据点来检查 N 次转换
@@ -608,7 +608,7 @@ def detect_stagnation(score_history, gates, template_key=None):
             elif comp == "==" and current_val == thr:
                 continue
 
-        # T3 KPI 行（threshold null）：与 score/controller 一致，已满足则跳过停滞检测
+        # T5 KPI 行（threshold null）：与 score/controller 一致，已满足则跳过停滞检测
         kpi_gate = None
         for g in (gates or []):
             gd = g.get("dim") or g.get("dimension", "")
@@ -935,7 +935,7 @@ def _maybe_reflect_experience_write(work_dir, state, tmpl):
 
 
 def _t3_kpi_actionable(gates):
-    """T3 至少有一条 KPI 行（threshold null）且已填 target（quality-gates.md）。"""
+    """T5 至少有一条 KPI 行（threshold null）且已填 target（quality-gates.md）。"""
     rows = [g for g in (gates or []) if g.get("threshold") is None]
     if not rows:
         return False
@@ -1097,7 +1097,7 @@ def _observe_report_findings_md(work_dir, state):
 def phase_observe(work_dir, state, round_num):
     """OBSERVE: 输出当前得分 vs 目标，读取经验库推荐。
 
-    返回 (decision, reasons)：decision 为 \"continue\" 或 \"pause\"（T3 缺 KPI 时暂停）。
+    返回 (decision, reasons)：decision 为 \"continue\" 或 \"pause\"（T5 缺 KPI 时暂停）。
     """
     banner(round_num, "OBSERVE", "采集当前状态")
 
@@ -1116,15 +1116,15 @@ def phase_observe(work_dir, state, round_num):
     gates = get_gates(state)
     template = get_template(state)
 
-    if template == "T3" and not _t3_kpi_actionable(gates):
+    if template == "T5" and not _t3_kpi_actionable(gates):
         warn(
-            "T3 未配置可执行 KPI：请在 plan.gates 中为 KPI 行填写 target 与 dim（测量维度键须与 iterations[].scores 一致）。"
+            "T5 未配置可执行 KPI：请在 plan.gates 中为 KPI 行填写 target 与 dim（测量维度键须与 iterations[].scores 一致）。"
         )
         error(
-            "OBSERVE: KPI 未就绪 — 暂停任务（与 quality-gates.md T3「KPI 定义缺失时 OBSERVE 暂停」一致）"
+            "OBSERVE: KPI 未就绪 — 暂停任务（与 quality-gates.md T5「KPI 定义缺失时 OBSERVE 暂停」一致）"
         )
         return "pause", [
-            "T3 缺少 KPI 定义或 target；请补全 plan.gates 后 autoloop-controller.py <work_dir> --resume"
+            "T5 缺少 KPI 定义或 target；请补全 plan.gates 后 autoloop-controller.py <work_dir> --resume"
         ]
 
     # 1. 当前分数 vs 门禁目标
@@ -1242,7 +1242,7 @@ def phase_orient(work_dir, state, round_num):
         thr = g.get("threshold")
         label = g.get("label", dim)
 
-        # T3 / 用户自定义 KPI：threshold 为 None 时用 target 与当前分算差距（对齐 check_gates_passed）
+        # T5 / 用户自定义 KPI：threshold 为 None 时用 target 与当前分算差距（对齐 check_gates_passed）
         if thr is None:
             tgt = g.get("target")
             if tgt is not None and cur is not None:
@@ -1426,7 +1426,7 @@ def phase_act(work_dir, state, round_num, strict=False):
         info("plan.template_params 白名单: {}".format(globs.strip()[:500]))
 
     sup = ""
-    if template in ("T3", "T4", "T5"):
+    if template in ("T5", "T6", "T4"):
         sup = """
         交付类模板建议流程（可与 Superpowers 等技能对齐）:
         brainstorming → writing-plans → subagent-driven-development → TDD → requesting-code-review
@@ -1496,7 +1496,7 @@ def phase_verify(work_dir, state, round_num, strict=False):
                 continue
             dim = gate_result.get("dimension", "")
             value = gate_result.get("value")
-            # T3：kpi_target 在 score 中为汇总布尔，勿覆盖 iterations[].scores 中的数值 KPI
+            # T5：kpi_target 在 score 中为汇总布尔，勿覆盖 iterations[].scores 中的数值 KPI
             if dim == "kpi_target" and isinstance(value, bool):
                 continue
             if dim and value is not None:
@@ -1550,10 +1550,10 @@ def phase_verify(work_dir, state, round_num, strict=False):
                         )
                     break
 
-    # T3：score 对 kpi_target 常返回 bool，不写 iterations[].scores；从 plan.gates 数值回填
-    # 须读 iterations[-1].scores 原文：get_current_scores 在 T3 空 scores 时会用 gate 回填，避免误判「已有 KPI」而跳过写回
+    # T5：score 对 kpi_target 常返回 bool，不写 iterations[].scores；从 plan.gates 数值回填
+    # 须读 iterations[-1].scores 原文：get_current_scores 在 T5 空 scores 时会用 gate 回填，避免误判「已有 KPI」而跳过写回
     state_post = load_state(work_dir)
-    if get_template(state_post) == "T3":
+    if get_template(state_post) == "T5":
         iters = state_post.get("iterations") or []
         raw_sc = (iters[-1].get("scores") or {}) if iters else {}
         kt = raw_sc.get("kpi_target")
@@ -1631,7 +1631,7 @@ def _manifest_stagnation_max_explore(template_key):
 
 
 def _stagnation_max_explore_apply(work_dir, state, stag, decision, reasons):
-    """manifest.stagnation_max_explore：停滞中记录策略切换次数，超限则 pause（T3/T6/T7）。"""
+    """manifest.stagnation_max_explore：停滞中记录策略切换次数，超限则 pause（T5/T7/T8）。"""
     tpl = get_template(state)
     limit = _manifest_stagnation_max_explore(tpl)
     if not limit:
@@ -1762,19 +1762,19 @@ def phase_evolve(work_dir, state, round_num, strict=False):
     elif all_passed and gate_details and tsv_fc:
         reasons.append("门禁数值已通过，但 TSV fail-closed 阻止成功终止")
 
-    # 2. 预算耗尽（T5 + linear_phases 且交付未标记完成时暂停，避免仅靠 OODA 轮次误停）
+    # 2. 预算耗尽（T4 + linear_phases 且交付未标记完成时暂停，避免仅靠 OODA 轮次误停）
     if round_num >= max_rounds:
         tmpl = get_template(state)
         plan = state.get("plan", {})
         linear_pause = (
-            tmpl == "T5"
+            tmpl == "T4"
             and plan.get("template_mode") == "linear_phases"
             and not plan.get("linear_delivery_complete", False)
             and not all_passed
         )
         if linear_pause:
             reasons.append(
-                "已达最大轮次 {}，但 T5+template_mode=linear_phases 且 linear_delivery_complete=false — "
+                "已达最大轮次 {}，但 T4+template_mode=linear_phases 且 linear_delivery_complete=false — "
                 "暂停（请推进交付阶段后 autoloop-state.py update … plan.linear_delivery_complete true，"
                 "或提高 plan.budget.max_rounds）".format(max_rounds)
             )
@@ -1802,7 +1802,7 @@ def phase_evolve(work_dir, state, round_num, strict=False):
             reasons.append(f"停滞: {', '.join(d for d, _, _ in stagnating)}")
             stagnating_dims = {d for d, _, _ in stagnating}
             # loop-protocol：连续多轮「所有可监控维度」均无进展才算无法继续
-            # 仅 1 个可监控维度（常见 T3 仅 kpi_target）时，eligible==stagnating 恒成立，不应判「全体停滞」终止
+            # 仅 1 个可监控维度（常见 T5 仅 kpi_target）时，eligible==stagnating 恒成立，不应判「全体停滞」终止
             if (
                 decision == "continue"
                 and eligible_stag_dims
@@ -2110,7 +2110,7 @@ def run_loop(
                     print(f"{'=' * 60}{C_RESET}\n")
                     checkpoint["pause_state"] = {
                         "reason": "; ".join(obs_reasons),
-                        "required_confirmation": "补全 T3 KPI 后继续",
+                        "required_confirmation": "补全 T5 KPI 后继续",
                         "paused_at": now_iso(),
                     }
                     save_checkpoint(work_dir, checkpoint)

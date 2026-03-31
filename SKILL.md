@@ -3,7 +3,7 @@ name: autoloop
 description: >
   Autonomous iteration engine combining OODA loop with subagent parallel execution
   and quality-gated convergence. 7 task templates: research (T1), compare (T2),
-  iterate (T3), generate (T4), deliver (T5), quality (T6), optimize (T7).
+  iterate (T5), generate (T6), deliver (T4), quality (T7), optimize (T8).
   Drives multi-round improvement cycles until measurable quality targets are met.
   Use when tasks require systematic multi-step iteration, quality-gated delivery,
   or multi-dimensional optimization with evidence-based scoring.
@@ -30,7 +30,7 @@ description: >
 
 ## Step 0: Initialize
 
-1. Determine task type (T1-T7) using the routing table in Step 1.
+1. Determine task type (T1-T8) using the routing table in Step 1.
 2. If no `autoloop-state.json` exists in the work directory:
    ```bash
    python3 ${SKILL_DIR}/scripts/autoloop-init.py <work_dir> <template> "<goal>"
@@ -49,15 +49,16 @@ Match the user request to a template using trigger words and intent:
 |----------|--------------|--------|
 | T1 Research | research, survey, landscape, 全景调研, 深度调研 | Systematic multi-source knowledge gathering |
 | T2 Compare | compare, evaluate options, 对比, 选型, which is better | Evidence-based decision among N candidates |
-| T3 Iterate | iterate until, improve, optimize KPI, 迭代优化, 达标 | KPI-driven repeated refinement toward a target |
-| T4 Generate | generate batch, produce N items, 批量生成 | High-volume same-type content production |
-| T5 Deliver | deliver feature, end-to-end, ship, 全流程交付 | Requirements through production deployment |
-| T6 Quality | quality review, enterprise grade, 企业级, 代码审查 | Multi-dimension code/system quality elevation |
-| T7 Optimize | optimize, architecture, performance, stability, 系统诊断 | Architecture / performance / stability improvement（与 T3 区分：T3 以**用户 KPI 数值**收敛为主；T7 以**系统多维度工程质量/架构**为主，见 `quality-gates.md` T6/T7） |
+| T3 Product Design | product design, design doc, 产品设计, 方案文档 | Product design and implementation specification |
+| T4 Deliver | deliver feature, end-to-end, ship, 全流程交付 | Requirements through production deployment |
+| T5 Iterate | iterate until, improve, optimize KPI, 迭代优化, 达标 | KPI-driven repeated refinement toward a target |
+| T6 Generate | generate batch, produce N items, 批量生成 | High-volume same-type content production |
+| T7 Quality | quality review, enterprise grade, 企业级, 代码审查 | Multi-dimension code/system quality elevation |
+| T8 Optimize | optimize, architecture, performance, stability, 系统诊断 | Architecture / performance / stability improvement（与 T5 区分：T5 以**用户 KPI 数值**收敛为主；T8 以**系统多维度工程质量/架构**为主，见 `quality-gates.md` T7/T8） |
 
 **Confidence routing**: When trigger words are ambiguous, apply the confidence matching rules in `references/parameters.md` routing section. If confidence is below threshold, ask the user to clarify.
 
-**Multi-template chains**: Use `/autoloop:pipeline` for sequential template execution (e.g., T1 -> T2 -> T5). Detail: `commands/autoloop-pipeline.md`.
+**Multi-template chains**: Use `/autoloop:pipeline` for sequential template execution (e.g., T1 -> T2 -> T4). Detail: `commands/autoloop-pipeline.md`.
 
 ---
 
@@ -67,7 +68,7 @@ Match the user request to a template using trigger words and intent:
 2. Required fields: goal, template, scope, quality gate dimensions, max rounds, budget.
 3. **Gate thresholds (SSOT)** come exclusively from `references/gate-manifest.json` — the mandatory numeric threshold source of truth for all gate pass/fail decisions. Use `references/quality-gates.md` for scoring semantics, confidence/fail-closed rules, and methodology — not as the numeric threshold source.
 4. Write the plan to `autoloop-plan.md` in the work directory.
-5. For T5 Deliver: phase gates follow `references/delivery-phases.md`; phase 5 (acceptance) requires user confirmation. Optional SSOT: `plan.template_mode: linear_phases` ties EVOLVE budget to `plan.linear_delivery_complete` (see `references/loop-data-schema.md`).
+5. For T4 Deliver: phase gates follow `references/delivery-phases.md`; phase 5 (acceptance) requires user confirmation. Optional SSOT: `plan.template_mode: linear_phases` ties EVOLVE budget to `plan.linear_delivery_complete` (see `references/loop-data-schema.md`).
 
 Detail: `commands/autoloop-plan.md`.
 
@@ -77,7 +78,7 @@ Detail: `commands/autoloop-plan.md`.
 
 Run the OODA+ loop. Each iteration passes through 8 stages in order.
 
-**Layering**: AutoLoop owns round progression, gates, TSV variance fail-closed (via EVOLVE), and termination. Implementation work inside ACT can follow Superpowers-style flows (brainstorm → plan → subagents → TDD → review) or your stack’s equivalent — see controller ACT prompts for T3/T4/T5 hints.
+**Layering**: AutoLoop owns round progression, gates, TSV variance fail-closed (via EVOLVE), and termination. Implementation work inside ACT can follow Superpowers-style flows (brainstorm → plan → subagents → TDD → review) or your stack’s equivalent — see controller ACT prompts for T5/T6/T4 hints.
 
 ### Per-Stage Responsibilities
 
@@ -121,11 +122,12 @@ python3 ${SKILL_DIR}/scripts/autoloop-validate.py <work_dir>
 |----------|---------------|-----------------|--------|
 | T1 Research | **General research entry**. For market/industry topics, upgrade automatically to a **top-tier market research report** with fixed core chapters, per-chapter data+analysis+conclusion, optional direction modules (e.g. industry + AI job substitution), and a **master-agent / subagent protocol**: the master agent splits chapters, dispatches evidence collection, integrates chapter evidence packets, resolves conflicts, and writes the only final report; OODA rounds optional for gate convergence | coverage, credibility, consistency, completeness | `commands/autoloop-research.md`, `references/t1-formal-report.md` §0 |
 | T2 Compare | Independent option-analyzer per candidate | coverage, credibility, bias, sensitivity | `commands/autoloop-compare.md` |
-| T3 Iterate | KPI-driven with baseline measurement | user-defined KPI target | `commands/autoloop-iterate.md` |
-| T4 Generate | Batch with per-unit QC, auto-retry on low score | pass_rate, avg_score | `commands/autoloop-generate.md` |
-| T5 Deliver | 5-phase (Phase 1-5) with user gate at phase 5 | **Machine dims** (manifest): `syntax_errors`, `p1_p2_issues`, `service_health`, `user_acceptance` — 文档口语可称 syntax / P1-P2 / 服务健康 / 验收 | `commands/autoloop-deliver.md` |
-| T6 Quality | 3-dimension unified review framework | security, reliability, maintainability | `commands/autoloop-quality.md` |
-| T7 Optimize | 3-dimension with checkpoint every 5 fixes | architecture, performance, stability | `commands/autoloop-optimize.md` |
+| T3 Product Design | Product design and specification document | design completeness, feasibility | `commands/autoloop-design.md` |
+| T4 Deliver | 5-phase (Phase 1-5) with user gate at phase 5 | **Machine dims** (manifest): `syntax_errors`, `p1_p2_issues`, `service_health`, `user_acceptance` — 文档口语可称 syntax / P1-P2 / 服务健康 / 验收 | `commands/autoloop-deliver.md` |
+| T5 Iterate | KPI-driven with baseline measurement | user-defined KPI target | `commands/autoloop-iterate.md` |
+| T6 Generate | Batch with per-unit QC, auto-retry on low score | pass_rate, avg_score | `commands/autoloop-generate.md` |
+| T7 Quality | 3-dimension unified review framework | security, reliability, maintainability | `commands/autoloop-quality.md` |
+| T8 Optimize | 3-dimension with checkpoint every 5 fixes | architecture, performance, stability | `commands/autoloop-optimize.md` |
 
 ### Per-Iteration Output Requirements
 
@@ -214,12 +216,12 @@ Dispatch serially when task B requires task A output:
 |-------|---------------|-------------------|
 | planner | Task decomposition, architecture design | Task start, complex feature planning |
 | researcher | Web research, competitive analysis, data collection | T1/T2 throughout |
-| backend-dev | Backend implementation (stack per plan) | T5 phase 1, T6/T7 fixes |
-| frontend-dev | Frontend implementation (stack per plan) | T5 phase 1, T6/T7 fixes |
-| db-migrator | Database migrations, SQL operations | T5 phase 1 (when DB changes needed) |
-| code-reviewer | Security + quality review | T5 phase 2, T6 every round, T7 every 5 fixes |
-| generator | Batch content production | T4 throughout |
-| verifier | Test execution, production acceptance | T5 phases 3+5, T6/T7 post-fix |
+| backend-dev | Backend implementation (stack per plan) | T4 phase 1, T7/T8 fixes |
+| frontend-dev | Frontend implementation (stack per plan) | T4 phase 1, T7/T8 fixes |
+| db-migrator | Database migrations, SQL operations | T4 phase 1 (when DB changes needed) |
+| code-reviewer | Security + quality review | T4 phase 2, T7 every round, T8 every 5 fixes |
+| generator | Batch content production | T6 throughout |
+| verifier | Test execution, production acceptance | T4 phases 3+5, T7/T8 post-fix |
 
 ### Subagent Context Requirements
 
@@ -248,7 +250,7 @@ Detail: `references/agent-dispatch.md`.
 | `autoloop-results.tsv` | Structured iteration log (15 columns per `references/loop-data-schema.md` TSV schema) | VERIFY stage |
 | `checkpoint.json` | Session recovery state | Every stage |
 | `references/experience-registry.md` | Cross-task strategy memory | REFLECT stage |
-| `references/domain-pack-*.md` | Technology-specific gate weights and detection commands (FastAPI, Next.js) | Task start (T6/T7) |
+| `references/domain-pack-*.md` | Technology-specific gate weights and detection commands (FastAPI, Next.js) | Task start (T7/T8) |
 
 **Cross-File Primary Keys**: Four files share unified keys (`iteration` + `strategy_id` + `dimension` + `problem_id`) for traceability. Detail: `references/loop-data-schema.md` primary key specification.
 
@@ -274,9 +276,9 @@ Detail: `references/agent-dispatch.md`.
 When operating within a project that has a `CLAUDE.md`:
 
 - AutoLoop serves as the Orchestrator-First execution engine defined in CLAUDE.md
-- T5 Deliver maps directly to the CLAUDE.md mandatory development flow (phases 0-5)
+- T4 Deliver maps directly to the CLAUDE.md mandatory development flow (phases 0-5)
 - All engineering decisions follow the project CLAUDE.md code conventions
-- Technology stack parameters are collected in `autoloop-plan.md` and respected by T5/T6/T7 subagents
+- Technology stack parameters are collected in `autoloop-plan.md` and respected by T4/T7/T8 subagents
 
 ---
 
@@ -307,10 +309,10 @@ MCP is an enhancement layer; file-based mode remains the default.
 /autoloop:plan     -> Guided plan configuration
 /autoloop:research -> T1 Research
 /autoloop:compare  -> T2 Compare
-/autoloop:iterate  -> T3 Iterate
-/autoloop:generate -> T4 Generate
-/autoloop:deliver  -> T5 Deliver
-/autoloop:quality  -> T6 Quality
-/autoloop:optimize -> T7 Optimize
-/autoloop:pipeline -> Multi-template chain (e.g., T1 -> T2 -> T5)
+/autoloop:iterate  -> T5 Iterate
+/autoloop:generate -> T6 Generate
+/autoloop:deliver  -> T4 Deliver
+/autoloop:quality  -> T7 Quality
+/autoloop:optimize -> T8 Optimize
+/autoloop:pipeline -> Multi-template chain (e.g., T1 -> T2 -> T4)
 ```

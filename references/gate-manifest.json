@@ -19,20 +19,7 @@
         {"dimension": "sensitivity", "threshold": 1, "unit": "bool", "type": "soft", "comparator": "=="}
       ]
     },
-    "T3": {
-      "name": "Iterate",
-      "gates": [
-        {"dimension": "kpi_target", "threshold": null, "unit": "user_defined", "type": "hard", "comparator": ">=", "note": "threshold set in plan"}
-      ]
-    },
     "T4": {
-      "name": "Generate",
-      "gates": [
-        {"dimension": "pass_rate", "threshold": 90, "unit": "%", "type": "hard", "comparator": ">="},
-        {"dimension": "avg_score", "threshold": 7, "unit": "/10", "type": "hard", "comparator": ">="}
-      ]
-    },
-    "T5": {
       "name": "Deliver",
       "gates": [
         {"dimension": "syntax_errors", "threshold": 0, "unit": "count", "type": "hard", "comparator": "=="},
@@ -41,7 +28,20 @@
         {"dimension": "user_acceptance", "threshold": 1, "unit": "bool", "type": "hard", "comparator": "=="}
       ]
     },
+    "T5": {
+      "name": "Iterate",
+      "gates": [
+        {"dimension": "kpi_target", "threshold": null, "unit": "user_defined", "type": "hard", "comparator": ">=", "note": "threshold set in plan"}
+      ]
+    },
     "T6": {
+      "name": "Generate",
+      "gates": [
+        {"dimension": "pass_rate", "threshold": 90, "unit": "%", "type": "hard", "comparator": ">="},
+        {"dimension": "avg_score", "threshold": 7, "unit": "/10", "type": "hard", "comparator": ">="}
+      ]
+    },
+    "T7": {
       "name": "Quality",
       "gates": [
         {"dimension": "security", "threshold": 9, "unit": "/10", "type": "hard", "comparator": ">="},
@@ -53,7 +53,7 @@
         {"dimension": "maintainability_p2", "threshold": 5, "unit": "count", "type": "soft", "comparator": "<="}
       ]
     },
-    "T7": {
+    "T8": {
       "name": "Optimize",
       "gates": [
         {"dimension": "architecture", "threshold": 8, "unit": "/10", "type": "hard", "comparator": ">="},
@@ -65,15 +65,15 @@
   "stagnation_thresholds": {
     "T1": {"value": 3, "unit": "%", "type": "relative"},
     "T2": {"value": 3, "unit": "%", "type": "relative"},
-    "T3": {"value": 2, "unit": "%", "type": "relative"},
-    "T6": {"value": 0.3, "unit": "points", "type": "absolute"},
-    "T7": {"value": 0.5, "unit": "points", "type": "absolute"}
+    "T5": {"value": 2, "unit": "%", "type": "relative"},
+    "T7": {"value": 0.3, "unit": "points", "type": "absolute"},
+    "T8": {"value": 0.5, "unit": "points", "type": "absolute"}
   },
   "stagnation_consecutive": 2,
   "stagnation_max_explore": {
-    "T3": 3,
-    "T6": 2,
-    "T7": 2
+    "T5": 3,
+    "T7": 2,
+    "T8": 2
   },
   "oscillation": {
     "window": 3,
@@ -86,7 +86,7 @@
   "gate_status_enum": ["达标", "未达标", "豁免"],
   "tsv_status_enum": ["通过", "未通过", "待检查", "待审查"],
   "default_rounds": {
-    "T1": 3, "T2": 2, "T3": 99, "T4": 99,
-    "T5": 5, "T6": 99, "T7": 99
+    "T1": 3, "T2": 2, "T4": 5, "T5": 99,
+    "T6": 99, "T7": 99, "T8": 99
   }
 }

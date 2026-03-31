@@ -18,16 +18,16 @@
 |--------|------|----|---------|------|
 | `default_rounds.T1` | T1 Research | 3 轮 | T1 调研任务 | 调研类任务默认执行 3 轮，确保信息充分覆盖 |
 | `default_rounds.T2` | T2 Compare | 2 轮 | T2 对比任务 | 对比类任务完成两轮即可收敛结论 |
-| `default_rounds.T3` | T3 Iterate | **99**（SSOT: `gate-manifest.json`） | T3 迭代任务 | 数值以 manifest 为准；视为安全上限，可用 `plan.budget.max_rounds` 覆盖；终止仍以 KPI/门禁为主 |
-| `default_rounds.T4` | T4 Generate | 99 轮（门禁终止，**上限**） | T4 批量生成任务 | 以 pass_rate + avg_score 门禁为终止条件；未设 `plan.budget.max_rounds` 时控制器可按 `plan.generation_items` 或 `template_params.items` 取 **`min(items×2, 99)`** 作为默认轮次（P-04） |
-| `default_rounds.T5` | T5 Deliver | **5**（OODA 轮次预算）| T5 交付任务 | 与 `delivery-phases.md` 五段交付（Phase 1-5）对齐的**完整 OODA 轮次**上限。`plan.budget.max_rounds` 可覆盖。 |
-| `default_rounds.T6` | T6 Quality | **99**（SSOT: `gate-manifest.json`） | T6 质量评审任务 | 同 T3：manifest 为权威；可覆盖 max_rounds；门禁终止优先 |
-| `default_rounds.T7` | T7 Optimize | **99**（SSOT: `gate-manifest.json`） | T7 优化任务 | 同上 |
+| `default_rounds.T5` | T5 Iterate | **99**（SSOT: `gate-manifest.json`） | T5 迭代任务 | 数值以 manifest 为准；视为安全上限，可用 `plan.budget.max_rounds` 覆盖；终止仍以 KPI/门禁为主 |
+| `default_rounds.T6` | T6 Generate | 99 轮（门禁终止，**上限**） | T6 批量生成任务 | 以 pass_rate + avg_score 门禁为终止条件；未设 `plan.budget.max_rounds` 时控制器可按 `plan.generation_items` 或 `template_params.items` 取 **`min(items×2, 99)`** 作为默认轮次（P-04） |
+| `default_rounds.T4` | T4 Deliver | **5**（OODA 轮次预算）| T4 交付任务 | 与 `delivery-phases.md` 五段交付（Phase 1-5）对齐的**完整 OODA 轮次**上限。`plan.budget.max_rounds` 可覆盖。 |
+| `default_rounds.T7` | T7 Quality | **99**（SSOT: `gate-manifest.json`） | T7 质量评审任务 | 同 T5：manifest 为权威；可覆盖 max_rounds；门禁终止优先 |
+| `default_rounds.T8` | T8 Optimize | **99**（SSOT: `gate-manifest.json`） | T8 优化任务 | 同上 |
 
 **使用约定**：
 - 向导在 Step 4/5 展示对应模板的默认值，用户可在计划阶段调整
 - `items × 2` 中的 `items` 指 plan.md 中定义的生成单元总数
-- T3/T6/T7 的轮次上限以 `references/gate-manifest.json` 的 `default_rounds` 为准（当前为 **99**）；文档表中的「无上限」已废弃，避免与实现冲突
+- T5/T7/T8 的轮次上限以 `references/gate-manifest.json` 的 `default_rounds` 为准（当前为 **99**）；文档表中的「无上限」已废弃，避免与实现冲突
 
 ---
 
@@ -136,22 +136,22 @@
 
 | 参数名 | 模板 | 值 | 说明 |
 |--------|------|----|------|
-| `stagnation.T3.threshold` | T3 Iterate | < 2%（相对值） | KPI 改善幅度低于当前值的 2% 视为停滞 |
-| `stagnation.T3.max_explore` | T3 Iterate | 3 轮 | 停滞后最多尝试 3 种新策略 |
-| `stagnation.T6.threshold` | T6 Quality | < 0.3 分（绝对值） | 安全/可靠/可维护任一维度改善 < 0.3 分视为停滞 |
-| `stagnation.T6.max_explore` | T6 Quality | 2 轮 | 停滞后最多尝试 2 种新策略 |
-| `stagnation.T7.threshold` | T7 Optimize | < 0.5 分（绝对值） | 架构/性能/稳定任一维度改善 < 0.5 分视为停滞 |
-| `stagnation.T7.max_explore` | T7 Optimize | 2 轮 | 停滞后最多尝试 2 种新策略 |
+| `stagnation.T5.threshold` | T5 Iterate | < 2%（相对值） | KPI 改善幅度低于当前值的 2% 视为停滞 |
+| `stagnation.T5.max_explore` | T5 Iterate | 3 轮 | 停滞后最多尝试 3 种新策略 |
+| `stagnation.T7.threshold` | T7 Quality | < 0.3 分（绝对值） | 安全/可靠/可维护任一维度改善 < 0.3 分视为停滞 |
+| `stagnation.T7.max_explore` | T7 Quality | 2 轮 | 停滞后最多尝试 2 种新策略 |
+| `stagnation.T8.threshold` | T8 Optimize | < 0.5 分（绝对值） | 架构/性能/稳定任一维度改善 < 0.5 分视为停滞 |
+| `stagnation.T8.max_explore` | T8 Optimize | 2 轮 | 停滞后最多尝试 2 种新策略 |
 
-**实现状态（`max_explore`）**：`references/gate-manifest.json` 的 **`stagnation_max_explore`**（T3/T6/T7）由 `autoloop-controller.py` `phase_evolve` 消费：在仍有 **stagnating** 信号时，若本轮与上轮 `iterations[].strategy.strategy_id` 不同则递增 `metadata.stagnation_explore_switches`；达到上限且决策仍为 `continue` 时改为 **`pause`**。无停滞时计数清零。与表格中 `stagnation.T3.max_explore` 等语义对齐；未在 manifest 配置的模板不适用。
+**实现状态（`max_explore`）**：`references/gate-manifest.json` 的 **`stagnation_max_explore`**（T5/T7/T8）由 `autoloop-controller.py` `phase_evolve` 消费：在仍有 **stagnating** 信号时，若本轮与上轮 `iterations[].strategy.strategy_id` 不同则递增 `metadata.stagnation_explore_switches`；达到上限且决策仍为 `continue` 时改为 **`pause`**。无停滞时计数清零。与表格中 `stagnation.T5.max_explore` 等语义对齐；未在 manifest 配置的模板不适用。
 
 **注**：T1/T2 使用通用停滞阈值 `evolution.switch.improvement_threshold`（< 3%），因为调研类任务的停滞特征与迭代优化类不同。
 
-### 6.1.1 T3：`get_current_scores` 与停滞历史（实现约定）
+### 6.1.1 T5：`get_current_scores` 与停滞历史（实现约定）
 
 > 与 `scripts/autoloop-controller.py` 行为对齐；避免 ORIENT 与 EVOLVE 误判。
 
-- **`get_current_scores(state)`**（T3）：若 `iterations[-1].scores` 为空，可用 **`plan.gates[].current` 的数值** 回填展示用当前分（如 `kpi_target`），供 ORIENT 差距表与部分启发式逻辑使用。
+- **`get_current_scores(state)`**（T5）：若 `iterations[-1].scores` 为空，可用 **`plan.gates[].current` 的数值** 回填展示用当前分（如 `kpi_target`），供 ORIENT 差距表与部分启发式逻辑使用。
 - **`get_score_history(state)`**（停滞/振荡窗口）：仅串联 **`iterations[].scores` 非空** 的轮次；**不包含**上述「空轮次 + gate 回填」的虚拟点。故 T3 新轮在 VERIFY 写回前，停滞序列仍以上一轮及之前的 SSOT 分数为准。
 
 ### 6.2 统一停滞状态机
@@ -179,11 +179,11 @@
 |--------|----|---------|
 | `default_rounds.T1` | 3 轮 | 迭代控制 |
 | `default_rounds.T2` | 2 轮 | 迭代控制 |
-| `default_rounds.T3` | 99（见 `gate-manifest.json`） | 迭代控制 |
-| `default_rounds.T4` | 99 轮（门禁终止） | 迭代控制 |
-| `default_rounds.T5` | **5 轮**（`gate-manifest.json` SSOT，与交付阶段文档对齐）| 迭代控制；`plan.template_mode=linear_phases` 时另有暂停语义（见 `autoloop-controller`） |
-| `default_rounds.T6` | 99（见 `gate-manifest.json`） | 迭代控制 |
+| `default_rounds.T5` | 99（见 `gate-manifest.json`） | 迭代控制 |
+| `default_rounds.T6` | 99 轮（门禁终止） | 迭代控制 |
+| `default_rounds.T4` | **5 轮**（`gate-manifest.json` SSOT，与交付阶段文档对齐）| 迭代控制；`plan.template_mode=linear_phases` 时另有暂停语义（见 `autoloop-controller`） |
 | `default_rounds.T7` | 99（见 `gate-manifest.json`） | 迭代控制 |
+| `default_rounds.T8` | 99（见 `gate-manifest.json`） | 迭代控制 |
 | `evolution.expand.budget_threshold` | ≥ 30% | 进化触发 |
 | `evolution.expand.dimension_ceiling` | ≤ 初始 × 1.5 | 进化触发 / 扩展上限 |
 | `evolution.narrow.budget_consumed` | ≥ 70% | 进化触发 |
@@ -196,12 +196,12 @@
 | `flow.rollback.max_per_phase` | 2 次 | 流程回退 |
 | `flow.rollback.phase2_exception` | 3 轮 | 流程回退 |
 | `verification.conflict.score_diff` | > 2 | 矛盾解决 |
-| `stagnation.T3.threshold` | < 2%（相对值） | 停滞检测 |
-| `stagnation.T3.max_explore` | 3 轮 | 停滞检测 |
-| `stagnation.T6.threshold` | < 0.3 分（绝对值） | 停滞检测 |
-| `stagnation.T6.max_explore` | 2 轮 | 停滞检测 |
-| `stagnation.T7.threshold` | < 0.5 分（绝对值） | 停滞检测 |
+| `stagnation.T5.threshold` | < 2%（相对值） | 停滞检测 |
+| `stagnation.T5.max_explore` | 3 轮 | 停滞检测 |
+| `stagnation.T7.threshold` | < 0.3 分（绝对值） | 停滞检测 |
 | `stagnation.T7.max_explore` | 2 轮 | 停滞检测 |
+| `stagnation.T8.threshold` | < 0.5 分（绝对值） | 停滞检测 |
+| `stagnation.T8.max_explore` | 2 轮 | 停滞检测 |
 | `oscillation.window` | 3 轮 | 振荡检测 |
 | `oscillation.band` | ±0.5 分 | 振荡检测 |
 | `regression.threshold` | 跌破门禁阈值 | 回归检测 |

@@ -17,15 +17,40 @@ SCRIPTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 mcp = FastMCP("autoloop", instructions="AutoLoop 自主迭代引擎的确定性工具集。提供质量门禁计算、TSV 校验、跨文件校验等功能。")
 
 
+def _default_mcp_timeout() -> int:
+    raw = os.environ.get("AUTOLOOP_MCP_SCRIPT_TIMEOUT", "30").strip()
+    try:
+        n = int(raw, 10)
+        return max(1, min(n, 3600))
+    except ValueError:
+        return 30
+
+
+def _script_timeout_seconds(script_name: str) -> int:
+    """validate 与 controller 子进程对齐，默认放宽到 300s（大仓库/CI）。"""
+    if script_name == "autoloop-validate.py":
+        raw = os.environ.get("AUTOLOOP_MCP_VALIDATE_TIMEOUT", "300").strip()
+        try:
+            n = int(raw, 10)
+            return max(1, min(n, 3600))
+        except ValueError:
+            return 300
+    return _default_mcp_timeout()
+
+
 def _run_script(script_name: str, args: list[str]) -> str:
     """执行 scripts/ 目录下的 Python 脚本，返回 stdout"""
     script_path = os.path.join(SCRIPTS_DIR, script_name)
+    timeout_sec = _script_timeout_seconds(script_name)
     if not os.path.exists(script_path):
-        return json.dumps({"error": f"脚本不存在: {script_path}"})
+        return json.dumps({
+            "success": False,
+            "error": f"脚本不存在: {script_path}",
+        })
     try:
         result = subprocess.run(
             [sys.executable, script_path] + args,
-            capture_output=True, text=True, timeout=30
+            capture_output=True, text=True, timeout=timeout_sec
         )
         output = result.stdout.strip()
         if result.returncode != 0:
@@ -33,9 +58,17 @@ def _run_script(script_name: str, args: list[str]) -> str:
             return json.dumps({"success": False, "output": output, "error": error})
         return json.dumps({"success": True, "output": output})
     except subprocess.TimeoutExpired:
-        return json.dumps({"error": "脚本执行超时（30s）"})
+        hint = (
+            "AUTOLOOP_MCP_VALIDATE_TIMEOUT"
+            if script_name == "autoloop-validate.py"
+            else "AUTOLOOP_MCP_SCRIPT_TIMEOUT"
+        )
+        return json.dumps({
+            "success": False,
+            "error": f"脚本执行超时（{timeout_sec}s，可用 {hint} 调整）",
+        })
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return json.dumps({"success": False, "error": str(e)})
 
 
 @mcp.tool()
@@ -44,7 +77,7 @@ def autoloop_init(work_dir: str, template: str, goal: str) -> str:
 
     Args:
         work_dir: 工作目录路径
-        template: 模板类型（T1-T7）
+        template: 模板类型（T1-T8）
         goal: 一句话任务目标
     """
     return _run_script("autoloop-init.py", [work_dir, template, goal])
@@ -52,11 +85,14 @@ def autoloop_init(work_dir: str, template: str, goal: str) -> str:
 
 @mcp.tool()
 def autoloop_score(findings_path: str, json_output: bool = True) -> str:
-    """计算质量门禁得分（覆盖率、可信度、一致性、完整性）
+    """运行 autoloop-score：对工作目录或 autoloop-state.json 路径评分。
+
+    门禁维度与阈值由 `references/gate-manifest.json`（SSOT）及当前 `plan.template`
+    决定，覆盖 T1–T7（非仅 T1 四维 findings 口径）。
 
     Args:
-        findings_path: autoloop-findings.md 文件路径
-        json_output: 是否输出 JSON 格式（默认 True）
+        findings_path: 工作目录路径，或 `autoloop-state.json` / `autoloop-findings.md` 文件路径
+        json_output: 为 True 时附加 `--json`，输出结构化门禁结果
     """
     args = [findings_path]
     if json_output:
@@ -147,7 +183,7 @@ def autoloop_experience(work_dir: str, command: str, args: str = "") -> str:
     Args:
         work_dir: 工作目录路径
         command: 操作命令 - query|write|list
-        args: 命令参数（空格分隔），例如 query: '--template T1 --tags web,api'；write: '--strategy-id S01-xxx --effect 保持 --score 8'；list: '--json'（可选）
+        args: 命令参数（空格分隔），例如 query: '--template T1 --tags web,api'（默认不含「观察」策略；需含观察加时加 '--include-observation'）；write: '--strategy-id S01-xxx --effect 保持 --score 0.5'（--score 为 **delta** 变化量，非绝对分；可选 '--mechanism "…"'）；list: '--json'（可选）
     """
     cmd_args = [work_dir, command]
     if args:
@@ -171,15 +207,30 @@ def autoloop_finalize(work_dir: str, json_output: bool = False) -> str:
 
 
 @mcp.tool()
-def autoloop_controller(work_dir: str, mode: str = "run") -> str:
+def autoloop_controller(
+    work_dir: str,
+    mode: str = "run",
+    template: str = "",
+    goal: str = "",
+) -> str:
     """主循环控制器 — init/run/resume/status
 
     Args:
         work_dir: 工作目录路径
-        mode: 运行模式 - run（默认，启动/继续循环）| init（初始化，需配合 template/goal）| resume（从暂停恢复）| status（查看状态）
+        mode: 运行模式 - run（默认，启动/继续循环）| init（须传 template）| resume（从暂停恢复）| status（查看状态）
+        template: mode=init 时必填，如 T1、T2
+        goal: mode=init 时可选的一行任务目标
     """
     if mode == "init":
-        return _run_script("autoloop-controller.py", [work_dir, "--init"])
+        if not template.strip():
+            return json.dumps({
+                "success": False,
+                "error": "mode=init 时必须提供 template（例如 T1、T5）",
+            })
+        cmd = [work_dir, "--init", "--template", template.strip()]
+        if goal.strip():
+            cmd.extend(["--goal", goal.strip()])
+        return _run_script("autoloop-controller.py", cmd)
     elif mode == "resume":
         return _run_script("autoloop-controller.py", [work_dir, "--resume"])
     elif mode == "status":

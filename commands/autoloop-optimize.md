@@ -1,13 +1,13 @@
 ---
 name: autoloop-optimize
 description: >
-  AutoLoop T7: 架构/性能/稳定性优化模板。三维度并行全面诊断，
+  AutoLoop T8: 架构/性能/稳定性优化模板。三维度并行全面诊断，
   跨维度协同修复（一个修复改善多个维度），每 5 个修复 checkpoint 重新评分。
-  目标：达到 references/quality-gates.md T7 门禁矩阵要求。
+  目标：达到 references/quality-gates.md T8 门禁矩阵要求。
   触发：/autoloop:optimize 或任何需要系统级优化的任务。
 ---
 
-# AutoLoop T7: Optimize — 架构/性能/稳定性优化
+# AutoLoop T8: Optimize — 架构/性能/稳定性优化
 
 ## 执行前提
 
@@ -48,9 +48,9 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 ## 三维度评分标准
 
 > **评分标准和扣分规则完整定义见 `references/enterprise-standard.md`。**
-> T7 诊断和评分必须覆盖 enterprise-standard.md 中的所有检查项和扣分映射，不得自定义缩水版。
+> T8 诊断和评分必须覆盖 enterprise-standard.md 中的所有检查项和扣分映射，不得自定义缩水版。
 
-**目标分数**：质量门禁阈值见 `references/quality-gates.md` T7 行（架构、性能、稳定性各维度分数目标）。
+**目标分数**：质量门禁阈值见 `references/quality-gates.md` T8 行（架构、性能、稳定性各维度分数目标）。
 
 ---
 
@@ -454,10 +454,10 @@ Checkpoint（已完成 {N} 个修复）
 
 ## 终止条件
 
-达标判定见 `references/quality-gates.md` T7 行。
+达标判定见 `references/quality-gates.md` T8 行。
 
 ```
-全部达标（目标值以 quality-gates-engineering.md T7 行为准）：
+全部达标（目标值以 quality-gates-engineering.md T8 行为准）：
   架构 {N}/10 ≥ 目标 ✓
   性能 {N}/10 ≥ 目标 ✓
   稳定性 {N}/10 ≥ 目标 ✓

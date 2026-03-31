@@ -121,9 +121,9 @@ class TestBoolGateEval(unittest.TestCase):
 class TestPlanGatesInit(unittest.TestCase):
     """P1: plan.gates dim 与 scorer dimension 一致（如 syntax 非 syntax_errors）。"""
 
-    def test_t5_syntax_internal_dim(self):
+    def test_t4_syntax_internal_dim(self):
         score = _load_score_module()
-        gates = score.plan_gates_for_ssot_init("T5")
+        gates = score.plan_gates_for_ssot_init("T4")
         dims = [g["dim"] for g in gates]
         self.assertIn("syntax", dims)
         self.assertNotIn("syntax_errors", dims)
@@ -295,13 +295,13 @@ class TestPhaseOrientThresholdNone(unittest.TestCase):
         self.assertIn("KPI 非数值", out)
 
 
-class TestGateManifestT5DefaultRounds(unittest.TestCase):
-    """P2-04/T5：manifest 默认 OODA 轮次与交付阶段对齐（T5 瘦身后 Phase 1-5 = 5 轮）。"""
+class TestGateManifestT4DefaultRounds(unittest.TestCase):
+    """P2-04/T4：manifest 默认 OODA 轮次与交付阶段对齐（T4 瘦身后 Phase 1-5 = 5 轮）。"""
 
-    def test_t5_is_five(self):
+    def test_t4_is_five(self):
         path = ROOT / "references" / "gate-manifest.json"
         data = json.loads(path.read_text(encoding="utf-8"))
-        self.assertEqual(data["default_rounds"]["T5"], 5)
+        self.assertEqual(data["default_rounds"]["T4"], 5)
 
 
 class TestScoreOverallFailClosed(unittest.TestCase):
@@ -497,14 +497,14 @@ class TestPhaseArtifactsExtended(unittest.TestCase):
         self.assertTrue(any("checkpoint" in x for x in warn), warn)
 
 
-class TestEvolveT5LinearPhases(unittest.TestCase):
-    """P2-04：T5 + linear_phases 预算耗尽时暂停。"""
+class TestEvolveT4LinearPhases(unittest.TestCase):
+    """P2-04：T4 + linear_phases 预算耗尽时暂停。"""
 
     def test_budget_pause_when_linear_incomplete(self):
         ctl = _load_controller_module()
         fake_state = {
             "plan": {
-                "template": "T5",
+                "template": "T4",
                 "template_mode": "linear_phases",
                 "linear_delivery_complete": False,
                 "budget": {"max_rounds": 1},
@@ -619,7 +619,7 @@ class TestEvolveMultiStagnationStop(unittest.TestCase):
         self.assertFalse(any("无法继续" in x for x in r), msg=r)
 
     def test_single_eligible_stagnating_does_not_global_stop(self):
-        """T3 等仅 1 维 KPI 可监控时：该维停滞不触发「全体可监控维停滞→stop」。"""
+        """T5 等仅 1 维 KPI 可监控时：该维停滞不触发「全体可监控维停滞→stop」。"""
         ctl = _load_controller_module()
         detail = {
             "dim": "kpi_target",
@@ -632,7 +632,7 @@ class TestEvolveMultiStagnationStop(unittest.TestCase):
         }
         fake_state = {
             "plan": {
-                "template": "T3",
+                "template": "T5",
                 "budget": {"max_rounds": 99},
                 "gates": [detail],
             },
@@ -658,7 +658,7 @@ class TestEvolveMultiStagnationStop(unittest.TestCase):
         self.assertFalse(any("无法继续" in x for x in r), msg=r)
 
 
-def _p208_t5_iteration(scores):
+def _p208_t4_iteration(scores):
     """单轮迭代骨架，与 autoloop-state add-iteration 结构兼容，供 P2-08 fixture 使用。"""
     return {
         "round": 1,
@@ -713,18 +713,18 @@ def _p208_t5_iteration(scores):
     }
 
 
-class TestP208T5EvolveHardFailRound1(unittest.TestCase):
-    """P2-08：T5 + 至少一条 hard 未达标 + 第 1 轮 EVOLVE 行为锁定。
+class TestP208T4EvolveHardFailRound1(unittest.TestCase):
+    """P2-08：T4 + 至少一条 hard 未达标 + 第 1 轮 EVOLVE 行为锁定。
 
-    与 `references/gate-manifest.json` default_rounds.T5=7 一致：plan.budget.max_rounds 为 0 时
-    get_max_rounds 退回 manifest 的 7，故 round_num=1 不会触发预算耗尽 stop。
+    与 `references/gate-manifest.json` default_rounds.T4=5 一致：plan.budget.max_rounds 为 0 时
+    get_max_rounds 退回 manifest 的 5，故 round_num=1 不会触发预算耗尽 stop。
     """
 
     def _fixture_dir(self, scores, results_tsv):
         td = tempfile.mkdtemp(prefix="al_p208_")
         self.addCleanup(lambda: shutil.rmtree(td, ignore_errors=True))
         subprocess.run(
-            [sys.executable, str(SCRIPTS / "autoloop-state.py"), "init", td, "T5", "p208"],
+            [sys.executable, str(SCRIPTS / "autoloop-state.py"), "init", td, "T4", "p208"],
             check=True,
             capture_output=True,
             text=True,
@@ -732,7 +732,7 @@ class TestP208T5EvolveHardFailRound1(unittest.TestCase):
         path = os.path.join(td, "autoloop-state.json")
         with open(path, encoding="utf-8") as f:
             st = json.load(f)
-        st["iterations"] = [_p208_t5_iteration(scores)]
+        st["iterations"] = [_p208_t4_iteration(scores)]
         st["results_tsv"] = results_tsv
         st["plan"]["budget"]["current_round"] = 1
         st["plan"]["budget"]["max_rounds"] = 0
@@ -873,7 +873,7 @@ class TestE2EInitScoreValidate(unittest.TestCase):
         self.assertEqual(va.returncode, 0, msg=va.stdout + va.stderr)
 
 
-class TestT3KpiScoreMatchesController(unittest.TestCase):
+class TestT5KpiScoreMatchesController(unittest.TestCase):
     """P0-01：kpi_target 与 check_gates_passed 均优先 iterations[-1].scores。"""
 
     def test_scores_override_when_plan_current_null(self):
@@ -881,7 +881,7 @@ class TestT3KpiScoreMatchesController(unittest.TestCase):
         ctl = _load_controller_module()
         state = {
             "plan": {
-                "template": "T3",
+                "template": "T5",
                 "gates": [{
                     "dim": "latency",
                     "dimension": "latency",
@@ -903,14 +903,14 @@ class TestT3KpiScoreMatchesController(unittest.TestCase):
         self.assertTrue(det[0]["passed"])
 
 
-class TestGetCurrentScoresT3GateFallback(unittest.TestCase):
-    """T3 新轮 scores 空时从 plan.gates[].current 回填（ORIENT 用）。"""
+class TestGetCurrentScoresT5GateFallback(unittest.TestCase):
+    """T5 新轮 scores 空时从 plan.gates[].current 回填（ORIENT 用）。"""
 
     def test_empty_iteration_scores_use_gate_current(self):
         ctl = _load_controller_module()
         st = {
             "plan": {
-                "template": "T3",
+                "template": "T5",
                 "gates": [
                     {
                         "dim": "kpi_target",
@@ -930,7 +930,7 @@ class TestGetCurrentScoresT3GateFallback(unittest.TestCase):
         ctl = _load_controller_module()
         st = {
             "plan": {
-                "template": "T3",
+                "template": "T5",
                 "gates": [{"dim": "kpi_target", "current": 7.0}],
             },
             "iterations": [{"round": 8, "scores": {"kpi_target": 8.5}}],
@@ -938,7 +938,7 @@ class TestGetCurrentScoresT3GateFallback(unittest.TestCase):
         self.assertEqual(ctl.get_current_scores(st), {"kpi_target": 8.5})
 
 
-class TestDetectStagnationT3KpiSkip(unittest.TestCase):
+class TestDetectStagnationT5KpiSkip(unittest.TestCase):
     """P1-01：threshold=null 且 KPI 已满足的维度不参与停滞。"""
 
     def test_met_kpi_dimension_excluded(self):
@@ -952,7 +952,7 @@ class TestDetectStagnationT3KpiSkip(unittest.TestCase):
             "gate": "hard",
         }]
         history = [{"latency": 90.0}, {"latency": 90.0}, {"latency": 90.0}]
-        r, el = ctl.detect_stagnation(history, gates, template_key="T3")
+        r, el = ctl.detect_stagnation(history, gates, template_key="T5")
         self.assertEqual(r, [])
         self.assertEqual(el, set())
 
@@ -1189,14 +1189,14 @@ class TestAddFindingSummaryField(unittest.TestCase):
             self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
 
 
-class TestGetMaxRoundsT4Items(unittest.TestCase):
-    """P-04：T4 按 items×2 推导默认 max_rounds（有上限）。"""
+class TestGetMaxRoundsT6Items(unittest.TestCase):
+    """P-04：T6 按 items×2 推导默认 max_rounds（有上限）。"""
 
     def test_items_times_two_capped(self):
         ctl = _load_controller_module()
         st = {
             "plan": {
-                "template": "T4",
+                "template": "T6",
                 "budget": {"max_rounds": 0},
                 "generation_items": 10,
             }
@@ -1204,7 +1204,7 @@ class TestGetMaxRoundsT4Items(unittest.TestCase):
         self.assertEqual(ctl.get_max_rounds(st), 20)
         st2 = {
             "plan": {
-                "template": "T4",
+                "template": "T6",
                 "budget": {"max_rounds": 0},
                 "template_params": {"items": 80},
             }
@@ -1219,7 +1219,7 @@ class TestPlanGateExemptAndCrossDim(unittest.TestCase):
         ctl = _load_controller_module()
         state = {
             "plan": {
-                "template": "T6",
+                "template": "T7",
                 "gates": [
                     {
                         "dim": "reliability_score",
@@ -1243,7 +1243,7 @@ class TestPlanGateExemptAndCrossDim(unittest.TestCase):
         ctl = _load_controller_module()
         state = {
             "plan": {
-                "template": "T6",
+                "template": "T7",
                 "decide_act_handoff": {
                     "impacted_dimensions": ["reliability_score"],
                 },
@@ -1271,7 +1271,7 @@ class TestPlanGateExemptAndCrossDim(unittest.TestCase):
         ctl = _load_controller_module()
         state = {
             "plan": {
-                "template": "T6",
+                "template": "T7",
                 "gates": [
                     {
                         "dim": "reliability_score",
@@ -1327,7 +1327,7 @@ class TestStrictEvolveFindingsGate(unittest.TestCase):
         disk_state = {
             "iterations": [{"round": 1, "scores": {}}],
             "findings": {"rounds": []},
-            "plan": {"template": "T3", "gates": []},
+            "plan": {"template": "T5", "gates": []},
             "metadata": {},
         }
         with tempfile.TemporaryDirectory() as td:
@@ -1344,7 +1344,7 @@ class TestStrictEvolveFindingsGate(unittest.TestCase):
         disk_state = {
             "iterations": [{"round": 1, "scores": {}, "findings": [{"id": "f1"}]}],
             "findings": {"rounds": [{"round": 1, "findings": [{"id": "x"}]}]},
-            "plan": {"template": "T3", "gates": []},
+            "plan": {"template": "T5", "gates": []},
             "results_tsv": [{"iteration": 99, "score_variance": "0", "confidence": "100"}],
             "metadata": {},
         }

@@ -35,12 +35,12 @@
 
 | 经验类型 | 分发目标 | 审批级别 | 示例 |
 |---------|---------|---------|------|
-| 评分标准缺陷 | quality-gates.md | 低风险：AI自动 | "T6 SQL注入检查容易漏报存储过程" |
+| 评分标准缺陷 | quality-gates.md | 低风险：AI自动 | "T7 SQL注入检查容易漏报存储过程" |
 | 参数校准 | parameters.md | 中风险：AI推进+下轮验证 | "T1用3轮比5轮效率更高" |
 | 策略效果 | 本文件策略效果库 | 低风险：AI自动 | "分模块扫描比全量扫描提升30%" |
 | 模板改进 | 对应template文件 | 低风险：AI自动 | "findings表增加根因列更有用" |
-| 流程缺陷 | loop-protocol.md 或对应command | 高风险：用户确认 | "T5缺少数据库回滚验证步骤" |
-| 门禁阈值调整 | quality-gates.md | 高风险：用户确认 | "T6安全性从9改为8" |
+| 流程缺陷 | loop-protocol.md 或对应command | 高风险：用户确认 | "T4缺少数据库回滚验证步骤" |
+| 门禁阈值调整 | quality-gates.md | 高风险：用户确认 | "T7安全性从9改为8" |
 
 ---
 
@@ -78,7 +78,7 @@
 
 **字段说明**：
 - strategy_id：策略唯一标识，与 results.tsv 和 findings.md 一致
-- template：适用模板（T1-T7，或"通用"）
+- template：适用模板（T1-T8，或"通用"）
 - dimension：目标维度
 - description：策略摘要（一句话，详细描述见下方"策略详细描述格式"）
 - avg_delta：各轮写入时 `--score`（单轮分数变化量 delta）的**算术平均值**；与 `use_count`、`success_rate` 同源，**有 `experience-audit.md` 时以审计中该 `strategy_id` 全部 `write` 的 score 序列为准**（`write` 与主表聚合一致）。
@@ -198,7 +198,7 @@ use_count = 1 时 success_rate 无统计意义，不作为升格依据。
 | 层级 | 标签 | 含义 | 示例 | 衰减速率 |
 |------|------|------|------|---------|
 | L1 | `strategic` | 方法论级别的认知，影响整体方向 | "fail-closed评分比宽容评分更能驱动质量" | 慢（180d） |
-| L2 | `procedural` | 流程级别的经验，影响执行步骤 | "并行扫描比串行扫描在T6中提速40%" | 中（90d） |
+| L2 | `procedural` | 流程级别的经验，影响执行步骤 | "并行扫描比串行扫描在T7中提速40%" | 中（90d） |
 | L3 | `tool` | 工具/技巧级别，影响具体操作 | "grep -rn 比 find + xargs 更快定位问题" | 快（30d） |
 
 **标注规则**（v2 预留）：每条策略在入库时标注一个层级标签。判断标准：
