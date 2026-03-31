@@ -20,7 +20,7 @@ description: >
 
 ### 技术栈检测与验证命令
 
-在阶段 0 扫描前，先确认技术栈，选择对应的验证命令：
+在 Phase 1 开始前，先确认技术栈，选择对应的验证命令：
 
 所有技术栈使用 plan 中定义的 `{syntax_check_cmd}`（见 `references/loop-protocol.md` 统一参数词汇表）进行语法验证，按 `syntax_check_file_arg` 决定是否附加文件参数。模块导出和路由注册检查方式由 plan 的 `main_entry_file` 决定。
 
