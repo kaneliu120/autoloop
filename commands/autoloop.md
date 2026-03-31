@@ -113,11 +113,19 @@ T7 Optimize: 系统/代码库路径（必须）、优先方向（可选）
 
 ### Step 5: Bootstrap — 创建迭代文件
 
-`/autoloop:plan` 确认计划后，立即创建以下三个文件（Bootstrap 规则见 `references/loop-protocol.md` 第1轮 Bootstrap 规则章节）：
+`/autoloop:plan` 确认计划后，须具备可跑 OODA 的**工作目录工件**（Bootstrap 规则见 `references/loop-protocol.md` 第1轮 Bootstrap 规则章节）。
 
-- `autoloop-findings.md`（使用 `assets/findings-template.md`）
-- `autoloop-progress.md`（使用 `assets/progress-template.md`）
-- `autoloop-results.tsv`（TSV Schema 见 `references/loop-protocol.md` 统一 TSV Schema 章节，写入15列表头行）
+**推荐（与 `README.md` / `SKILL.md` SSOT 路径一致）**：执行  
+`python3 <技能包>/scripts/autoloop-state.py init <工作目录> <T1–T7> "<目标>"`  
+一次生成 `autoloop-state.json`、`checkpoint.json`、TSV 与可由 `autoloop-render.py` 同步的 Markdown 视图。
+
+**兼容叙述（仅 Markdown 冷启动）**：至少创建：
+
+- `autoloop-findings.md`（`assets/findings-template.md`）
+- `autoloop-progress.md`（`assets/progress-template.md`）
+- `autoloop-results.tsv`（表头见 `references/loop-protocol.md` 统一 TSV Schema，15 列）
+
+无 `autoloop-state.json` 时，部分脚本仅 Markdown 回退；**新任务请以 `autoloop-state.py init` 为准**。
 
 Bootstrap 完成后**自动进入第一轮执行，不等待用户额外确认**。如果用户在计划摘要阶段提出修改，更新计划文件后再启动。
 
@@ -127,11 +135,11 @@ Bootstrap 完成后**自动进入第一轮执行，不等待用户额外确认**
 
 按选中的模板执行第一轮（参见对应的 command 文件）：
 
-- T1: `/autoloop:research` 第一轮：维度规划 + 并行搜索
+- T1: `/autoloop:research` 第一轮：识别**主体对象 + 附加方向**，生成核心章节与专项模块，再由主 agent 按章节派发 researcher / verifier 子 agent 并回收**章节证据包**。若主题属于市场/行业调研，默认按 `assets/report-template.md` **高标准市场/行业调研报告** 输出（强制核心章节，每章都有数据 + 分析 + 结论；若有附加方向则增加专项模块）。多轮仅用于门禁或章节深度未达标时补证，**不是** T1 定义（见 `references/t1-formal-report.md` §0）。
 - T2: `/autoloop:compare` 第一轮：选项分析
 - T3: `/autoloop:iterate` 第一轮：基线测量 + 首轮改进
 - T4: `/autoloop:generate` 第一轮：模板建立 + 批量生成
-- T5: `/autoloop:deliver` 阶段 0：分析
+- T5: `/autoloop:deliver` Phase 1：开发
 - T6: `/autoloop:quality` 第一轮：三维度并行扫描
 - T7: `/autoloop:optimize` 第一轮：全面诊断
 
@@ -171,14 +179,19 @@ AutoLoop 第 {N} 轮完成
 
 ## 终止与最终输出
 
-达到终止条件后，生成最终报告（格式参见 `assets/report-template.md`），包含：
+达到终止条件后，生成最终报告（格式参见 `assets/report-template.md`）。
 
-1. 执行摘要（目标、结果、质量达标情况）
-2. 详细发现（从 autoloop-findings.md 整合）
-3. 质量评分（最终各维度得分 vs 目标）
-4. 产出清单（生成了哪些文件、修复了哪些问题）
-5. 遗留事项（如有）
-6. 推荐下一步
+对 **T1 Research**：
+
+1. 最终报告只保留读者需要的信息：标题、主题、目标、分析日期、信息边界、正文、数据来源
+2. 市场 / 行业主题默认采用高标准章节：市场规模与增长、需求侧、价值链与利润池、竞争格局、监管、技术、商业模式、风险、综合判断
+3. 若题目带有“行业 + 方向/主题”，则在行业主报告之外增加专项模块
+4. 每个章节都必须具备：数据、分析、结论
+5. 主 agent 应基于章节证据包统一成稿，而不是让多个子 agent 分别拼正文
+6. 不得写入内部运行、质量门禁、方法论显性标题、系统痕迹
+7. 终止判断不只看四个门禁是否过线，还要看核心章节是否达到足够证据密度、来源是否按章节组织、证据边界是否明确
+
+对 **T2–T7**：按各自模板输出
 
 最终报告文件名遵循下方最终输出文件命名规则。
 

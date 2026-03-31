@@ -2,10 +2,6 @@
 
 > 从 loop-protocol.md 分离的数据层规范。状态机和 OODA 阶段定义见 `loop-protocol.md`。
 
-# Loop Protocol — OODA 迭代循环规范
-
-**协议版本**：1.0.0
-
 ### 版本语义定义（唯一权威）
 
 | 级别 | 触发条件 | 示例 | 方向 |
@@ -159,3 +155,102 @@ iteration	phase	status	dimension	metric_value	delta	strategy_id	action_summary	s
 - **优势**：消除跨文件信息重复和不一致，支持 `query` 命令快速检索任意字段
 - **初始化**：使用 `autoloop-state.py init` 替代 `autoloop-init.py`，自动创建 JSON + 4 个 MD
 
+---
+
+## autoloop-state.json 迁移（plan.gates 与 scorer 对齐）
+
+**背景**：`autoloop-score.py` 使用与 `gate-manifest.json` 一致的内部维度键（如 `syntax_errors` → `syntax`）。`plan.gates[].dim` 必须与评分 JSON 的 `dimension` 一致；每条 gate 建议包含 `manifest_dimension`（manifest 原始名）供 comparator 反查。
+
+**若你的 state 早于上述约定**（`plan.gates` 为空、缺少 `manifest_dimension`、或 `dim` 仍写 `syntax_errors` / `p1_count` 等 manifest 原名）：
+
+1. **推荐**：在工作目录删除 `autoloop-state.json`（及按需清理 checkpoint）后重新执行  
+   `python3 scripts/autoloop-state.py init <工作目录> <模板T1-T7> "<目标>"`  
+   将自动写入与 scorer 对齐的 `plan.gates`。
+2. **保留历史**：手工将每条 gate 的 `dim` 改为与 `gate-manifest.json` 经 `_MANIFEST_DIM_MAP` 映射后的内部键，并补上 `manifest_dimension`；可参考新生成 state 中的结构。
+3. **校验**：`python3 scripts/autoloop-validate.py <工作目录>` 对旧约约会给出 **warning**（非致命）；`--strict` 或 `AUTOLOOP_VALIDATE_STRICT=1` 时升级为 **error**。
+4. **预览迁移**：`python3 scripts/autoloop-state.py migrate <工作目录> --dry-run` 打印当前模板下 SSOT 建议的 `plan.gates` JSON（不修改文件）。
+
+---
+
+## plan.gates 字段约定（canonical）
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `dim` | 是 | 与 `autoloop-score` 输出的 `dimension` 一致（内部键） |
+| `manifest_dimension` | 强烈建议 | `gate-manifest.json` 中该条的原始 `dimension` 字符串 |
+| `threshold` / `target` | 视模板 | T3 等可为 `threshold: null` + `target` |
+| `gate` / `label` / `comparator` / `unit` | 视模板 | 与 manifest 一致 |
+
+**废弃**：仅写 `dimension` 而不写 `dim` — validate strict 模式下报错。
+
+---
+
+## 阶段产物（供 validate / 自动化核对）
+
+| 当前末轮 `iterations[-1].phase` | 最小产物（SSOT） | validate 行为 |
+|--------------------------------|------------------|----------------|
+| `OBSERVE` … `DECIDE` | 无额外强制（首轮可无 scores） | — |
+| `ACT` 及之后 | `plan.decide_act_handoff.strategy_id` **或** `iterations[-1].strategy.strategy_id`（`SNN-描述`） | strict→error，否则 warn |
+| `SYNTHESIZE` / `EVOLVE` / `REFLECT`（已进入 VERIFY 之后） | `iterations[-1].scores` 非空 | strict→error，否则 warn |
+| `REFLECT` | `iterations[-1].reflect` 为结构化 JSON（含 `strategy_id` / `effect` / `lesson_learned` 等至少一项有效值） | strict→error，否则 warn |
+
+| 其他 | 说明 |
+|------|------|
+| DECIDE | `plan.decide_act_handoff`（`strategy_id`、`hypothesis`、`planned_commands`） |
+| VERIFY | `iterations[-1].scores`；`plan.gates[].current` / `status` |
+| checkpoint | 若存在 `checkpoint.json`，`current_phase` 应与 `iterations[-1].phase` 一致 |
+
+**DECIDE→ACT 交接 SSOT**：策略交接字段**仅**写在 `autoloop-state.json` 的 `plan.decide_act_handoff`（及迭代内 `strategy` 镜像）；`checkpoint.json` **不**承载 `hypothesis` / `planned_commands`，避免双源。校验与自动化应以 state 为准。
+
+`autoloop-validate.py --strict` 将上表中 strict 行升级为 error。
+
+---
+
+## metadata 字段（SSOT）
+
+### `metadata.last_error`
+
+子进程失败或超时由 `scripts/autoloop-controller.py` 的 `run_tool` 写入（存在 `autoloop-state.json` 且调用方传入 `work_dir` 时）。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `time` | string (ISO8601) | 记录时间 |
+| `script` | string | 脚本文件名（如 `autoloop-validate.py`） |
+| `returncode` | int | 退出码；超时为 `124` |
+| `stderr` | string | 截取后的标准错误（最多约 500 字符） |
+
+### `metadata.audit[]`
+
+按时间追加的审计行，元素为对象，**至少**含 `time`、`event`。
+
+| `event` | 说明 | 典型附加字段 |
+|---------|------|----------------|
+| `phase_complete` | 阶段推进 | `detail`（字符串，兼容旧格式） |
+| `tool_start` | 子工具即将执行 | `script`、`argv`（字符串列表）、`work_dir` |
+| `tool_finish` | 子工具已结束（含非零退出） | `returncode`、`timeout`（bool）、`stderr`（截取） |
+| `tool_timeout` | 子工具超时 | `returncode`（124）、`timeout`（true） |
+
+---
+
+## plan.template_mode 与 T5 交付（P2-04）
+
+| 字段 | 类型 | 默认 | 说明 |
+|------|------|------|------|
+| `plan.template_mode` | string | `ooda_rounds` | `ooda_rounds`：终止条件与 manifest `default_rounds` 一致。`linear_phases`：T5 下预算耗尽时若 `linear_delivery_complete` 仍为 false，控制器 EVOLVE **暂停**而非成功终止，避免仅靠 OODA 轮次误停。 |
+| `plan.linear_delivery_complete` | boolean | `false` | 人工在交付 Phase 1–5 全部完成后设为 `true`（见 `references/delivery-phases.md`）。 |
+
+---
+
+## findings 条目 canonical 字段（P3-07）
+
+| 字段 | 角色 |
+|------|------|
+| `summary` | **推荐**：短摘要（列表/渲染优先展示） |
+| `content` | 详述正文（可选） |
+| `description` | 与 `content` 二选一兼容旧数据 |
+
+- 三者皆空：`autoloop-validate` **warn**（`render`/`score` 可能跳过该条）。
+- 同时含 `summary` 与 `content`：**warn**（建议 summary 为 canonical 短句、content 为长文）。
+- `autoloop-score` 对可信度/完整性等统计时，URL 与来源扫描会合并 `source` 与上述正文（`summary`→`content`→`description`）。
+
+---

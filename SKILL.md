@@ -67,7 +67,7 @@ Match the user request to a template using trigger words and intent:
 2. Required fields: goal, template, scope, quality gate dimensions, max rounds, budget.
 3. **Gate thresholds (SSOT)** come exclusively from `references/gate-manifest.json` — the mandatory numeric threshold source of truth for all gate pass/fail decisions. Use `references/quality-gates.md` for scoring semantics, confidence/fail-closed rules, and methodology — not as the numeric threshold source.
 4. Write the plan to `autoloop-plan.md` in the work directory.
-5. For T5 Deliver: phase gates follow `references/delivery-phases.md`; phase 0.5 (documentation) requires user confirmation before proceeding. Optional SSOT: `plan.template_mode: linear_phases` ties EVOLVE budget to `plan.linear_delivery_complete` (see `references/loop-data-schema.md`).
+5. For T5 Deliver: phase gates follow `references/delivery-phases.md`; phase 5 (acceptance) requires user confirmation. Optional SSOT: `plan.template_mode: linear_phases` ties EVOLVE budget to `plan.linear_delivery_complete` (see `references/loop-data-schema.md`).
 
 Detail: `commands/autoloop-plan.md`.
 
@@ -123,7 +123,7 @@ python3 ${SKILL_DIR}/scripts/autoloop-validate.py <work_dir>
 | T2 Compare | Independent option-analyzer per candidate | coverage, credibility, bias, sensitivity | `commands/autoloop-compare.md` |
 | T3 Iterate | KPI-driven with baseline measurement | user-defined KPI target | `commands/autoloop-iterate.md` |
 | T4 Generate | Batch with per-unit QC, auto-retry on low score | pass_rate, avg_score | `commands/autoloop-generate.md` |
-| T5 Deliver | 7-phase with user gates at phase 0.5 and phase 5 | **Machine dims** (manifest): `syntax_errors`, `p1_p2_issues`, `service_health`, `user_acceptance` — 文档口语可称 syntax / P1-P2 / 服务健康 / 验收 | `commands/autoloop-deliver.md` |
+| T5 Deliver | 5-phase (Phase 1-5) with user gate at phase 5 | **Machine dims** (manifest): `syntax_errors`, `p1_p2_issues`, `service_health`, `user_acceptance` — 文档口语可称 syntax / P1-P2 / 服务健康 / 验收 | `commands/autoloop-deliver.md` |
 | T6 Quality | 3-dimension unified review framework | security, reliability, maintainability | `commands/autoloop-quality.md` |
 | T7 Optimize | 3-dimension with checkpoint every 5 fixes | architecture, performance, stability | `commands/autoloop-optimize.md` |
 
@@ -213,7 +213,7 @@ Dispatch serially when task B requires task A output:
 | Agent | Responsibility | Invocation Context |
 |-------|---------------|-------------------|
 | planner | Task decomposition, architecture design | Task start, complex feature planning |
-| researcher | Web research, competitive analysis, data collection | T1/T2 throughout, T5 phase 0 |
+| researcher | Web research, competitive analysis, data collection | T1/T2 throughout |
 | backend-dev | Backend implementation (stack per plan) | T5 phase 1, T6/T7 fixes |
 | frontend-dev | Frontend implementation (stack per plan) | T5 phase 1, T6/T7 fixes |
 | db-migrator | Database migrations, SQL operations | T5 phase 1 (when DB changes needed) |

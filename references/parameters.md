@@ -18,16 +18,16 @@
 |--------|------|----|---------|------|
 | `default_rounds.T1` | T1 Research | 3 轮 | T1 调研任务 | 调研类任务默认执行 3 轮，确保信息充分覆盖 |
 | `default_rounds.T2` | T2 Compare | 2 轮 | T2 对比任务 | 对比类任务完成两轮即可收敛结论 |
-| `default_rounds.T3` | T3 Iterate | 无上限 | T3 迭代任务 | 以质量门禁为终止条件，不设轮次上限；预算由用户定义 |
-| `default_rounds.T4` | T4 Generate | items × 2 轮 | T4 批量生成任务 | 默认轮次 = 生成单元数量 × 2，保证每单元至少 2 次优化机会 |
-| `default_rounds.T5` | T5 Deliver | 1（线性阶段制）| T5 交付任务 | 非轮次制，按 Phase 1-5 线性阶段推进 |
-| `default_rounds.T6` | T6 Quality | 无上限 | T6 质量评审任务 | 以质量门禁为终止条件，不设轮次上限 |
-| `default_rounds.T7` | T7 Optimize | 无上限 | T7 优化任务 | 以质量门禁为终止条件，不设轮次上限 |
+| `default_rounds.T3` | T3 Iterate | **99**（SSOT: `gate-manifest.json`） | T3 迭代任务 | 数值以 manifest 为准；视为安全上限，可用 `plan.budget.max_rounds` 覆盖；终止仍以 KPI/门禁为主 |
+| `default_rounds.T4` | T4 Generate | 99 轮（门禁终止，**上限**） | T4 批量生成任务 | 以 pass_rate + avg_score 门禁为终止条件；未设 `plan.budget.max_rounds` 时控制器可按 `plan.generation_items` 或 `template_params.items` 取 **`min(items×2, 99)`** 作为默认轮次（P-04） |
+| `default_rounds.T5` | T5 Deliver | **5**（OODA 轮次预算）| T5 交付任务 | 与 `delivery-phases.md` 五段交付（Phase 1-5）对齐的**完整 OODA 轮次**上限。`plan.budget.max_rounds` 可覆盖。 |
+| `default_rounds.T6` | T6 Quality | **99**（SSOT: `gate-manifest.json`） | T6 质量评审任务 | 同 T3：manifest 为权威；可覆盖 max_rounds；门禁终止优先 |
+| `default_rounds.T7` | T7 Optimize | **99**（SSOT: `gate-manifest.json`） | T7 优化任务 | 同上 |
 
 **使用约定**：
 - 向导在 Step 4/5 展示对应模板的默认值，用户可在计划阶段调整
 - `items × 2` 中的 `items` 指 plan.md 中定义的生成单元总数
-- "无上限"模板的实际终止条件见 `quality-gates.md` 对应行
+- T3/T6/T7 的轮次上限以 `references/gate-manifest.json` 的 `default_rounds` 为准（当前为 **99**）；文档表中的「无上限」已废弃，避免与实现冲突
 
 ---
 
@@ -129,6 +129,8 @@
 ## 六、模板级停滞检测参数
 
 > 来源：R7评审建议#3 — T3/T6/T7 需要独立停滞阈值
+>
+> **SSOT**: 运行时阈值由 `references/gate-manifest.json` 的 `stagnation_thresholds` 字段提供。本节为人类可读文档，如有冲突以 gate-manifest.json 为准。
 
 ### 6.1 停滞阈值（按模板独立）
 
@@ -141,7 +143,16 @@
 | `stagnation.T7.threshold` | T7 Optimize | < 0.5 分（绝对值） | 架构/性能/稳定任一维度改善 < 0.5 分视为停滞 |
 | `stagnation.T7.max_explore` | T7 Optimize | 2 轮 | 停滞后最多尝试 2 种新策略 |
 
+**实现状态（`max_explore`）**：`references/gate-manifest.json` 的 **`stagnation_max_explore`**（T3/T6/T7）由 `autoloop-controller.py` `phase_evolve` 消费：在仍有 **stagnating** 信号时，若本轮与上轮 `iterations[].strategy.strategy_id` 不同则递增 `metadata.stagnation_explore_switches`；达到上限且决策仍为 `continue` 时改为 **`pause`**。无停滞时计数清零。与表格中 `stagnation.T3.max_explore` 等语义对齐；未在 manifest 配置的模板不适用。
+
 **注**：T1/T2 使用通用停滞阈值 `evolution.switch.improvement_threshold`（< 3%），因为调研类任务的停滞特征与迭代优化类不同。
+
+### 6.1.1 T3：`get_current_scores` 与停滞历史（实现约定）
+
+> 与 `scripts/autoloop-controller.py` 行为对齐；避免 ORIENT 与 EVOLVE 误判。
+
+- **`get_current_scores(state)`**（T3）：若 `iterations[-1].scores` 为空，可用 **`plan.gates[].current` 的数值** 回填展示用当前分（如 `kpi_target`），供 ORIENT 差距表与部分启发式逻辑使用。
+- **`get_score_history(state)`**（停滞/振荡窗口）：仅串联 **`iterations[].scores` 非空** 的轮次；**不包含**上述「空轮次 + gate 回填」的虚拟点。故 T3 新轮在 VERIFY 写回前，停滞序列仍以上一轮及之前的 SSOT 分数为准。
 
 ### 6.2 统一停滞状态机
 
@@ -168,11 +179,11 @@
 |--------|----|---------|
 | `default_rounds.T1` | 3 轮 | 迭代控制 |
 | `default_rounds.T2` | 2 轮 | 迭代控制 |
-| `default_rounds.T3` | 无上限 | 迭代控制 |
-| `default_rounds.T4` | items × 2 轮 | 迭代控制 |
-| `default_rounds.T5` | 1（线性阶段制）| 迭代控制 |
-| `default_rounds.T6` | 无上限 | 迭代控制 |
-| `default_rounds.T7` | 无上限 | 迭代控制 |
+| `default_rounds.T3` | 99（见 `gate-manifest.json`） | 迭代控制 |
+| `default_rounds.T4` | 99 轮（门禁终止） | 迭代控制 |
+| `default_rounds.T5` | **5 轮**（`gate-manifest.json` SSOT，与交付阶段文档对齐）| 迭代控制；`plan.template_mode=linear_phases` 时另有暂停语义（见 `autoloop-controller`） |
+| `default_rounds.T6` | 99（见 `gate-manifest.json`） | 迭代控制 |
+| `default_rounds.T7` | 99（见 `gate-manifest.json`） | 迭代控制 |
 | `evolution.expand.budget_threshold` | ≥ 30% | 进化触发 |
 | `evolution.expand.dimension_ceiling` | ≤ 初始 × 1.5 | 进化触发 / 扩展上限 |
 | `evolution.narrow.budget_consumed` | ≥ 70% | 进化触发 |
@@ -215,3 +226,9 @@
 - 得分 ≥ `high_confidence_threshold`（0.8）但 Top 2 差距 < `ambiguity_gap`（0.2）→ 展示 Top 2-3 让用户选
 - 得分在 `confirm_threshold`（0.5）到 `high_confidence_threshold`（0.8）之间 → 请用户确认
 - 得分 < `confirm_threshold`（0.5）→ 展示全部模板
+
+---
+
+## 九、可复现性（采样）
+
+若子任务使用随机数或采样，须在 `findings` 或 `iterations` 中记录 **seed**（整数），便于复跑对照；与 `scripts/` 确定性工具链解耦，属任务层约定。

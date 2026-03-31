@@ -70,6 +70,11 @@
     "T7": {"value": 0.5, "unit": "points", "type": "absolute"}
   },
   "stagnation_consecutive": 2,
+  "stagnation_max_explore": {
+    "T3": 3,
+    "T6": 2,
+    "T7": 2
+  },
   "oscillation": {
     "window": 3,
     "band": 0.5
@@ -79,5 +84,9 @@
   "phase_enum": ["OBSERVE", "ORIENT", "DECIDE", "ACT", "VERIFY", "SYNTHESIZE", "EVOLVE", "REFLECT"],
   "task_status_enum": ["准备开始", "进行中", "暂停等待确认", "已完成"],
   "gate_status_enum": ["达标", "未达标", "豁免"],
-  "tsv_status_enum": ["通过", "未通过", "待检查", "待审查"]
+  "tsv_status_enum": ["通过", "未通过", "待检查", "待审查"],
+  "default_rounds": {
+    "T1": 3, "T2": 2, "T3": 99, "T4": 99,
+    "T5": 5, "T6": 99, "T7": 99
+  }
 }
