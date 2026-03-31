@@ -20,12 +20,17 @@ TOOL_ALLOWLIST = {
     "bash", "web_search", "task",
 }
 
-# 敏感路径模式（不允许 subagent 读写）
-SENSITIVE_PATTERNS = [
-    ".env", ".env.production", "credentials", "secrets",
-    "id_rsa", "id_ed25519", ".ssh/", "token", "api_key",
+# 敏感路径检测（分两类，避免子串误报如 "tokenizer_output" 匹配 "token"）
+# 精确文件名匹配（用 os.path.basename）
+SENSITIVE_EXACT_FILENAMES = {
+    ".env", ".env.production", ".env.local", ".env.staging",
+    "id_rsa", "id_ed25519", "id_ecdsa",
+    "credentials.json", "secrets.json", "token.json",
+    "api_key.txt", "api_keys.json",
     "gate-manifest.json",  # P1-04 config-protection
-]
+}
+# 路径段匹配（检查路径中是否包含这些目录）
+SENSITIVE_PATH_SEGMENTS = {".ssh", "secrets", ".credentials"}
 
 # 需要预审批的写操作路径模式
 APPROVAL_REQUIRED_PATTERNS = [
@@ -47,11 +52,20 @@ def check_tool(tool_name):
 
 
 def check_path(file_path):
-    """检查路径是否敏感"""
-    path_lower = file_path.lower()
-    for pattern in SENSITIVE_PATTERNS:
-        if pattern.lower() in path_lower:
-            result = {"path": file_path, "sensitive": True, "matched_pattern": pattern}
+    """检查路径是否敏感（精确匹配文件名 + 路径段匹配目录）"""
+    basename = os.path.basename(file_path).lower()
+    # 精确文件名匹配
+    for name in SENSITIVE_EXACT_FILENAMES:
+        if basename == name.lower():
+            result = {"path": file_path, "sensitive": True, "matched_pattern": name, "match_type": "exact_filename"}
+            _log_event("sensitive_path_access", result)
+            print(json.dumps(result))
+            return True
+    # 路径段匹配（目录名）
+    path_parts = set(p.lower() for p in file_path.replace("\\", "/").split("/"))
+    for seg in SENSITIVE_PATH_SEGMENTS:
+        if seg.lower() in path_parts:
+            result = {"path": file_path, "sensitive": True, "matched_pattern": seg, "match_type": "path_segment"}
             _log_event("sensitive_path_access", result)
             print(json.dumps(result))
             return True
@@ -110,7 +124,10 @@ def main():
         if "--tail" in sys.argv:
             idx = sys.argv.index("--tail")
             if idx + 1 < len(sys.argv):
-                tail = int(sys.argv[idx + 1])
+                try:
+                    tail = int(sys.argv[idx + 1])
+                except ValueError:
+                    tail = 20
         audit_log(tail)
     else:
         print(f"Unknown command or missing args: {cmd}")

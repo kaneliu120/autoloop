@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
-"""AutoLoop Middleware — 横切关注点模块
+"""AutoLoop Middleware — 横切关注点模块（函数式实现）
 
 将 controller.py 中的横切逻辑抽象为独立、可插拔的 Middleware 函数。
 每个 Middleware 可独立启用/禁用，不影响核心 OODA 管道。
+
+与 scripts/middleware/ 目录的关系：
+- 本文件（autoloop-middleware.py）: 函数式实现，可独立运行和 CLI 调试，
+  用于未来 controller 集成 run_middleware_chain() 调用
+- scripts/middleware/: 类基接口定义（OOP），用于未来架构重构时
+  替换 controller 中的内联逻辑为独立模块
+- 两者是同一设计的不同实现风格，待 controller 重构（P3-08 Phase 2）时统一
 
 当前包含：
 1. LoggingMiddleware — 统一的阶段输入/输出日志

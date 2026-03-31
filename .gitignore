@@ -20,3 +20,4 @@ dist/
 
 # Local virtual environment
 .venv/
+__pycache__/
