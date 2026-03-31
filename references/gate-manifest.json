@@ -19,6 +19,15 @@
         {"dimension": "sensitivity", "threshold": 1, "unit": "bool", "type": "soft", "comparator": "=="}
       ]
     },
+    "T3": {
+      "gates": [
+        {"dimension": "design_completeness", "threshold": 7, "unit": "score", "type": "hard", "comparator": ">=", "note": "需求清单中条目有对应设计方案的比例"},
+        {"dimension": "feasibility_score", "threshold": 7, "unit": "score", "type": "hard", "comparator": ">=", "note": "技术可行性（架构、依赖、风险）"},
+        {"dimension": "requirement_coverage", "threshold": 7, "unit": "score", "type": "hard", "comparator": ">=", "note": "每条需求可追溯到设计文档章节"},
+        {"dimension": "scope_precision", "threshold": 7, "unit": "score", "type": "soft", "comparator": ">=", "note": "IN/OUT 明确、依赖已识别"},
+        {"dimension": "validation_evidence", "threshold": 7, "unit": "score", "type": "soft", "comparator": ">=", "note": "可行性检查 + 风险评估已完成"}
+      ]
+    },
     "T4": {
       "name": "Deliver",
       "gates": [
@@ -65,6 +74,7 @@
   "stagnation_thresholds": {
     "T1": {"value": 3, "unit": "%", "type": "relative"},
     "T2": {"value": 3, "unit": "%", "type": "relative"},
+    "T3": {"value": 3, "unit": "%", "type": "relative"},
     "T5": {"value": 2, "unit": "%", "type": "relative"},
     "T7": {"value": 0.3, "unit": "points", "type": "absolute"},
     "T8": {"value": 0.5, "unit": "points", "type": "absolute"}
@@ -86,7 +96,7 @@
   "gate_status_enum": ["达标", "未达标", "豁免"],
   "tsv_status_enum": ["通过", "未通过", "待检查", "待审查"],
   "default_rounds": {
-    "T1": 3, "T2": 2, "T4": 5, "T5": 99,
+    "T1": 3, "T2": 2, "T3": 3, "T4": 5, "T5": 99,
     "T6": 99, "T7": 99, "T8": 99
   }
 }

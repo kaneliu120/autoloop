@@ -49,7 +49,7 @@ Match the user request to a template using trigger words and intent:
 |----------|--------------|--------|
 | T1 Research | research, survey, landscape, 全景调研, 深度调研 | Systematic multi-source knowledge gathering |
 | T2 Compare | compare, evaluate options, 对比, 选型, which is better | Evidence-based decision among N candidates |
-| T3 Product Design | product design, design doc, 产品设计, 方案文档 | Product design and implementation specification |
+| T3 Product Design | product design, 产品设计, 方案文档, PRD, spec, 需求分析 | Requirements analysis → solution design → feasibility review |
 | T4 Deliver | deliver feature, end-to-end, ship, 全流程交付 | Requirements through production deployment |
 | T5 Iterate | iterate until, improve, optimize KPI, 迭代优化, 达标 | KPI-driven repeated refinement toward a target |
 | T6 Generate | generate batch, produce N items, 批量生成 | High-volume same-type content production |
@@ -122,7 +122,7 @@ python3 ${SKILL_DIR}/scripts/autoloop-validate.py <work_dir>
 |----------|---------------|-----------------|--------|
 | T1 Research | **General research entry**. For market/industry topics, upgrade automatically to a **top-tier market research report** with fixed core chapters, per-chapter data+analysis+conclusion, optional direction modules (e.g. industry + AI job substitution), and a **master-agent / subagent protocol**: the master agent splits chapters, dispatches evidence collection, integrates chapter evidence packets, resolves conflicts, and writes the only final report; OODA rounds optional for gate convergence | coverage, credibility, consistency, completeness | `commands/autoloop-research.md`, `references/t1-formal-report.md` §0 |
 | T2 Compare | Independent option-analyzer per candidate | coverage, credibility, bias, sensitivity | `commands/autoloop-compare.md` |
-| T3 Product Design | Product design and specification document | design completeness, feasibility | `commands/autoloop-design.md` |
+| T3 Design | 3-phase: requirements → design → review; output is confirmed spec for T4 | design_completeness, feasibility_score, requirement_coverage, scope_precision, validation_evidence | `commands/autoloop-design.md` |
 | T4 Deliver | 5-phase (Phase 1-5) with user gate at phase 5 | **Machine dims** (manifest): `syntax_errors`, `p1_p2_issues`, `service_health`, `user_acceptance` — 文档口语可称 syntax / P1-P2 / 服务健康 / 验收 | `commands/autoloop-deliver.md` |
 | T5 Iterate | KPI-driven with baseline measurement | user-defined KPI target | `commands/autoloop-iterate.md` |
 | T6 Generate | Batch with per-unit QC, auto-retry on low score | pass_rate, avg_score | `commands/autoloop-generate.md` |
@@ -309,6 +309,7 @@ MCP is an enhancement layer; file-based mode remains the default.
 /autoloop:plan     -> Guided plan configuration
 /autoloop:research -> T1 Research
 /autoloop:compare  -> T2 Compare
+/autoloop:design   -> T3 Product Design
 /autoloop:iterate  -> T5 Iterate
 /autoloop:generate -> T6 Generate
 /autoloop:deliver  -> T4 Deliver
