@@ -556,11 +556,15 @@ def detect_oscillation(score_history):
 def _confidence_for_dim(dim):
     """根据评分维度的数据来源，返回 (confidence, margin)。
 
-    三级置信度（与 autoloop-score._confidence_for_dim 一致）：
+    与 autoloop-score.py 中的同名函数保持语义一致。
+    因文件名含连字符无法直接 import，维护两份——修改时需同步。
+
     - empirical (margin ≤ 0.3): 基于工具实际输出
     - heuristic (margin ≤ 1.5): 基于内容分析模式匹配
     - binary (margin = None): 只能判通过/不通过
     """
+    # P1-6: 规范化维度名（manifest名 → 内部名）
+    dim = _MANIFEST_DIM_TO_INTERNAL.get(dim, dim)
     _EMPIRICAL = {
         "syntax", "p1_p2_issues", "service_health",
         "p1_all", "security_p2", "reliability_p2", "maintainability_p2",
