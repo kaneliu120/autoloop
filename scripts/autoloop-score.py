@@ -61,6 +61,12 @@ _MANIFEST_LABEL_MAP = {
     "architecture": "架构",
     "performance": "性能",
     "stability": "稳定性",
+    # T3 产品设计类
+    "design_completeness": "设计完整度",
+    "feasibility_score": "技术可行性",
+    "requirement_coverage": "需求覆盖度",
+    "scope_precision": "范围精确度",
+    "validation_evidence": "验证证据",
 }
 
 # manifest unit → scorer unit 映射
@@ -116,9 +122,10 @@ for _k in TEMPLATE_GATES:
 _TEMPLATE_ALIAS.update({
     "t1 research": "T1", "t1-research": "T1", "research": "T1",
     "t2 compare": "T2", "t2-compare": "T2", "compare": "T2",
+    "t3 design": "T3", "t3-design": "T3", "t3 product design": "T3", "t3-product-design": "T3",
+    "t4 deliver": "T4", "t4-deliver": "T4", "deliver": "T4",
     "t5 iterate": "T5", "t5-iterate": "T5", "iterate": "T5",
     "t6 generate": "T6", "t6-generate": "T6", "generate": "T6",
-    "t4 deliver": "T4", "t4-deliver": "T4", "deliver": "T4",
     "t7 quality": "T7", "t7-quality": "T7", "quality": "T7",
     "t8 optimize": "T8", "t8-optimize": "T8", "optimize": "T8",
 })
@@ -445,8 +452,9 @@ def _eval_gate(gate_def, value, evidence=""):
         thr_display = "{}/10".format(threshold)
         val_display = "{:.1f}/10".format(value)
     elif unit == "score":
-        thr_display = "< {}".format(threshold)
-        val_display = "{:.3f}".format(value)
+        comparator_display = gate_def.get("comparator", ">=")
+        thr_display = "{} {}".format(comparator_display, threshold)
+        val_display = "{:.1f}".format(float(value) if isinstance(value, (int, float)) else 0.0)
     elif unit in ("errors", "count"):
         thr_display = "{} {}".format(comparator, threshold)
         val_display = str(int(value))
@@ -677,6 +685,129 @@ def score_from_ssot(state):
             value = scores.get("stability", scores.get("stability_score", 0.0))
             value = float(value) if isinstance(value, (int, float)) else 0.0
             evidence = "稳定性得分={:.1f}/10".format(value)
+
+        # --- T3 产品设计类 ---
+        elif dim == "design_completeness":
+            # 检查 findings 中有多少需求条目有对应的设计描述
+            raw = scores.get("design_completeness", scores.get("design_complete", None))
+            if raw is not None and isinstance(raw, (int, float)):
+                value = float(raw)
+                evidence = "设计完整度={:.1f}/10（来自 scores）".format(value)
+            else:
+                rounds = state.get("findings", {}).get("rounds", [])
+                req_entries = 0
+                design_entries = 0
+                for rnd in rounds:
+                    for finding in rnd.get("findings", []):
+                        body = _finding_body_text(finding)
+                        dim_tag = finding.get("dimension", "")
+                        if any(kw in dim_tag or kw in body for kw in
+                               ("需求", "requirement", "功能", "feature", "user story")):
+                            req_entries += 1
+                            if any(kw in body for kw in
+                                   ("方案", "设计", "design", "spec", "实现", "架构", "approach")):
+                                design_entries += 1
+                if req_entries > 0:
+                    value = min(10.0, (design_entries / req_entries) * 10.0)
+                    evidence = "{}/{}需求条目有设计描述 → {:.1f}/10".format(
+                        design_entries, req_entries, value)
+                else:
+                    value = 0.0
+                    evidence = "未找到需求条目（findings 中无需求维度标注）"
+
+        elif dim == "feasibility_score":
+            # 检查是否有技术可行性分析内容
+            raw = scores.get("feasibility_score", scores.get("feasibility", None))
+            if raw is not None and isinstance(raw, (int, float)):
+                value = float(raw)
+                evidence = "技术可行性={:.1f}/10（来自 scores）".format(value)
+            else:
+                rounds = state.get("findings", {}).get("rounds", [])
+                feasibility_signals = 0
+                for rnd in rounds:
+                    for finding in rnd.get("findings", []):
+                        body = _finding_body_text(finding)
+                        dim_tag = finding.get("dimension", "")
+                        if any(kw in dim_tag or kw in body for kw in
+                               ("可行性", "feasibility", "风险", "risk", "技术约束",
+                                "constraint", "依赖", "dependency", "架构", "architecture")):
+                            feasibility_signals += _finding_substantive_info_count(finding)
+                if feasibility_signals >= 6:
+                    value = 9.0
+                elif feasibility_signals >= 4:
+                    value = 7.5
+                elif feasibility_signals >= 2:
+                    value = 6.0
+                elif feasibility_signals >= 1:
+                    value = 4.0
+                else:
+                    value = 0.0
+                evidence = "可行性相关信息点={}个 → {:.1f}/10".format(feasibility_signals, value)
+
+        elif dim == "requirement_coverage":
+            # 检查需求到设计的追溯链（每条需求可追溯到文档章节）
+            raw = scores.get("requirement_coverage", scores.get("req_coverage", None))
+            if raw is not None and isinstance(raw, (int, float)):
+                value = float(raw)
+                evidence = "需求覆盖度={:.1f}/10（来自 scores）".format(value)
+            else:
+                covered, total = _count_findings_coverage(state)
+                value = (covered / total * 10.0) if total > 0 else 0.0
+                evidence = "{}/{}维度有追溯记录 → {:.1f}/10".format(covered, total, value)
+
+        elif dim == "scope_precision":
+            # 检查是否有明确的 IN/OUT 范围定义
+            raw = scores.get("scope_precision", scores.get("scope", None))
+            if raw is not None and isinstance(raw, (int, float)):
+                value = float(raw)
+                evidence = "范围精确度={:.1f}/10（来自 scores）".format(value)
+            else:
+                rounds = state.get("findings", {}).get("rounds", [])
+                scope_signals = 0
+                for rnd in rounds:
+                    for finding in rnd.get("findings", []):
+                        body = _finding_body_text(finding)
+                        dim_tag = finding.get("dimension", "")
+                        if any(kw in dim_tag or kw in body for kw in
+                               ("范围", "scope", "IN scope", "OUT scope", "边界", "boundary",
+                                "不包含", "排除", "exclude", "明确")):
+                            scope_signals += _finding_substantive_info_count(finding)
+                if scope_signals >= 4:
+                    value = 9.0
+                elif scope_signals >= 2:
+                    value = 7.0
+                elif scope_signals >= 1:
+                    value = 5.0
+                else:
+                    value = 0.0
+                evidence = "范围定义信息点={}个 → {:.1f}/10".format(scope_signals, value)
+
+        elif dim == "validation_evidence":
+            # 检查是否有独立评审记录（可行性检查 + 风险评估已完成）
+            raw = scores.get("validation_evidence", scores.get("validation", None))
+            if raw is not None and isinstance(raw, (int, float)):
+                value = float(raw)
+                evidence = "验证证据={:.1f}/10（来自 scores）".format(value)
+            else:
+                rounds = state.get("findings", {}).get("rounds", [])
+                validation_signals = 0
+                for rnd in rounds:
+                    for finding in rnd.get("findings", []):
+                        body = _finding_body_text(finding)
+                        dim_tag = finding.get("dimension", "")
+                        if any(kw in dim_tag or kw in body for kw in
+                               ("评审", "review", "验证", "validation", "检查", "check",
+                                "风险评估", "risk assessment", "可行性检查", "feasibility check")):
+                            validation_signals += _finding_substantive_info_count(finding)
+                if validation_signals >= 4:
+                    value = 9.0
+                elif validation_signals >= 2:
+                    value = 7.0
+                elif validation_signals >= 1:
+                    value = 5.0
+                else:
+                    value = 0.0
+                evidence = "评审/验证信息点={}个 → {:.1f}/10".format(validation_signals, value)
 
         else:
             # 未知维度 — 尝试从 scores 中直接读取
