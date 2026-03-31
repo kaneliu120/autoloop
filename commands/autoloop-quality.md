@@ -1,13 +1,13 @@
 ---
 name: autoloop-quality
 description: >
-  AutoLoop T6: 企业级质量迭代模板。三维度并行扫描（安全/可靠/可维护），
+  AutoLoop T7: 企业级质量迭代模板。三维度并行扫描（安全/可靠/可维护），
   按 P1→P2→P3 优先级修复，每修复后验证无回归，直到全部达到企业级标准。
-  目标：达到 references/quality-gates.md T6 门禁矩阵要求。
+  目标：达到 references/quality-gates.md T7 门禁矩阵要求。
   触发：/autoloop:quality 或任何需要将代码提升到企业级质量的任务。
 ---
 
-# AutoLoop T6: Quality — 企业级质量迭代
+# AutoLoop T7: Quality — 企业级质量迭代
 
 ## 执行前提
 
@@ -57,13 +57,13 @@ OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
 ## 企业级质量标准定义
 
 > **评分标准完整定义见 `references/enterprise-standard.md`。**
-> T6 审查必须覆盖 enterprise-standard.md 中的所有检查项，包括但不限于：
+> T7 审查必须覆盖 enterprise-standard.md 中的所有检查项，包括但不限于：
 > 超时配置、重试逻辑、健康检查、测试覆盖、连接池配置等。
 > 不得仅依赖本文件中的简化列表，必须以 enterprise-standard.md 为准。
 
-**目标分数**：质量门禁阈值见 `references/quality-gates.md` T6 行（安全性、可靠性、可维护性各维度分数目标）。
+**目标分数**：质量门禁阈值见 `references/quality-gates.md` T7 行（安全性、可靠性、可维护性各维度分数目标）。
 
-**达标条件（复合判定，见 references/quality-gates-engineering.md T6 复合判定规则）**：
+**达标条件（复合判定，见 references/quality-gates-engineering.md T7 复合判定规则）**：
 - 分数达标 AND 计数达标（P1=0，安全P2=0）两个条件必须同时满足
 
 ---
@@ -260,9 +260,9 @@ grep -rn "http://\|https://" {路径}  # 硬编码 URL
 
 | 维度 | 初始得分 | 目标 | 状态 |
 |------|---------|------|------|
-| 安全性 | {N}/10 | {阈值见 quality-gates.md §T6 门禁} | 未达标/达标 |
-| 可靠性 | {N}/10 | {阈值见 quality-gates.md §T6 门禁} | 未达标/达标 |
-| 可维护性 | {N}/10 | {阈值见 quality-gates.md §T6 门禁} | 未达标/达标 |
+| 安全性 | {N}/10 | {阈值见 quality-gates.md §T7 门禁} | 未达标/达标 |
+| 可靠性 | {N}/10 | {阈值见 quality-gates.md §T7 门禁} | 未达标/达标 |
+| 可维护性 | {N}/10 | {阈值见 quality-gates.md §T7 门禁} | 未达标/达标 |
 
 总问题数：{N}
   P1（必须修复）：{N}
@@ -382,15 +382,15 @@ Checkpoint（已修复 {N} 个问题）
 
 ### 终止判断
 
-终止条件为复合判定（必须同时满足两个条件），完整规则见 `references/quality-gates.md` T6 复合判定规则。
+终止条件为复合判定（必须同时满足两个条件），完整规则见 `references/quality-gates.md` T7 复合判定规则。
 
 ```
-条件一：分数达标（阈值见 quality-gates.md T6 门禁行）
+条件一：分数达标（阈值见 quality-gates.md T7 门禁行）
   安全性 {N}/10 ≥ {阈值} ✓
   可靠性 {N}/10 ≥ {阈值} ✓
   可维护性 {N}/10 ≥ {阈值} ✓
 
-条件二：计数达标（容忍度见 quality-gates-engineering.md T6 复合判定规则）
+条件二：计数达标（容忍度见 quality-gates-engineering.md T7 复合判定规则）
   P1 问题 = 0（所有维度）✓
   安全 P2 问题 = 0 ✓
   可靠性 P2 问题 ≤ {容忍值} ✓
@@ -421,7 +421,7 @@ Checkpoint（已修复 {N} 个问题）
 
 ## 最终审计报告
 
-文件名遵循 `references/loop-protocol.md` 统一输出文件命名章节（T6: `autoloop-audit-{date}.md`）。写入时使用 `assets/audit-template.md`：
+文件名遵循 `references/loop-protocol.md` 统一输出文件命名章节（T7: `autoloop-audit-{date}.md`）。写入时使用 `assets/audit-template.md`：
 
 ```markdown
 # 企业级质量审计报告
@@ -430,9 +430,9 @@ Checkpoint（已修复 {N} 个问题）
 
 | 维度 | 初始 | 最终 | 目标 | 状态 |
 |------|------|------|------|------|
-| 安全性 | {初始}/10 | {最终}/10 | {阈值见 quality-gates.md §T6 门禁} | 达标/未达标 |
-| 可靠性 | {初始}/10 | {最终}/10 | {阈值见 quality-gates.md §T6 门禁} | 达标/未达标 |
-| 可维护性 | {初始}/10 | {最终}/10 | {阈值见 quality-gates.md §T6 门禁} | 达标/未达标 |
+| 安全性 | {初始}/10 | {最终}/10 | {阈值见 quality-gates.md §T7 门禁} | 达标/未达标 |
+| 可靠性 | {初始}/10 | {最终}/10 | {阈值见 quality-gates.md §T7 门禁} | 达标/未达标 |
+| 可维护性 | {初始}/10 | {最终}/10 | {阈值见 quality-gates.md §T7 门禁} | 达标/未达标 |
 
 **迭代轮次**：{N}
 **修复问题数**：{N}（P1:{N} P2:{N} P3:{N}）

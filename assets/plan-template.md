@@ -54,21 +54,12 @@
 | {假设 2，如实施周期} | {当前值，如 6} | {单位，如 月} | {低值} ~ {高值} |
 | {假设 3，如团队规模} | {当前值，如 5} | {单位，如 人} | {低值} ~ {高值} |
 
-**T3 Iterate**：
-- KPI：{指标名} = {目标值}
-- 当前基线：{基线值}（{测量时间}）
-- 测量方法：{命令或步骤}
-- 改动约束：{允许 / 不允许的改动范围}
+**T3 Product Design**：
+- 功能需求：{详细描述}
+- 目标代码库路径：{绝对路径}
+- 输出文档路径：{绝对路径}
 
-**T4 Generate**：
-- 内容类型：{类型}
-- 数量：{N} 个
-- 变量：{变量 1}、{变量 2}
-- 质量阈值：{N}/10
-- output_path：{输出目录绝对路径，默认 {工作目录}/autoloop-output/}
-- naming_pattern：{文件命名规则，如 {template_name}-{index}.md}
-
-**T5 Deliver**：
+**T4 Deliver**：
 - 功能描述：{详细需求}
 - 代码库路径：{绝对路径}
 - 新增路由：{是/否}，路由前缀：{前缀}
@@ -86,7 +77,21 @@
 - migration_check_cmd：{数据库迁移检查命令，如 `alembic check` / `prisma migrate status` / N/A}
 - doc_output_path：{方案文档输出目录绝对路径}
 
-**T6 Quality**：
+**T5 Iterate**：
+- KPI：{指标名} = {目标值}
+- 当前基线：{基线值}（{测量时间}）
+- 测量方法：{命令或步骤}
+- 改动约束：{允许 / 不允许的改动范围}
+
+**T6 Generate**：
+- 内容类型：{类型}
+- 数量：{N} 个
+- 变量：{变量 1}、{变量 2}
+- 质量阈值：{N}/10
+- output_path：{输出目录绝对路径，默认 {工作目录}/autoloop-output/}
+- naming_pattern：{文件命名规则，如 {template_name}-{index}.md}
+
+**T7 Quality**：
 - 代码库路径：{绝对路径}
 - main_entry_file：{主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
 - 审查模块：{模块列表 / 全量}
@@ -95,7 +100,7 @@
 - 已知问题：{描述 / 无}
 - 特殊约束：{约束 / 无}
 
-**T7 Optimize**：
+**T8 Optimize**：
 - 系统路径：{绝对路径}
 - main_entry_file：{主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
 - syntax_check_cmd：{语法检查命令，如 python3 -m py_compile {file}}

@@ -2,15 +2,15 @@
 
 ## 概述
 
-本文档是 quality-gates.md 的评分细则组件，定义 T6/T7 各维度的评分计算方法。通过标准见 quality-gates.md §门禁分类总览。
+本文档是 quality-gates.md 的评分细则组件，定义 T7/T8 各维度的评分计算方法。通过标准见 quality-gates.md §门禁分类总览。
 
-本文档定义 AutoLoop T6（Quality）和 T7（Optimize）使用的企业级标准评分体系。所有评分规则是具体、可量化的，消除主观判断。
+本文档定义 AutoLoop T7（Quality）和 T8（Optimize）使用的企业级标准评分体系。所有评分规则是具体、可量化的，消除主观判断。
 
 > **客观化原则**：本文档所有扣分条目均使用可量化阈值或可grep验证的规则，不使用"清晰""重要""关键""频繁"等主观判断词。具体阈值可在 `parameters.md` 中调整。
 
 评分维度（Security / Reliability / Maintainability / Architecture / Performance / Stability）及其通过标准均为**技术栈无关**的通用标准。各维度下设"技术栈特定检测"子节，列出针对具体技术栈的检测命令示例。
 
-> **Domain Pack 扩展**：当 `autoloop-plan.md` 指定 `domain_pack`（如 `python-fastapi`）时，T6/T7 OBSERVE 阶段应读取 `references/domain-pack-{pack名}.md`，其中的检测命令替换本文档的通用命令，权重调整覆盖通用权重，新增检测项追加到扣分规则。详见 `references/domain-pack-spec.md`。
+> **Domain Pack 扩展**：当 `autoloop-plan.md` 指定 `domain_pack`（如 `python-fastapi`）时，T7/T8 OBSERVE 阶段应读取 `references/domain-pack-{pack名}.md`，其中的检测命令替换本文档的通用命令，权重调整覆盖通用权重，新增检测项追加到扣分规则。详见 `references/domain-pack-spec.md`。
 
 ---
 

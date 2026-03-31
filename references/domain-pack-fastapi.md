@@ -3,7 +3,7 @@
 ## 适用范围
 
 - 技术栈：Python 3.10+ / FastAPI / SQLAlchemy 2.0 / Pydantic v2
-- 适用模板：T6 Quality / T7 Optimize
+- 适用模板：T7 Quality / T8 Optimize
 
 ---
 
@@ -77,7 +77,7 @@ grep -rn "http://\|https://\|sk-\|pk_" {路径} --include="*.py" | grep -v ".md\
 awk '/^    def |^def /{if(lines>80)print FILENAME":"fn": "lines" lines"; fn=$0; lines=0} {lines++}' {路径}/**/*.py
 ```
 
-### 架构检测（T7）
+### 架构检测（T8）
 
 ```bash
 # 路由层直接访问 DB
@@ -90,7 +90,7 @@ python3 -c "import importlib; importlib.import_module('{模块名}')" 2>&1 | gre
 grep -rn "@router\.\(get\|post\|put\|delete\|patch\)" {路径} --include="*.py"
 ```
 
-### 性能检测（T7）
+### 性能检测（T8）
 
 ```bash
 # 同步混用（async 函数中调用同步库）
@@ -106,7 +106,7 @@ grep -rn "for.*await.*session\|for.*\.query" {路径} --include="*.py"
 grep -rn "\.all()\|fetchall()" {路径} --include="*.py" | grep -v "limit\|offset\|paginate"
 ```
 
-### 稳定性检测（T7）
+### 稳定性检测（T8）
 
 ```bash
 # 健康检查依赖验证

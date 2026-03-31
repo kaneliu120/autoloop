@@ -1,0 +1,153 @@
+{
+  "plan": {
+    "task_id": "autoloop-EXAMPLE-REPLACE",
+    "template": "T1",
+    "goal": "example",
+    "detailed_background": "",
+    "success_criteria": [],
+    "status": "准备开始",
+    "work_dir": "<你的任务目录绝对路径>",
+    "plan_version": "1.0",
+    "dimensions": [],
+    "gates": [
+      {
+        "dim": "coverage",
+        "dimension": "coverage",
+        "manifest_dimension": "coverage",
+        "label": "覆盖率",
+        "threshold": 85,
+        "unit": "%",
+        "gate": "hard",
+        "comparator": ">=",
+        "current": null,
+        "status": "未达标"
+      },
+      {
+        "dim": "credibility",
+        "dimension": "credibility",
+        "manifest_dimension": "credibility",
+        "label": "可信度",
+        "threshold": 80,
+        "unit": "%",
+        "gate": "hard",
+        "comparator": ">=",
+        "current": null,
+        "status": "未达标"
+      },
+      {
+        "dim": "consistency",
+        "dimension": "consistency",
+        "manifest_dimension": "consistency",
+        "label": "一致性",
+        "threshold": 90,
+        "unit": "%",
+        "gate": "soft",
+        "comparator": ">=",
+        "current": null,
+        "status": "未达标"
+      },
+      {
+        "dim": "completeness",
+        "dimension": "completeness",
+        "manifest_dimension": "completeness",
+        "label": "完整性",
+        "threshold": 85,
+        "unit": "%",
+        "gate": "soft",
+        "comparator": ">=",
+        "current": null,
+        "status": "未达标"
+      }
+    ],
+    "budget": {
+      "max_rounds": 0,
+      "current_round": 0,
+      "time_limit": "无限制",
+      "exhaustion_strategy": "输出当前最优"
+    },
+    "scope": {
+      "includes": [],
+      "excludes": [],
+      "extensions": []
+    },
+    "template_params": {},
+    "template_mode": "ooda_rounds",
+    "linear_delivery_complete": false,
+    "output_files": {
+      "plan": {
+        "path": "autoloop-plan.md",
+        "status": "已创建"
+      },
+      "progress": {
+        "path": "autoloop-progress.md",
+        "status": "待创建"
+      },
+      "findings": {
+        "path": "autoloop-findings.md",
+        "status": "待创建"
+      },
+      "results_tsv": {
+        "path": "autoloop-results.tsv",
+        "status": "待创建"
+      }
+    },
+    "strategy_history": [],
+    "change_log": [
+      {
+        "time": "2026-03-29T09:42:17",
+        "field": "初始创建",
+        "before": "",
+        "after": "",
+        "reason": ""
+      }
+    ]
+  },
+  "iterations": [],
+  "findings": {
+    "executive_summary": {
+      "topic": "待填写",
+      "total_rounds": 0,
+      "final_scores": {},
+      "top_conclusions": []
+    },
+    "rounds": [],
+    "engineering_issues": {
+      "security": [],
+      "reliability": [],
+      "maintainability": [],
+      "architecture": [],
+      "performance": [],
+      "stability": []
+    },
+    "fix_records": [],
+    "disputes": [],
+    "info_gaps": [],
+    "expansion_directions": [],
+    "sources": {
+      "high": [],
+      "medium": [],
+      "low": []
+    },
+    "problem_tracker": [],
+    "strategy_evaluations": [],
+    "pattern_recognition": {
+      "recurring_problems": [],
+      "diminishing_returns": [],
+      "cross_dimension": [],
+      "bottlenecks": []
+    },
+    "lessons_learned": {
+      "verified_hypotheses": [],
+      "generalizable_methods": [],
+      "process_improvements": []
+    }
+  },
+  "experience": [],
+  "results_tsv": [],
+  "metadata": {
+    "protocol_version": "1.0.0",
+    "created_at": "2026-03-29T09:42:17",
+    "updated_at": "2026-03-29T09:42:17",
+    "ssot_version": "1.0.0"
+  }
+}

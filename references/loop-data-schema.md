@@ -21,22 +21,22 @@
 
 | 变量名 | 类型 | 用途 | 收集时机 | 适用模板 |
 |--------|------|------|---------|---------|
-| deploy_target | string | 部署目标主机/环境（如 sip-server、prod-01）| plan | T5 |
-| deploy_command | string | 部署执行命令（完整命令，如 gcloud compute ssh ...）| plan | T5 |
-| service_list | string[] | 服务名称列表（如 [sip-backend, sip-worker]）| plan | T5 |
-| service_count | int | 服务数量（自动计算 = len(service_list)，不手动填写）| 自动 | T5 |
-| health_check_url | string | 健康检查 URL（如 https://example.com/api/health）| plan | T5 |
-| acceptance_url | string | 线上验收 URL（如 https://example.com）| plan | T5 |
-| doc_output_path | string | 方案文档输出目录（绝对路径）| plan | T5 |
-| syntax_check_cmd | string | 语法检查命令（如 python3 -m py_compile {file} 或 npx tsc --noEmit）| plan | T5/T6/T7 |
-| syntax_check_file_arg | boolean | 语法检查命令是否接受单文件参数（python3 -m py_compile → true；npx tsc --noEmit → false）| plan | T5/T6/T7 |
-| new_router_name | string | 本次新增的 router 变量名（如 comments_router；无新路由填 N/A）| plan | T5 |
-| main_entry_file | string | 主入口文件绝对路径（如 /project/backend/main.py 或 /project/src/app.ts）| plan | T5/T6 |
-| output_path | string | 输出目录绝对路径（默认 {工作目录}/autoloop-output/）| plan | T4 |
-| naming_pattern | string | 文件命名规则（如 {template_name}-{index}.md）| plan | T4 |
+| deploy_target | string | 部署目标主机/环境（如 sip-server、prod-01）| plan | T4 |
+| deploy_command | string | 部署执行命令（完整命令，如 gcloud compute ssh ...）| plan | T4 |
+| service_list | string[] | 服务名称列表（如 [sip-backend, sip-worker]）| plan | T4 |
+| service_count | int | 服务数量（自动计算 = len(service_list)，不手动填写）| 自动 | T4 |
+| health_check_url | string | 健康检查 URL（如 https://example.com/api/health）| plan | T4 |
+| acceptance_url | string | 线上验收 URL（如 https://example.com）| plan | T4 |
+| doc_output_path | string | 方案文档输出目录（绝对路径）| plan | T4 |
+| syntax_check_cmd | string | 语法检查命令（如 python3 -m py_compile {file} 或 npx tsc --noEmit）| plan | T4/T7/T8 |
+| syntax_check_file_arg | boolean | 语法检查命令是否接受单文件参数（python3 -m py_compile → true；npx tsc --noEmit → false）| plan | T4/T7/T8 |
+| new_router_name | string | 本次新增的 router 变量名（如 comments_router；无新路由填 N/A）| plan | T4 |
+| main_entry_file | string | 主入口文件绝对路径（如 /project/backend/main.py 或 /project/src/app.ts）| plan | T4/T7 |
+| output_path | string | 输出目录绝对路径（默认 {工作目录}/autoloop-output/）| plan | T6 |
+| naming_pattern | string | 文件命名规则（如 {template_name}-{index}.md）| plan | T6 |
 | key_assumptions | list[{name, current_value, unit}] | T2 对比中的关键假设（结构化列表，每项含名称+当前值+单位，用于敏感性分析）| plan | T2 |
-| migration_check_cmd | string | 数据库迁移状态验证命令（如 python -m alembic current && python -m alembic check；无迁移填 N/A）| plan | T5 |
-| frontend_dir | string | 前端代码目录绝对路径（如 /project/frontend）| plan | T5 |
+| migration_check_cmd | string | 数据库迁移状态验证命令（如 python -m alembic current && python -m alembic check；无迁移填 N/A）| plan | T4 |
+| frontend_dir | string | 前端代码目录绝对路径（如 /project/frontend）| plan | T4 |
 
 ---
 
@@ -64,11 +64,11 @@
 |------|--------------|---------|
 | T1 Research | `autoloop-report-{topic}-{date}.md` | plan + findings + progress + results.tsv |
 | T2 Compare | `autoloop-report-{topic}-{date}.md` | 同上 |
-| T3 Iterate | `autoloop-report-{topic}-{date}.md` | 同上 |
-| T4 Generate | `{output_path}/{naming_pattern}` (生成内容) + `autoloop-report-{topic}-{date}.md` (汇总报告) | 同上 |
-| T5 Deliver | `autoloop-delivery-{feature}-{date}.md` | 同上 |
-| T6 Quality | `autoloop-audit-{date}.md` | 同上 |
-| T7 Optimize | `autoloop-audit-{date}.md` | 同上 |
+| T5 Iterate | `autoloop-report-{topic}-{date}.md` | 同上 |
+| T6 Generate | `{output_path}/{naming_pattern}` (生成内容) + `autoloop-report-{topic}-{date}.md` (汇总报告) | 同上 |
+| T4 Deliver | `autoloop-delivery-{feature}-{date}.md` | 同上 |
+| T7 Quality | `autoloop-audit-{date}.md` | 同上 |
+| T8 Optimize | `autoloop-audit-{date}.md` | 同上 |
 
 其中 `{date}` = `YYYYMMDD`，`{topic}` / `{feature}` 从 plan 的一句话目标中提取（空格替换为 `-`，小写）。
 
@@ -94,7 +94,7 @@ iteration	phase	status	dimension	metric_value	delta	strategy_id	action_summary	s
 | action_summary | 具体执行动作摘要 | 扫描全部SQL拼接并替换为参数化 |
 | side_effect | 对其他维度的影响（无副作用填"无"） | 可维护性-0.5 |
 | evidence_ref | 证据引用（findings.md 中的问题ID） | S001, R003 |
-| unit_id | T2选项名/T4单元编号（其他模板填 —） | 选项A / 001 / — |
+| unit_id | T2选项名/T6单元编号（其他模板填 —） | 选项A / 001 / — |
 | protocol_version | 当前协议版本号 | 1.0.0 |
 | score_variance | 多evaluator评分方差（单evaluator填0） | 0.5 |
 | confidence | 评分置信度百分比 | 85% |
@@ -102,9 +102,9 @@ iteration	phase	status	dimension	metric_value	delta	strategy_id	action_summary	s
 
 **使用约定（各模板行粒度）**：
 
-- T1/T3/T5/T6/T7：每轮**每维度**一行，确保每个维度的分数变化和策略归因都可追踪
+- T1/T5/T4/T7/T8：每轮**每维度**一行，确保每个维度的分数变化和策略归因都可追踪
 - T2 Compare：每轮每选项每维度一行，`unit_id` = 选项名
-- T4 Generate：每生成单元一行，`unit_id` = 生成单元 ID（001/002/...），`dimension` = `score`
+- T6 Generate：每生成单元一行，`unit_id` = 生成单元 ID（001/002/...），`dimension` = `score`
 - strategy_id 必须与 findings.md 中策略评估表的策略名一致
 - side_effect 字段强制填写（无副作用填"无"）
 - 首轮基线采集时，strategy_id 填"baseline"，action_summary 填"基线测量"
@@ -164,7 +164,7 @@ iteration	phase	status	dimension	metric_value	delta	strategy_id	action_summary	s
 **若你的 state 早于上述约定**（`plan.gates` 为空、缺少 `manifest_dimension`、或 `dim` 仍写 `syntax_errors` / `p1_count` 等 manifest 原名）：
 
 1. **推荐**：在工作目录删除 `autoloop-state.json`（及按需清理 checkpoint）后重新执行  
-   `python3 scripts/autoloop-state.py init <工作目录> <模板T1-T7> "<目标>"`  
+   `python3 scripts/autoloop-state.py init <工作目录> <模板T1-T8> "<目标>"`  
    将自动写入与 scorer 对齐的 `plan.gates`。
 2. **保留历史**：手工将每条 gate 的 `dim` 改为与 `gate-manifest.json` 经 `_MANIFEST_DIM_MAP` 映射后的内部键，并补上 `manifest_dimension`；可参考新生成 state 中的结构。
 3. **校验**：`python3 scripts/autoloop-validate.py <工作目录>` 对旧约约会给出 **warning**（非致命）；`--strict` 或 `AUTOLOOP_VALIDATE_STRICT=1` 时升级为 **error**。
@@ -178,7 +178,7 @@ iteration	phase	status	dimension	metric_value	delta	strategy_id	action_summary	s
 |------|------|------|
 | `dim` | 是 | 与 `autoloop-score` 输出的 `dimension` 一致（内部键） |
 | `manifest_dimension` | 强烈建议 | `gate-manifest.json` 中该条的原始 `dimension` 字符串 |
-| `threshold` / `target` | 视模板 | T3 等可为 `threshold: null` + `target` |
+| `threshold` / `target` | 视模板 | T5 等可为 `threshold: null` + `target` |
 | `gate` / `label` / `comparator` / `unit` | 视模板 | 与 manifest 一致 |
 
 **废弃**：仅写 `dimension` 而不写 `dim` — validate strict 模式下报错。
@@ -232,11 +232,11 @@ iteration	phase	status	dimension	metric_value	delta	strategy_id	action_summary	s
 
 ---
 
-## plan.template_mode 与 T5 交付（P2-04）
+## plan.template_mode 与 T4 交付（P2-04）
 
 | 字段 | 类型 | 默认 | 说明 |
 |------|------|------|------|
-| `plan.template_mode` | string | `ooda_rounds` | `ooda_rounds`：终止条件与 manifest `default_rounds` 一致。`linear_phases`：T5 下预算耗尽时若 `linear_delivery_complete` 仍为 false，控制器 EVOLVE **暂停**而非成功终止，避免仅靠 OODA 轮次误停。 |
+| `plan.template_mode` | string | `ooda_rounds` | `ooda_rounds`：终止条件与 manifest `default_rounds` 一致。`linear_phases`：T4 下预算耗尽时若 `linear_delivery_complete` 仍为 false，控制器 EVOLVE **暂停**而非成功终止，避免仅靠 OODA 轮次误停。 |
 | `plan.linear_delivery_complete` | boolean | `false` | 人工在交付 Phase 1–5 全部完成后设为 `true`（见 `references/delivery-phases.md`）。 |
 
 ---

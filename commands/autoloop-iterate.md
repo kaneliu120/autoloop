@@ -1,13 +1,13 @@
 ---
 name: autoloop-iterate
 description: >
-  AutoLoop T3: 目标驱动迭代模板。定义 KPI 和基线，每轮改进后重新测量，
+  AutoLoop T5: 目标驱动迭代模板。定义 KPI 和基线，每轮改进后重新测量，
   直到 KPI 达标或达到最大轮次。支持人工反馈介入。
-  质量门禁阈值见 references/quality-gates.md T3 行。
+  质量门禁阈值见 references/quality-gates.md T5 行。
   触发：/autoloop:iterate 或任何需要反复改进直到达标的任务。
 ---
 
-# AutoLoop T3: Iterate — 目标驱动迭代
+# AutoLoop T5: Iterate — 目标驱动迭代
 
 ## 执行前提
 
@@ -151,7 +151,7 @@ KPI 指标：{指标名}
 
 ### VERIFY：重新测量
 
-KPI 门禁定义见 `references/quality-gates.md` T3 KPI Target 章节。
+KPI 门禁定义见 `references/quality-gates.md` T5 KPI Target 章节。
 
 VERIFY阶段由独立的 kpi-evaluator subagent 执行评分（调度方式见 references/agent-dispatch.md 独立评分器章节）。kpi-evaluator 只接收KPI测量结果，不接收优化策略信息，按 quality-gates.md 锚点盲评。
 
@@ -263,7 +263,7 @@ git stash pop
 
 ## 进度追踪
 
-每轮在 `autoloop-progress.md` 追加完整 8 阶段记录（OBSERVE/ORIENT/DECIDE/ACT/VERIFY/SYNTHESIZE/EVOLVE/REFLECT），格式见 `references/loop-protocol.md` 循环日志格式章节。以下为 T3 Iterate 的简化摘要示例（实际记录必须包含所有 8 个阶段）：
+每轮在 `autoloop-progress.md` 追加完整 8 阶段记录（OBSERVE/ORIENT/DECIDE/ACT/VERIFY/SYNTHESIZE/EVOLVE/REFLECT），格式见 `references/loop-protocol.md` 循环日志格式章节。以下为 T5 Iterate 的简化摘要示例（实际记录必须包含所有 8 个阶段）：
 
 ```markdown
 ## 第 {N} 轮 — {时间}

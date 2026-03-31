@@ -11,6 +11,17 @@ import json
 import os
 import re
 import sys
+import urllib.parse
+
+_score_dir = os.path.dirname(os.path.abspath(__file__))
+if _score_dir not in sys.path:
+    sys.path.insert(0, _score_dir)
+
+from autoloop_kpi import (
+    kpi_row_satisfied,
+    plan_gate_is_exempt,
+    results_tsv_last_row_fail_closed,
+)
 
 # ---------------------------------------------------------------------------
 # 门禁定义 — 从 gate-manifest.json（SSOT）加载
@@ -83,10 +94,12 @@ def _manifest_to_scorer_gates(manifest):
             label = _MANIFEST_LABEL_MAP.get(dim_raw, dim_raw)
             gates.append({
                 "dim": dim,
+                "manifest_dimension": dim_raw,
                 "threshold": threshold,
                 "unit": unit,
                 "gate": gate_type,
                 "label": label,
+                "comparator": g.get("comparator", ">="),
             })
         result[tkey] = gates
     return result
@@ -103,20 +116,56 @@ for _k in TEMPLATE_GATES:
 _TEMPLATE_ALIAS.update({
     "t1 research": "T1", "t1-research": "T1", "research": "T1",
     "t2 compare": "T2", "t2-compare": "T2", "compare": "T2",
-    "t3 iterate": "T3", "t3-iterate": "T3", "iterate": "T3",
-    "t4 generate": "T4", "t4-generate": "T4", "generate": "T4",
-    "t5 deliver": "T5", "t5-deliver": "T5", "deliver": "T5",
-    "t6 quality": "T6", "t6-quality": "T6", "quality": "T6",
-    "t7 optimize": "T7", "t7-optimize": "T7", "optimize": "T7",
+    "t5 iterate": "T5", "t5-iterate": "T5", "iterate": "T5",
+    "t6 generate": "T6", "t6-generate": "T6", "generate": "T6",
+    "t4 deliver": "T4", "t4-deliver": "T4", "deliver": "T4",
+    "t7 quality": "T7", "t7-quality": "T7", "quality": "T7",
+    "t8 optimize": "T8", "t8-optimize": "T8", "optimize": "T8",
 })
 
 
 def resolve_template(raw):
-    """将模板字符串标准化为 T1-T7 键"""
+    """将模板字符串标准化为 T1-T8 键"""
     if not raw:
         return None
     key = raw.strip().lower()
     return _TEMPLATE_ALIAS.get(key)
+
+
+def plan_gates_for_ssot_init(template_raw):
+    """从 manifest 生成 plan.gates，dim 与 scorer JSON dimension / iterations.scores 键一致。
+
+    每条含 manifest_dimension 供 controller 反查 manifest comparator。
+    """
+    tkey = resolve_template(template_raw)
+    if not tkey:
+        tr = (template_raw or "").strip()
+        if tr in TEMPLATE_GATES:
+            tkey = tr
+    tmpl = _MANIFEST.get("templates", {})
+    if not tkey or tkey not in tmpl:
+        return []
+    out = []
+    for g in tmpl[tkey]["gates"]:
+        dim_raw = g["dimension"]
+        dim = _MANIFEST_DIM_MAP.get(dim_raw, dim_raw)
+        unit = _MANIFEST_UNIT_MAP.get(g["unit"], g["unit"])
+        row = {
+            "dim": dim,
+            "dimension": dim,
+            "manifest_dimension": dim_raw,
+            "label": _MANIFEST_LABEL_MAP.get(dim_raw, dim_raw),
+            "threshold": g["threshold"],
+            "unit": unit,
+            "gate": g["type"],
+            "comparator": g.get("comparator", ">="),
+            "current": None,
+            "status": "未达标",
+        }
+        if g["threshold"] is None:
+            row["target"] = None
+        out.append(row)
+    return out
 
 
 # =====================================================================
@@ -149,8 +198,15 @@ def detect_mode(path):
             with open(path, "r", encoding="utf-8") as f:
                 state = json.load(f)
             return "ssot", state, os.path.dirname(path)
-        # 视为 markdown
-        with open(path, "r", encoding="utf-8") as f:
+        abspath = os.path.abspath(path)
+        dir_ = os.path.dirname(abspath) or "."
+        state_sidecar = os.path.join(dir_, "autoloop-state.json")
+        if os.path.isfile(state_sidecar):
+            with open(state_sidecar, "r", encoding="utf-8") as f:
+                state = json.load(f)
+            return "ssot", state, dir_
+        # 无同目录 SSOT 时视为纯 markdown findings
+        with open(abspath, "r", encoding="utf-8") as f:
             content = f.read()
         return "markdown", content, path
 
@@ -167,6 +223,50 @@ def _get_latest_scores(state):
     if not iterations:
         return {}
     return iterations[-1].get("scores", {})
+
+
+def _finding_body_text(finding):
+    """findings 条目 canonical 正文：summary → content → description（与 loop-data-schema / validate 一致）。"""
+    if not isinstance(finding, dict):
+        return ""
+    for k in ("summary", "content", "description"):
+        v = finding.get(k)
+        if v not in (None, ""):
+            return str(v).strip()
+    return ""
+
+
+def _finding_substantive_info_count(finding):
+    """每条 finding 的实质信息量（用于 coverage / completeness 严格口径）。"""
+    body = _finding_body_text(finding) or ""
+    lines = body.split("\n")
+    bullets = sum(
+        1 for line in lines
+        if line.strip().startswith("- ") and len(line.strip()) > 10
+    )
+    if bullets >= 2:
+        return bullets
+    paras = sum(
+        1 for line in lines
+        if line.strip() and len(line.strip()) > 10
+        and not line.strip().startswith("#")
+        and not line.strip().startswith("|")
+    )
+    return max(bullets, paras)
+
+
+def _find_plan_gate_row(plan_gates, dim, manifest_dimension=None):
+    """在 plan.gates 中查找与模板维度对应的行（dim 或 manifest_dimension）。"""
+    if not plan_gates:
+        return None
+    md = manifest_dimension or dim
+    for pg in plan_gates:
+        pd = pg.get("dim") or pg.get("dimension", "")
+        if pd == dim:
+            return pg
+        if manifest_dimension and pg.get("manifest_dimension") == md:
+            return pg
+    return None
 
 
 def _get_plan_gates(state):
@@ -195,38 +295,53 @@ def _count_issues_by_severity(state, category=None):
 
 
 def _count_findings_coverage(state):
-    """从 findings.rounds 计算维度覆盖情况"""
+    """从 findings.rounds 计算维度覆盖：每维至少 2 条实质信息点才算覆盖。"""
     plan_dims = state.get("plan", {}).get("dimensions", [])
-    total_dims = len(plan_dims) if plan_dims else 0
-
-    # 收集所有 round 中出现的维度
-    covered_dims = set()
     rounds = state.get("findings", {}).get("rounds", [])
+    dim_best = {}
     for rnd in rounds:
         for finding in rnd.get("findings", []):
             dim = finding.get("dimension", "")
-            if dim:
-                covered_dims.add(dim)
-
-    # 如果 plan 没定义 dimensions，就用 findings 中出现的维度数作为 total
-    if total_dims == 0:
-        total_dims = len(covered_dims)
-
-    return len(covered_dims), total_dims
+            if not dim:
+                continue
+            n = _finding_substantive_info_count(finding)
+            dim_best[dim] = max(dim_best.get(dim, 0), n)
+    if plan_dims:
+        total = len(plan_dims)
+        covered = sum(1 for d in plan_dims if dim_best.get(d, 0) >= 2)
+    else:
+        if not dim_best:
+            return 0, 0
+        total = len(dim_best)
+        covered = sum(1 for _, n in dim_best.items() if n >= 2)
+    return covered, total
 
 
 def _count_findings_credibility(state):
-    """计算有多源支撑的发现比例"""
+    """计算有多源支撑的发现比例（多 URL、多域名或分号/逗号分隔多来源）。"""
     rounds = state.get("findings", {}).get("rounds", [])
     total = 0
     multi_source = 0
     for rnd in rounds:
         for finding in rnd.get("findings", []):
             total += 1
-            source = finding.get("source", "")
-            # 多源检测：多个 URL 或明确标注
-            url_count = len(re.findall(r'https?://', source)) if source else 0
-            if url_count >= 2 or ";" in source or "," in source:
+            source = finding.get("source", "") or ""
+            blob = source + " " + _finding_body_text(finding)
+            if not blob.strip():
+                continue
+            urls = re.findall(r"https?://[^\s)\]>]+", blob)
+            domains = set()
+            for u in urls:
+                try:
+                    domains.add(urllib.parse.urlparse(u).netloc.lower())
+                except Exception:
+                    pass
+            if (
+                len(urls) >= 2
+                or len(domains) >= 2
+                or ";" in source
+                or "," in source
+            ):
                 multi_source += 1
     return multi_source, total
 
@@ -254,15 +369,19 @@ def _count_findings_consistency(state):
 
 
 def _count_findings_completeness(state):
-    """计算有来源引用的发现比例"""
+    """有来源引用且至少 1 个实质信息点的发现比例。"""
     rounds = state.get("findings", {}).get("rounds", [])
     total = 0
     sourced = 0
     for rnd in rounds:
         for finding in rnd.get("findings", []):
             total += 1
-            source = finding.get("source", "")
-            if source and len(source.strip()) > 0:
+            source = (finding.get("source") or "").strip()
+            body = _finding_body_text(finding)
+            has_ref = bool(
+                source or (body and re.search(r"https?://|来源|Source|arXiv", body, re.I))
+            )
+            if has_ref and _finding_substantive_info_count(finding) >= 1:
                 sourced += 1
     return sourced, total
 
@@ -273,16 +392,21 @@ def _eval_gate(gate_def, value, evidence=""):
     value: 实际值（百分比 / 分数 / 计数 / bool）
     """
     dim = gate_def["dim"]
+    manifest_dimension = gate_def.get("manifest_dimension", dim)
     threshold = gate_def["threshold"]
     unit = gate_def["unit"]
     gate_type = gate_def["gate"]
     label = gate_def["label"]
 
-    # threshold 为 None 表示用户自定义（T3 KPI）
+    # threshold 为 None 表示用户自定义（T5 KPI）
+    # T5 KPI 的数值比较在 score_from_ssot() 中完成（plan_gates 循环），
+    # value 到达此处时已是 bool（kpi_pass）。
+    # controller.py check_gates_passed 中有平行的数值比较路径（plan.gates[].target）。
     if threshold is None:
-        passed = value is not None and value is True
+        passed = value is not None and bool(value)
         return {
             "dimension": dim,
+            "manifest_dimension": manifest_dimension,
             "label": label,
             "value": value,
             "threshold": "用户定义",
@@ -292,18 +416,24 @@ def _eval_gate(gate_def, value, evidence=""):
             "evidence": evidence,
         }
 
-    # 根据 unit 决定比较方式
-    if unit in ("%", "/10"):
-        # 值越大越好
+    # 使用 manifest comparator 字段进行比较（SSOT），unit 作为回退
+    comparator = gate_def.get("comparator", ">=")
+    if unit == "bool":
+        # bool + ==：与 threshold 严格相等（避免 float 偏见分被 bool() 误判为 True）
+        if comparator == "==":
+            passed = value == threshold
+        else:
+            passed = bool(value)
+    elif comparator == ">=":
         passed = value >= threshold
-    elif unit == "bool":
-        passed = bool(value)
-    elif unit in ("errors", "count"):
-        # 值越小越好（≤ threshold）
+    elif comparator == "<=":
         passed = value <= threshold
-    elif unit == "score":
-        # bias_check: 值越小越好（< threshold）
+    elif comparator == "==":
+        passed = value == threshold
+    elif comparator == "<":
         passed = value < threshold
+    elif comparator == ">":
+        passed = value > threshold
     else:
         passed = value >= threshold
 
@@ -318,7 +448,7 @@ def _eval_gate(gate_def, value, evidence=""):
         thr_display = "< {}".format(threshold)
         val_display = "{:.3f}".format(value)
     elif unit in ("errors", "count"):
-        thr_display = "<= {}".format(threshold)
+        thr_display = "{} {}".format(comparator, threshold)
         val_display = str(int(value))
     elif unit == "bool":
         thr_display = "True"
@@ -329,6 +459,7 @@ def _eval_gate(gate_def, value, evidence=""):
 
     return {
         "dimension": dim,
+        "manifest_dimension": manifest_dimension,
         "label": label,
         "value": value,
         "value_display": val_display,
@@ -359,6 +490,23 @@ def score_from_ssot(state):
 
     for gate_def in gates:
         dim = gate_def["dim"]
+        pg = _find_plan_gate_row(plan_gates, dim, gate_def.get("manifest_dimension"))
+        if pg and plan_gate_is_exempt(pg):
+            results.append(
+                {
+                    "dimension": dim,
+                    "manifest_dimension": gate_def.get("manifest_dimension", dim),
+                    "label": gate_def["label"],
+                    "value": None,
+                    "threshold": gate_def["threshold"],
+                    "unit": gate_def["unit"],
+                    "gate_type": gate_def["gate"],
+                    "pass": True,
+                    "evidence": "plan.gates.status=豁免（rollup 视同通过）",
+                }
+            )
+            continue
+
         value = None
         evidence = ""
 
@@ -385,12 +533,17 @@ def score_from_ssot(state):
 
         # --- T2 专属 ---
         elif dim == "bias_check":
-            # 从 scores 或 plan_gates 读取偏见分数（max across options）
-            value = scores.get("bias_check", scores.get("bias_score", 0.0))
-            if isinstance(value, (int, float)):
-                evidence = "最大偏见分数={:.3f}".format(value)
+            # bool + ==1：数值须先归一为「偏见<0.15」布尔（quality-gates.md）
+            raw = scores.get("bias_check", scores.get("bias_score", 0.0))
+            if isinstance(raw, bool):
+                value = raw
+                evidence = "偏见检查={}".format("通过" if raw else "未通过")
+            elif isinstance(raw, (int, float)):
+                value = raw < 0.15
+                evidence = "最大偏见分数={:.3f} → {}".format(
+                    raw, "通过" if value else "未通过")
             else:
-                value = 0.0
+                value = False
                 evidence = "无偏见检查数据"
 
         elif dim == "sensitivity":
@@ -401,32 +554,31 @@ def score_from_ssot(state):
                 value = bool(value)
                 evidence = "敏感性分析={}".format(value)
 
-        # --- T3 KPI ---
+        # --- T5 KPI ---
         elif dim == "kpi_target":
-            # 检查 plan.gates 中用户定义的 KPI 是否全部达标
-            kpi_pass = True
-            kpi_details = []
-            for pg in plan_gates:
-                pg_dim = pg.get("dimension", "")
-                current = pg.get("current")
-                target = pg.get("target")
-                status = pg.get("status", "")
-                if current is not None and target is not None:
-                    try:
-                        met = float(current) >= float(target)
-                    except (ValueError, TypeError):
-                        met = status in ("达标", "通过", "pass", "passed")
+            kpi_rows = [pg for pg in plan_gates if pg.get("threshold") is None]
+            if not kpi_rows:
+                value = False
+                evidence = "无KPI定义（plan.gates 无 threshold=null 行）"
+            else:
+                kpi_pass = True
+                kpi_details = []
+                for pg in kpi_rows:
+                    pg_dim = pg.get("dimension", pg.get("dim", ""))
+                    override = scores.get(pg_dim)
+                    met = kpi_row_satisfied(pg, override)
                     if not met:
                         kpi_pass = False
+                    cur = (
+                        override if override is not None else pg.get("current")
+                    )
+                    tgt = pg.get("target")
                     kpi_details.append("{}:{}→{}({})".format(
-                        pg_dim, current, target, "✓" if met else "✗"))
-                else:
-                    kpi_pass = False
-                    kpi_details.append("{}:未定义目标值".format(pg_dim))
-            value = kpi_pass
-            evidence = "; ".join(kpi_details) if kpi_details else "无KPI定义"
+                        pg_dim, cur, tgt, "✓" if met else "✗"))
+                value = kpi_pass
+                evidence = "; ".join(kpi_details)
 
-        # --- T4 生成类 ---
+        # --- T6 生成类 ---
         elif dim == "pass_rate":
             value = scores.get("pass_rate", 0.0)
             if isinstance(value, (int, float)):
@@ -443,7 +595,7 @@ def score_from_ssot(state):
                 value = 0.0
                 evidence = "无平均分数据"
 
-        # --- T5 交付类 ---
+        # --- T4 交付类 ---
         elif dim == "syntax":
             value = scores.get("syntax_errors", scores.get("syntax", 0))
             if isinstance(value, (int, float)):
@@ -474,7 +626,7 @@ def score_from_ssot(state):
                 value = bool(value)
                 evidence = "用户验收={}".format(value)
 
-        # --- T6 质量类 ---
+        # --- T7 质量类 ---
         elif dim == "security_score":
             value = scores.get("security_score", scores.get("security", 0.0))
             value = float(value) if isinstance(value, (int, float)) else 0.0
@@ -510,7 +662,7 @@ def score_from_ssot(state):
             value = counts["P2"]
             evidence = "可维护性P2问题={}个".format(value)
 
-        # --- T7 优化类 ---
+        # --- T8 优化类 ---
         elif dim == "architecture":
             value = scores.get("architecture", scores.get("architecture_score", 0.0))
             value = float(value) if isinstance(value, (int, float)) else 0.0
@@ -702,13 +854,20 @@ def _overall_pass(results):
     return True
 
 
-def print_results(template, results, mode="ssot"):
+def print_results(template, results, mode="ssot", state=None):
     """格式化输出门禁结果"""
-    overall = _overall_pass(results)
+    payload = results_to_json(template, results, mode=mode, state=state)
+    overall = payload["overall_pass"]
     mode_label = "SSOT" if mode == "ssot" else "Markdown(回退)"
 
     print("模板: {} | 模式: {} | 总判定: {}".format(
         template or "未知", mode_label, "PASS" if overall else "FAIL"))
+    if mode == "ssot" and state is not None and payload.get("tsv_fail_closed"):
+        print(
+            "TSV fail-closed: {}（与 EVOLVE 终止 rollup 一致；门禁 alone 不足以判收敛）".format(
+                payload.get("fail_closed_reason") or "方差/置信度"
+            )
+        )
     print()
     print("{:<16} {:>10} {:>10} {:>6} {:>6}  {}".format(
         "维度", "得分", "阈值", "类型", "状态", "证据"))
@@ -732,7 +891,7 @@ def print_results(template, results, mode="ssot"):
     # 软门禁未通过的提示
     soft_fails = [r for r in results
                   if isinstance(r, dict) and r.get("gate_type") == "soft" and not r.get("pass", False)]
-    if soft_fails and overall:
+    if soft_fails and payload.get("gates_pass"):
         print()
         print("注意: {}个软门禁未通过（已记录，不阻塞终止判定）:".format(len(soft_fails)))
         for r in soft_fails:
@@ -741,12 +900,23 @@ def print_results(template, results, mode="ssot"):
     print()
 
 
-def results_to_json(template, results, mode="ssot"):
-    """将结果转为 JSON 可序列化的 dict"""
+def results_to_json(template, results, mode="ssot", state=None):
+    """将结果转为 JSON 可序列化的 dict。
+
+    SSOT 模式下若 results_tsv 末行 fail-closed，则 overall_pass 为 false（与 controller phase_evolve 一致）。
+    """
+    gate_pass = _overall_pass(results)
+    tsv_fc, tsv_reason = False, None
+    if mode == "ssot" and state is not None:
+        tsv_fc, tsv_reason = results_tsv_last_row_fail_closed(state)
+    overall = gate_pass and not tsv_fc
     return {
         "template": template,
         "mode": mode,
-        "overall_pass": _overall_pass(results),
+        "gates_pass": gate_pass,
+        "tsv_fail_closed": tsv_fc,
+        "fail_closed_reason": tsv_reason if tsv_fc else None,
+        "overall_pass": overall,
         "gates": results,
     }
 
@@ -774,17 +944,18 @@ def main():
     else:
         template, results = score_from_markdown(data)
 
+    ssot_state = data if mode == "ssot" else None
     if json_output:
-        output = results_to_json(template, results, mode)
+        output = results_to_json(template, results, mode, state=ssot_state)
         print(json.dumps(output, ensure_ascii=False, indent=2))
     else:
-        print_results(template, results, mode)
+        print_results(template, results, mode, state=ssot_state)
         # 附加 JSON 行（供其他脚本消费）
-        output = results_to_json(template, results, mode)
+        output = results_to_json(template, results, mode, state=ssot_state)
         print("---JSON---")
         print(json.dumps(output, ensure_ascii=False))
 
-    sys.exit(0 if _overall_pass(results) else 1)
+    sys.exit(0 if results_to_json(template, results, mode, state=ssot_state)["overall_pass"] else 1)
 
 
 if __name__ == "__main__":

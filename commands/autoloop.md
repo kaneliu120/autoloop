@@ -38,21 +38,22 @@ description: >
 |------|---------------------|---------------------|
 | T1 Research | "research"、"全景调研"、"深度调研"、"彻底研究" | "了解"、"调查"、"分析"、"研究" |
 | T2 Compare | "compare"、"对比分析"、"方案评估"、"选型" | "哪个更好"、"比较"、"评估选项" |
-| T3 Iterate | "iterate until"、"迭代优化"、"直到达标" | "改进"、"优化"、"反复" |
-| T4 Generate | "generate batch"、"批量生成"、"大批量" | "生成"、"创建"、"大量" |
-| T5 Deliver | "deliver feature"、"全流程交付"、"端到端" | "实现"、"开发"、"上线" |
-| T6 Quality | "quality review"、"企业级"、"代码审查" | "提升质量"、"审查"、"review" |
-| T7 Optimize | "optimize"、"架构优化"、"性能优化" | "稳定性"、"系统诊断"、"瓶颈" |
+| T3 Product Design | "product design"、"产品设计"、"方案文档" | "设计"、"方案"、"PRD" |
+| T4 Deliver | "deliver feature"、"全流程交付"、"端到端" | "实现"、"开发"、"上线" |
+| T5 Iterate | "iterate until"、"迭代优化"、"直到达标" | "改进"、"优化"、"反复" |
+| T6 Generate | "generate batch"、"批量生成"、"大批量" | "生成"、"创建"、"大量" |
+| T7 Quality | "quality review"、"企业级"、"代码审查" | "提升质量"、"审查"、"review" |
+| T8 Optimize | "optimize"、"架构优化"、"性能优化" | "稳定性"、"系统诊断"、"瓶颈" |
 | Pipeline | "pipeline"、"链式执行"、"调研到交付" | "端到端管道"、"从调研到" |
 
 **Step 2b — 上下文加权**：
 
 | 上下文线索 | 加权模板 | 加分 |
 |-----------|---------|------|
-| 用户提供了代码路径/仓库 | T5/T6/T7 | +0.2 |
+| 用户提供了代码路径/仓库 | T4/T7/T8 | +0.2 |
 | 提到"方案"、"选项"、"候选" | T2 | +0.2 |
-| 提到"KPI"、"指标"、"目标值" | T3 | +0.2 |
-| 提到"文档"、"报告"、"内容" | T1/T4 | +0.1 |
+| 提到"KPI"、"指标"、"目标值" | T5 | +0.2 |
+| 提到"文档"、"报告"、"内容" | T1/T6 | +0.1 |
 
 **Step 2c — 置信度计算**：
 
@@ -77,11 +78,12 @@ description: >
 请选择最匹配的模板：
   [A] Research  — 系统性调研，覆盖率驱动
   [B] Compare   — 多方案对比，证据决策
-  [C] Iterate   — 目标驱动迭代，KPI 达标
-  [D] Generate  — 批量内容生成，质量保证
-  [E] Deliver   — 全流程交付，需求到上线
-  [F] Quality   — 企业级质量，三维度审查
-  [G] Optimize  — 系统优化，架构/性能/稳定性
+  [C] Product Design — 产品设计，方案文档
+  [D] Deliver   — 全流程交付，需求到上线
+  [E] Iterate   — 目标驱动迭代，KPI 达标
+  [F] Generate  — 批量内容生成，质量保证
+  [G] Quality   — 企业级质量，三维度审查
+  [H] Optimize  — 系统优化，架构/性能/稳定性
   [H] Pipeline  — 多模板链式执行
 
 选择哪个？或者直接描述你的目标，我帮你匹配。
@@ -97,11 +99,12 @@ description: >
 
 T1 Research: 调研维度（可以自动生成）、最大轮次（默认值见 `references/parameters.md` default_rounds.T1）
 T2 Compare: 要比较的选项列表（必须用户提供）
-T3 Iterate: KPI 定义和当前基线（必须用户提供）
-T4 Generate: 模板示例（至少 1 个）、数量
-T5 Deliver: 需求描述（详细）、目标代码库路径
-T6 Quality: 代码库路径（必须）、重点模块（可选）
-T7 Optimize: 系统/代码库路径（必须）、优先方向（可选）
+T3 Product Design: 功能需求描述（必须用户提供）
+T4 Deliver: 需求描述（详细）、目标代码库路径
+T5 Iterate: KPI 定义和当前基线（必须用户提供）
+T6 Generate: 模板示例（至少 1 个）、数量
+T7 Quality: 代码库路径（必须）、重点模块（可选）
+T8 Optimize: 系统/代码库路径（必须）、优先方向（可选）
 
 **不要问可以自动推断的东西**。例如：不要问"你想要几个维度"，直接生成合理的维度列表，执行后让用户确认或修改。
 
@@ -116,7 +119,7 @@ T7 Optimize: 系统/代码库路径（必须）、优先方向（可选）
 `/autoloop:plan` 确认计划后，须具备可跑 OODA 的**工作目录工件**（Bootstrap 规则见 `references/loop-protocol.md` 第1轮 Bootstrap 规则章节）。
 
 **推荐（与 `README.md` / `SKILL.md` SSOT 路径一致）**：执行  
-`python3 <技能包>/scripts/autoloop-state.py init <工作目录> <T1–T7> "<目标>"`  
+`python3 <技能包>/scripts/autoloop-state.py init <工作目录> <T1–T8> "<目标>"`  
 一次生成 `autoloop-state.json`、`checkpoint.json`、TSV 与可由 `autoloop-render.py` 同步的 Markdown 视图。
 
 **兼容叙述（仅 Markdown 冷启动）**：至少创建：
@@ -137,11 +140,12 @@ Bootstrap 完成后**自动进入第一轮执行，不等待用户额外确认**
 
 - T1: `/autoloop:research` 第一轮：识别**主体对象 + 附加方向**，生成核心章节与专项模块，再由主 agent 按章节派发 researcher / verifier 子 agent 并回收**章节证据包**。若主题属于市场/行业调研，默认按 `assets/report-template.md` **高标准市场/行业调研报告** 输出（强制核心章节，每章都有数据 + 分析 + 结论；若有附加方向则增加专项模块）。多轮仅用于门禁或章节深度未达标时补证，**不是** T1 定义（见 `references/t1-formal-report.md` §0）。
 - T2: `/autoloop:compare` 第一轮：选项分析
-- T3: `/autoloop:iterate` 第一轮：基线测量 + 首轮改进
-- T4: `/autoloop:generate` 第一轮：模板建立 + 批量生成
-- T5: `/autoloop:deliver` Phase 1：开发
-- T6: `/autoloop:quality` 第一轮：三维度并行扫描
-- T7: `/autoloop:optimize` 第一轮：全面诊断
+- T3: `/autoloop:design` 第一轮：需求分析 + 方案文档
+- T4: `/autoloop:deliver` Phase 1：开发
+- T5: `/autoloop:iterate` 第一轮：基线测量 + 首轮改进
+- T6: `/autoloop:generate` 第一轮：模板建立 + 批量生成
+- T7: `/autoloop:quality` 第一轮：三维度并行扫描
+- T8: `/autoloop:optimize` 第一轮：全面诊断
 
 每轮结束后，**必须执行 REFLECT**（所有模板通用）：写入 `autoloop-findings.md` 的4层反思结构表，格式见 `assets/findings-template.md`。详见 `references/loop-protocol.md` REFLECT 章节。
 
@@ -191,7 +195,7 @@ AutoLoop 第 {N} 轮完成
 6. 不得写入内部运行、质量门禁、方法论显性标题、系统痕迹
 7. 终止判断不只看四个门禁是否过线，还要看核心章节是否达到足够证据密度、来源是否按章节组织、证据边界是否明确
 
-对 **T2–T7**：按各自模板输出
+对 **T2–T8**：按各自模板输出
 
 最终报告文件名遵循下方最终输出文件命名规则。
 

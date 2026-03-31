@@ -1,13 +1,13 @@
 ---
 name: autoloop-generate
 description: >
-  AutoLoop T4: 批量内容生成模板。模板驱动 + 并行生成 + 逐项质量检查 + 自动重试。
+  AutoLoop T6: 批量内容生成模板。模板驱动 + 并行生成 + 逐项质量检查 + 自动重试。
   每个生成单元独立评分，低分自动重生成，重试上限见 references/loop-protocol.md 统一重试规则（默认2次）。
-  质量门禁阈值见 references/quality-gates.md T4 行。
+  质量门禁阈值见 references/quality-gates.md T6 行。
   触发：/autoloop:generate 或任何需要批量生成同类内容的任务。
 ---
 
-# AutoLoop T4: Generate — 批量内容生成
+# AutoLoop T6: Generate — 批量内容生成
 
 ## 执行前提
 
@@ -15,7 +15,7 @@ description: >
 - 内容类型（报告/邮件/代码/数据/文案等）
 - 变量列表（每个生成单元的变化项）
 - 数量
-- 质量标准（通过标准见 `references/quality-gates.md` T4 行）
+- 质量标准（通过标准见 `references/quality-gates.md` T6 行）
 - 示例（至少 1 个用户认可的样本）
 - 输出位置（output_path，变量名见 `references/loop-protocol.md` 统一参数词汇表）
 - 文件命名规则（naming_pattern，变量名见 `references/loop-protocol.md` 统一参数词汇表）
@@ -190,7 +190,7 @@ description: >
 
 ## 重试机制
 
-重试上限见 `references/loop-protocol.md` 统一重试规则（默认 2 次）。对于评分低于 `references/quality-gates.md` T4 单元通过阈值的单元，触发重试：
+重试上限见 `references/loop-protocol.md` 统一重试规则（默认 2 次）。对于评分低于 `references/quality-gates.md` T6 单元通过阈值的单元，触发重试：
 
 **第 1 次重试**：
 - 将 quality-checker 的问题反馈给 generator
@@ -207,7 +207,7 @@ description: >
 **第 2 次重试（最后一次）**：
 - 换一个不同的生成策略
 - 完全重新生成，不参考之前的版本
-- 如果仍低于 `references/quality-gates.md` T4 单元通过阈值，标注为"需人工审查"，继续其他单元
+- 如果仍低于 `references/quality-gates.md` T6 单元通过阈值，标注为"需人工审查"，继续其他单元
 
 ---
 
@@ -252,8 +252,8 @@ description: >
 | 需人工审查 | {N} | {%} |
 | **总计** | {总N} | 100% |
 
-通过率：{X}%（目标阈值见 references/quality-gates.md T4 通过率章节）
-平均得分：{X}/10（目标阈值见 references/quality-gates.md T4 平均分章节）
+通过率：{X}%（目标阈值见 references/quality-gates.md T6 通过率章节）
+平均得分：{X}/10（目标阈值见 references/quality-gates.md T6 平均分章节）
 
 ### 质量分布
 
