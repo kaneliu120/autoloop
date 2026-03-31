@@ -52,23 +52,47 @@
 |------------|----------|-----------|-------------|-----------|-------------|-----------|-------------|--------|
 | （初始为空，随任务执行积累） | | | | | | | | |
 
+**P3-01 主表与审计（实现约定）**：
+- **主表**：每个 `strategy_id` **仅保留一行**（`autoloop-experience.py write` 为 upsert，更新 `use_count` / `success_rate` / `avg_delta` / `description` / `status` 等聚合字段）。
+- **审计**：与 `experience-registry.md` **同目录** 追加 `experience-audit.md`（每次 `write` 一条；`consolidate` 合并重复行时一条）。（此文件由 `autoloop-experience.py write` 首次调用时自动创建，无需手动创建。）
+- **历史重复行**：可执行 `autoloop-experience.py <工作目录> consolidate [--dry-run]`（须能解析到本文件；工作目录下 `references/` 或技能包 `references/` 之一存在本文件）。合并时 **优先按审计**重算 `use_count` / `avg_delta` / `success_rate`；无审计时对各行已有 `avg_delta` 取算术平均（近似）。
+- **`multi:`**：`strategy_id` 以 `multi:` 开头时**只写审计**、不修改主表（混合归因，见下文归因规则）。
+
+**P3-06 `multi:` 策略约束（实现约定）**：
+- **格式**：`multi:{SNN-描述,SNN-描述}` 或 `multi:{SNN-描述+SNN-描述}`（`+` / `,` 均可，可混用）；须 **恰好一层** 花括号；`multi:` 前缀大小写不敏感。
+- **子策略**：至少 **2** 个；每个须匹配与单策略相同的 `SNN-描述` 形式；**不得重复**。
+- **write**：`autoloop-experience.py write` 在校验通过前**拒绝**非法 `multi:`；**禁止**对 `multi:` 使用 `--status`（不入主表生命周期）。
+- **validate**：`results.tsv` / SSOT `results_tsv` 中 `multi:` 行须通过上述格式校验，且每个子策略须在 findings（或 strategy_history）中可追溯；建议 `side_effect` 注明「混合归因」（与 loop-protocol 一致）。
+
+**P3-02 context 匹配（实现约定）**：
+- **`query`**：`--tags`（任务 context_tags）非空时，仅保留与策略 **description 内 context_tags**（`write --tags` 写入、紧跟 `@YYYY-MM-DD` 后的 `[…]`）**交集 ≥ 2** 的策略；无 `--tags` 时不做重叠过滤（首轮冷启动，与 loop-protocol 一致）。
+- **context-scoped 补充表**：有效 status 取 **精确匹配**（任务标签集 = 表行标签集）优先；否则在 **任务标签 ⊇ 表行标签** 的行中选 **表行标签数最多** 的一行；再无匹配则用主表全局 `status`。
+- **控制器**：`plan.context_tags` 为字符串或字符串列表时传给 `query --tags`；缺省不传（冷启动）。
+
+**write `--mechanism`（可选）**：`autoloop-experience.py write --mechanism "…"` 将机制简述写入主表 `description` 中的 `[mechanism: …]` 片段，便于 `use_count≥2` 时满足「补充 mechanism」类文档要求（与下方策略详细描述格式一致）。**context-scoped 补充表**：当前仅 `query` 读取；**无**独立 `write` 路径将行写入 scoped 区；全量 scoped 写入与「归档区」迁移仍为 v2 / backlog（见清单 F08）。
+
+**write 状态机与 use_count（实现约定）**：
+- 无 `--status` 时自动转换的**起点状态**为主表该 `strategy_id` 当前行的 `status`（不得在无 `--status` 时用固定「观察」覆盖「已废弃」等）。
+- 「连续 2 次 delta>0 / delta≤0」以 **`experience-audit.md` 中该策略最近一次 `write` 的 score** 与**本轮 `--score`** 比较；`use_count`、`avg_delta`、`success_rate` 亦由审计中同策略全部 `write` 的 score 序列（按时间顺序）+ 本轮重算，与主表仅保留一行 upsert 一致。
+- **推荐后应保持**：`query` 将某策略标为 **保持** 后，除非后续 `write` 用 `--effect` 等显式改写，主表该行的 `status`/推荐语义应保持稳定，与「连续 2 次」淘汰逻辑独立（淘汰仅针对验证失败路径）。
+
 **字段说明**：
 - strategy_id：策略唯一标识，与 results.tsv 和 findings.md 一致
 - template：适用模板（T1-T7，或"通用"）
 - dimension：目标维度
 - description：策略摘要（一句话，详细描述见下方"策略详细描述格式"）
-- avg_delta：历次使用的平均分数变化
+- avg_delta：各轮写入时 `--score`（单轮分数变化量 delta）的**算术平均值**；与 `use_count`、`success_rate` 同源，**有 `experience-audit.md` 时以审计中该 `strategy_id` 全部 `write` 的 score 序列为准**（`write` 与主表聚合一致）。
 - side_effects：已知副作用列表
-- use_count：累计使用次数
-- success_rate：产生正向效果的比例（use_count 中 delta > 0 的占比）
+- use_count：累计使用次数（= 上述 score 序列长度）
+- success_rate：产生正向效果的比例（各轮 delta **>** 0 的占比；与晋升规则「delta > 0」一致）
 - status：推荐 / 候选默认 / 观察 / 已废弃（生命周期状态枚举）
 
 **扩展字段**：
 
-- avg_cost：平均执行成本（轮次数），当前默认 —（预留，待数据积累后启用）
-- confidence：效果数据置信度（低/中/高），**已激活** — 见下方"confidence 自动计算与升格门槛"
-- context_tags：适用上下文标签列表（如 [python, backend, security]），**已激活** — 见下方"context_tags 标准词汇表"
-- side_effect_severity：副作用严重度（无/低/中/高），当前默认 无（预留，待数据积累后启用）
+- avg_cost：平均执行成本（轮次数），当前默认 —（v2 预留，待数据积累后启用）
+- confidence：效果数据置信度（低/中/高），**运行时计算**（cmd_write 内部根据 use_count 自动推导，不持久化到表列）— 见下方"confidence 自动计算与升格门槛"
+- context_tags：适用上下文标签列表（如 [python, backend, security]），**已激活**（通过 --tags 参数写入 description 字段）— 见下方"context_tags 标准词汇表"
+- side_effect_severity：副作用严重度（无/低/中/高），当前默认 无（v2 预留，待数据积累后启用）
 
 ### 策略详细描述格式
 
@@ -157,10 +181,13 @@ use_count = 1 时 success_rate 无统计意义，不作为升格依据。
 
 ### 经验自动晋升链
 
+```text
+入库(自动,观察,低置信) → 推荐(连续2次delta>0+use>=2) → 候选默认(success>=80%+use>=4+高置信) → [v2] 金丝雀验证(1次同类任务) → [v2] 升级(写入command,用户确认,patch+1)
 ```
-入库(自动,观察,低置信) → 推荐(连续2次delta>0+use>=2) → 候选默认(success>=80%+use>=4+高置信) → 金丝雀验证(1次同类任务) → 升级(写入command,用户确认,patch+1)
-```
-**回滚**：升级后连续 2 次 delta <= 0 → 从 command 移除，回退到推荐，patch+1。
+
+**v1 已实现**: 入库 → 观察 → 推荐 → 候选默认（自动晋升）；连续2次负向 → 已废弃（自动废弃）；已废弃 + 正向 → 观察（自动恢复）。
+**v2 预留**: 金丝雀验证、command 文件写入升级、升级后回滚。
+**回滚**（v2）：升级后连续 2 次 delta <= 0 → 从 command 移除，回退到推荐，patch+1。
 
 ---
 
@@ -174,12 +201,14 @@ use_count = 1 时 success_rate 无统计意义，不作为升格依据。
 | L2 | `procedural` | 流程级别的经验，影响执行步骤 | "并行扫描比串行扫描在T6中提速40%" | 中（90d） |
 | L3 | `tool` | 工具/技巧级别，影响具体操作 | "grep -rn 比 find + xargs 更快定位问题" | 快（30d） |
 
-**标注规则**：每条策略在入库时必须标注一个层级标签。判断标准：
+**标注规则**（v2 预留）：每条策略在入库时标注一个层级标签。判断标准：
 - 改变了"做不做" → strategic
 - 改变了"怎么做" → procedural
 - 改变了"用什么做" → tool
 
-**读取优先级**：OBSERVE 阶段读取经验时，strategic > procedural > tool。当预算紧张时，优先应用高层级经验。
+**读取优先级**（v2 预留）：OBSERVE 阶段读取经验时，strategic > procedural > tool。当预算紧张时，优先应用高层级经验。
+
+> **v1 状态**: MUSE 分层为设计文档，`memory_layer` 字段未写入表列。v1 使用扁平排序（success_rate × 时间衰减）。
 
 ### 时间衰减机制
 
@@ -200,11 +229,11 @@ use_count = 1 时 success_rate 无统计意义，不作为升格依据。
 - 重新验证：使用后 delta > 0 → last_validated_date 更新为当天，衰减重置
 - strategic 层级豁免：L1 经验的衰减周期为上表的 2 倍（60d/120d/180d）
 
-**扩展字段**：策略效果库新增 `memory_layer`（L1/L2/L3）和 `last_validated_date`（ISO 8601 日期）两个字段。
+**扩展字段**（v2 预留）：策略效果库计划新增 `memory_layer`（L1/L2/L3）和 `last_validated_date`（ISO 8601 日期）两个字段。v1 中 `last_validated_date` 通过 description 字段的 `@YYYY-MM-DD` 标签实现等效功能（cmd_query 解析此标签进行时间衰减排序）。
 
 ---
 
-## 策略组合与消融
+## 策略组合与消融（v2 预留）
 
 ### 策略组合（composed_from）
 
@@ -270,9 +299,9 @@ OBSERVE 阶段读取顺序（写入 loop-protocol.md）：
 
 ---
 
-## 协议变更效果追踪表
+## 协议变更效果追踪表（v2 预留）
 
-记录每次协议变更的预期目标和实际效果，支持结果验证。
+记录每次协议变更的预期目标和实际效果，支持结果验证。v1 中协议变更通过 git commit history 追踪。
 
 | change_id          | protocol_version | 变更内容 | 预期目标 | 验证窗口 | 实际效果 | 状态 |
 |--------------------|------------------|----------|----------|----------|----------|------|

@@ -15,6 +15,11 @@ import os
 import sys
 from io import StringIO
 
+_rdir = os.path.dirname(os.path.abspath(__file__))
+if _rdir not in sys.path:
+    sys.path.insert(0, _rdir)
+from autoloop_kpi import plan_gate_is_exempt  # noqa: E402
+
 STATE_FILE = "autoloop-state.json"
 
 
@@ -28,8 +33,8 @@ def load_state(work_dir):
 
 
 def render_plan(state, work_dir):
-    p = state["plan"]
-    meta = state["metadata"]
+    p = state.get("plan") or {}
+    meta = state.get("metadata") or {}
     lines = [
         "# AutoLoop Plan",
         "",
@@ -37,12 +42,12 @@ def render_plan(state, work_dir):
         "",
         "| 字段 | 值 |",
         "|------|-----|",
-        "| 任务 ID | {} |".format(p["task_id"]),
-        "| 模板 | {} |".format(p["template"]),
-        "| 目标 | {} |".format(p["goal"]),
-        "| 状态 | {} |".format(p["status"]),
-        "| 协议版本 | {} |".format(meta["protocol_version"]),
-        "| 创建时间 | {} |".format(meta["created_at"]),
+        "| 任务 ID | {} |".format(p.get("task_id", "")),
+        "| 模板 | {} |".format(p.get("template", "")),
+        "| 目标 | {} |".format(p.get("goal", "")),
+        "| 状态 | {} |".format(p.get("status", "")),
+        "| 协议版本 | {} |".format(meta.get("protocol_version", "")),
+        "| 创建时间 | {} |".format(meta.get("created_at", "")),
         "",
     ]
 
@@ -59,10 +64,26 @@ def render_plan(state, work_dir):
         lines += ["## 质量门禁", "",
                    "| 维度 | 目标 | 当前 | 状态 |",
                    "|------|------|------|------|"]
+        hard_non_exempt_fail = 0
+        hard_non_exempt = 0
         for g in p["gates"]:
+            dim_col = g.get("dim") or g.get("dimension", "")
+            st_show = g.get("status", "—")
+            if plan_gate_is_exempt(g):
+                st_show = "豁免"
             lines.append("| {} | {} | {} | {} |".format(
-                g.get("dimension", ""), g.get("target", ""),
-                g.get("current", "—"), g.get("status", "—")))
+                dim_col, g.get("target", ""),
+                g.get("current", "—"), st_show))
+            if (g.get("gate") or "").lower() == "hard" and not plan_gate_is_exempt(g):
+                hard_non_exempt += 1
+                s = (g.get("status") or "").strip()
+                if s == "未达标":
+                    hard_non_exempt_fail += 1
+        lines.append(
+            "*硬门禁未达标（不含豁免行）: {} / {}*".format(
+                hard_non_exempt_fail, hard_non_exempt
+            )
+        )
         lines.append("")
 
     budget = p.get("budget", {})
@@ -125,6 +146,25 @@ def render_progress(state, work_dir):
         reflect = it.get("reflect", {})
         if reflect.get("lesson_learned"):
             lines += ["### 反思", "", reflect["lesson_learned"], ""]
+        sid = (reflect.get("strategy_id") or "").strip()
+        eff = (reflect.get("effect") or "").strip()
+        if sid or eff:
+            lines += [
+                "### 结构化反思",
+                "",
+                "- **strategy_id**: `{}`".format(sid or "—"),
+                "- **effect**: {}".format(eff or "—"),
+            ]
+            for k in ("dimension", "delta", "rating_1_to_5"):
+                v = reflect.get(k)
+                if v is not None and v != "" and v != 0:
+                    lines.append("- **{}**: {}".format(k, v))
+            ctx = reflect.get("context")
+            if ctx:
+                lines.append(
+                    "- **context**: {}".format(str(ctx).replace("\n", " ")[:480])
+                )
+            lines.append("")
 
         lines.append("---")
         lines.append("")
@@ -133,6 +173,41 @@ def render_progress(state, work_dir):
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     return path
+
+
+def reflect_four_layer_footer_lines(state):
+    """loop-protocol 四层 H2+表：随 findings.md 每次渲染追加，避免仅 SSOT 轮次块时被整文件重写冲掉，OBSERVE Step0 可计数。"""
+    meta = state.get("metadata") or {} if isinstance(state, dict) else {}
+    pv = meta.get("protocol_version")
+    pv_s = str(pv).strip() if pv is not None and str(pv).strip() else "1.0.0"
+    return [
+        "",
+        "## 问题清单（REFLECT 第 1 层）",
+        "",
+        "| ID | 描述 | 状态 |",
+        "| --- | --- | --- |",
+        "| RFL-1 | 由 render 追加；请与 SSOT findings 同步更新叙事 | open |",
+        "",
+        "## 策略评估（REFLECT 第 2 层）",
+        "",
+        "| 策略 | 结果 | 备注 |",
+        "| --- | --- | --- |",
+        "| — | 待填 | 每轮 DECIDE 后更新 |",
+        "",
+        "## 模式识别（REFLECT 第 3 层）",
+        "",
+        "| 模式 | 说明 |",
+        "| --- | --- |",
+        "| — | 待从多轮 findings 归纳 |",
+        "",
+        "## 经验教训（REFLECT 第 4 层）",
+        "",
+        "| 教训 | 后续动作 |",
+        "| --- | --- |",
+        "| — | 待记录 |",
+        "",
+        "协议版本（findings 侧）: {}（与 SSOT metadata.protocol_version 对齐）".format(pv_s),
+    ]
 
 
 def render_findings(state, work_dir):
@@ -155,7 +230,12 @@ def render_findings(state, work_dir):
             lines.append("### {} [{}]".format(
                 f.get("dimension", ""), f.get("confidence", "")))
             lines.append("")
-            lines.append(f.get("content", ""))
+            body = f.get("content", "")
+            summ = f.get("summary", "")
+            if summ:
+                lines.append("**摘要**: {}".format(summ))
+                lines.append("")
+            lines.append(body)
             if f.get("source"):
                 lines.append("")
                 lines.append("来源: {}".format(f["source"]))
@@ -173,6 +253,8 @@ def render_findings(state, work_dir):
                 p.get("id", ""), p.get("description", "")[:50],
                 p.get("status", "")))
         lines.append("")
+
+    lines.extend(reflect_four_layer_footer_lines(state))
 
     path = os.path.join(work_dir, "autoloop-findings.md")
     with open(path, "w", encoding="utf-8") as f:

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autoloop"
+version = "0.1.0"
+description = "AutoLoop autonomous iteration engine (OODA + quality gates)"
+readme = "README.md"
+requires-python = ">=3.10"
+
+# 运行时脚本仍为 stdlib-only；安装后可使用 console_scripts（见 services/autoloop_entrypoints）。
+[project.scripts]
+autoloop-state = "autoloop_entrypoints:main_state"
+autoloop-validate = "autoloop_entrypoints:main_validate"
+autoloop-score = "autoloop_entrypoints:main_score"
+autoloop-controller = "autoloop_entrypoints:main_controller"
+autoloop-render = "autoloop_entrypoints:main_render"
+autoloop-init = "autoloop_entrypoints:main_init"
+autoloop-experience = "autoloop_entrypoints:main_experience"
+autoloop-finalize = "autoloop_entrypoints:main_finalize"
+autoloop-tsv = "autoloop_entrypoints:main_tsv"
+autoloop-variance = "autoloop_entrypoints:main_variance"
+autoloop-runner = "autoloop_runner.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "mcp>=1.0.0",
+    "pytest>=7.0",
+]
+runner = [
+    "openai>=1.0.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["services"]

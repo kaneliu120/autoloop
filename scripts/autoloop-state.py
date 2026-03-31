@@ -8,11 +8,13 @@
   autoloop-state.py add-iteration <工作目录>
   autoloop-state.py add-finding <工作目录> <JSON>
   autoloop-state.py add-tsv-row <工作目录> <JSON>
+  autoloop-state.py migrate <工作目录> [--dry-run]
 
 数据源文件: <工作目录>/autoloop-state.json
 """
 
 import datetime
+import importlib.util
 import json
 import os
 import re
@@ -80,6 +82,8 @@ def initial_state(template, goal, work_dir):
                 "extensions": []
             },
             "template_params": {},
+            "template_mode": "ooda_rounds",
+            "linear_delivery_complete": False,
             "output_files": {
                 "plan": {"path": "autoloop-plan.md", "status": "已创建"},
                 "progress": {"path": "autoloop-progress.md", "status": "待创建"},
@@ -87,6 +91,7 @@ def initial_state(template, goal, work_dir):
                 "results_tsv": {"path": "autoloop-results.tsv", "status": "待创建"}
             },
             "strategy_history": [],
+            "decide_act_handoff": None,
             "change_log": [
                 {"time": now, "field": "初始创建", "before": "", "after": "", "reason": ""}
             ]
@@ -258,6 +263,15 @@ def _auto_convert(value_str):
 
 # --- 子命令实现 ---
 
+def _load_plan_gates_for_template(template):
+    """从 autoloop-score 加载与 scorer 对齐的 plan.gates（避免维度键分裂）。"""
+    score_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "autoloop-score.py")
+    spec = importlib.util.spec_from_file_location("al_score_ssot", score_path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.plan_gates_for_ssot_init(template)
+
+
 def cmd_init(work_dir, template, goal):
     """初始化 autoloop-state.json"""
     if not os.path.isdir(work_dir):
@@ -271,6 +285,27 @@ def cmd_init(work_dir, template, goal):
         return False
 
     state = initial_state(template, goal, work_dir)
+    gates = _load_plan_gates_for_template(template)
+    state["plan"]["gates"] = gates
+    # 从 gates 推导 dimensions（manifest_dimension 优先，fallback dimension/dim）
+    state["plan"]["dimensions"] = [
+        g.get("manifest_dimension") or g.get("dimension") or g.get("dim", "")
+        for g in gates
+        if g.get("manifest_dimension") or g.get("dimension") or g.get("dim")
+    ]
+    # 从 gate-manifest.json 读取模板默认轮次
+    if state["plan"]["budget"]["max_rounds"] <= 0:
+        manifest_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "..", "references", "gate-manifest.json"
+        )
+        try:
+            with open(manifest_path, "r", encoding="utf-8") as mf:
+                manifest = json.load(mf)
+            default_rounds = manifest.get("default_rounds", {}).get(template, 3)
+            state["plan"]["budget"]["max_rounds"] = default_rounds
+        except (OSError, json.JSONDecodeError):
+            state["plan"]["budget"]["max_rounds"] = 3  # fallback
     saved = save_state(work_dir, state)
     print("OK: SSOT 数据源已创建: {}".format(saved))
     print("  任务 ID: {}".format(state["plan"]["task_id"]))
@@ -314,6 +349,7 @@ def cmd_update(work_dir, field_path, value_str):
     print("OK: {}".format(field_path))
     print("  旧值: {}".format(old_value))
     print("  新值: {}".format(new_value))
+
     return True
 
 
@@ -348,8 +384,9 @@ def cmd_query(work_dir, query_expr):
             print("未设置质量门禁维度")
             return True
         for g in gates:
+            dim_label = g.get("dimension", g.get("dim", "?"))
             print("  {}: 当前={} 目标={} 状态={}".format(
-                g["dimension"],
+                dim_label,
                 g.get("current", "—"),
                 g.get("target", "—"),
                 g.get("status", "—")
@@ -461,14 +498,31 @@ def cmd_add_finding(work_dir, finding_json):
         print("ERROR: JSON 解析失败: {}".format(e))
         sys.exit(1)
 
-    required = ["dimension", "content"]
-    missing = [k for k in required if k not in finding]
-    if missing:
-        print("ERROR: 缺少必需字段: {}".format(", ".join(missing)))
-        print('格式: {"dimension": "维度名", "content": "内容", '
-              '"source": "来源", "confidence": "高/中/低", '
-              '"type": "finding/issue/gap"}')
+    if "dimension" not in finding:
+        print("ERROR: 缺少必需字段: dimension")
+        print(
+            '格式: {"dimension": "维度名", "content"|"summary"|"description": "正文", '
+            '"source": "来源", "confidence": "高/中/低", '
+            '"type": "finding/issue/gap"}'
+        )
         sys.exit(1)
+    body_keys = ("summary", "description", "content")
+    if not any(
+        finding.get(k) not in (None, "")
+        for k in body_keys
+    ):
+        print("ERROR: 缺少正文字段: 须提供 summary、description 或 content 之一")
+        print(
+            '格式: {"dimension": "...", "summary": "...", ...} '
+            "（与 loop-data-schema / validate 口径一致）"
+        )
+        sys.exit(1)
+    if not finding.get("content"):
+        for k in ("summary", "description"):
+            v = finding.get(k)
+            if v not in (None, ""):
+                finding["content"] = v
+                break
 
     finding.setdefault("source", "")
     finding.setdefault("confidence", "中")
@@ -492,10 +546,35 @@ def cmd_add_finding(work_dir, finding_json):
         state["findings"]["rounds"][round_num - 1]["findings"].append(finding)
 
     save_state(work_dir, state)
+    preview = (
+        finding.get("content")
+        or finding.get("summary")
+        or finding.get("description")
+        or ""
+    )
     print("OK: 已添加发现 (第 {} 轮, 维度: {})".format(
         round_num, finding["dimension"]))
-    print("  内容: {}...".format(finding["content"][:80]))
+    print("  内容: {}...".format(str(preview)[:80]))
     return True
+
+
+def _tsv_row_variance_fail_closed(row):
+    """与 autoloop-variance check 对齐的 fail-closed（方差≥2 或 0<置信度<50）。"""
+    sv = str(row.get("score_variance", "0")).strip()
+    conf = str(row.get("confidence", "100")).replace("%", "").strip()
+    try:
+        var = float(sv) if sv and sv != "—" else 0.0
+    except ValueError:
+        return True, "score_variance 非数字"
+    try:
+        c = float(conf) if conf and conf != "—" else 100.0
+    except ValueError:
+        return True, "confidence 非数字"
+    if var >= 2.0:
+        return True, "score_variance≥2.0"
+    if c < 50 and c != 0:
+        return True, "confidence<50%"
+    return False, ""
 
 
 def cmd_add_tsv_row(work_dir, row_json):
@@ -510,6 +589,12 @@ def cmd_add_tsv_row(work_dir, row_json):
 
     for col in TSV_COLUMNS:
         row.setdefault(col, "—")
+
+    fc, reason = _tsv_row_variance_fail_closed(row)
+    if fc:
+        print("ERROR: TSV 行未通过方差/置信度校验: {}".format(reason))
+        print("  请修正 score_variance / confidence 后重试（见 autoloop-variance.py check）")
+        sys.exit(1)
 
     row.setdefault("protocol_version", PROTOCOL_VERSION)
     state["results_tsv"].append(row)
@@ -532,6 +617,7 @@ USAGE = """用法:
   autoloop-state.py add-iteration <工作目录>
   autoloop-state.py add-finding <工作目录> '<JSON>'
   autoloop-state.py add-tsv-row <工作目录> '<JSON>'
+  autoloop-state.py migrate <工作目录> --dry-run
 
 查询示例:
   autoloop-state.py query /path summary
@@ -544,7 +630,37 @@ USAGE = """用法:
   autoloop-state.py update /path plan.status 进行中
   autoloop-state.py update /path plan.budget.max_rounds 7
   autoloop-state.py update /path iterations[-1].phase ORIENT
+
+迁移示例:
+  autoloop-state.py migrate /path --dry-run   # 打印当前 plan.gates 与 SSOT 建议的差异预览
 """
+
+
+def cmd_migrate(work_dir, dry_run):
+    """对比 plan.gates 与 gate-manifest 初始化建议（不自动写回）。"""
+    import importlib.util
+
+    state = load_state(work_dir)
+    tmpl = state.get("plan", {}).get("template", "T1")
+    scripts_dir = os.path.dirname(os.path.abspath(__file__))
+    score_path = os.path.join(scripts_dir, "autoloop-score.py")
+    spec = importlib.util.spec_from_file_location("al_score_migrate", score_path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    proposed = mod.plan_gates_for_ssot_init(tmpl)
+    current = state.get("plan", {}).get("gates", [])
+
+    print("模板: {}".format(tmpl))
+    print("当前 plan.gates 条数: {}".format(len(current)))
+    print("SSOT 建议条数: {}".format(len(proposed)))
+    if dry_run:
+        print("\n--- 建议 plan.gates（预览，完整见下方 JSON）---")
+        print(json.dumps(proposed, ensure_ascii=False, indent=2))
+        print(
+            "\n（dry-run）未修改文件。若需对齐，请手工合并或重新 init；"
+            "详见 references/loop-data-schema.md §迁移"
+        )
+    return True
 
 
 def main():
@@ -594,6 +710,14 @@ def main():
             print("用法: autoloop-state.py add-tsv-row <工作目录> '<JSON>'")
             sys.exit(1)
         ok = cmd_add_tsv_row(sys.argv[2], sys.argv[3])
+        sys.exit(0 if ok else 1)
+
+    elif cmd == "migrate":
+        if len(sys.argv) < 3:
+            print("用法: autoloop-state.py migrate <工作目录> [--dry-run]")
+            sys.exit(1)
+        dry = "--dry-run" in sys.argv
+        ok = cmd_migrate(sys.argv[2], dry)
         sys.exit(0 if ok else 1)
 
     else:

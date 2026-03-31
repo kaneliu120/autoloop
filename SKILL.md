@@ -18,10 +18,11 @@ description: >
 - **Independent Evaluator**: Executor and evaluator must be different subagents. The evaluator scores output blind, without knowledge of execution strategy. Detail: `references/agent-dispatch.md` independent evaluator section.
 - **Fail-Closed Scoring**: A score missing any of score + rationale + evidence is invalid and treated as failing. Detail: `references/quality-gates.md` scoring specification.
 - **Single-Strategy Isolation**: Each DECIDE round selects exactly one strategy (unique `strategy_id`). Multi-strategy parallel results do not enter the experience registry. Detail: `references/loop-protocol.md` single-strategy isolation.
-- **Score Confidence**: TSV records `score_variance` and `confidence`. Low confidence (variance >= 2.0 or 0 evidence items) triggers fail-closed. Detail: `references/quality-gates.md` confidence calculation.
+- **Score Confidence**: TSV records `score_variance` and `confidence`. Low confidence (variance >= 2.0 or 0 evidence items) triggers fail-closed. Detail: `references/quality-gates.md` confidence calculation. In SSOT mode, `autoloop-score.py` **`overall_pass`** also treats the latest TSV row fail-closed as failure (aligned with `phase_evolve`, not gates-only).
 - **Cross-Dimension Impact Analysis**: DECIDE must analyze strategy impact on other dimensions; VERIFY must check all affected dimensions. Detail: `references/loop-protocol.md` impact analysis.
 - **Global Experience Registry**: Cross-task strategy effect data accumulates in `references/experience-registry.md`. OBSERVE reads recommended strategies; REFLECT writes back results.
 - **Deterministic Tool Scripts**: Python stdlib scripts in `scripts/` eliminate LLM calculation and formatting errors. All MANDATORY calls listed in Step 3.
+- **Strict runs**: `autoloop-controller.py <work_dir> --strict` (or `AUTOLOOP_STRICT=1`) stops the loop after VERIFY if score JSON, `autoloop-validate.py`, or `autoloop-variance.py check` fails. Same flag: EVOLVE 前还须本轮结构化 finding **且** `results_tsv` 末行 `iteration` 对齐当前轮次。Use `AUTOLOOP_VALIDATE_STRICT=1` or `autoloop-validate.py <dir> --strict` for schema-as-error (含 REFLECT strict 下 `delta`/Likert 等，见 `loop-protocol.md`)。
 - **Protocol Versioning**: Current version 1.0.0. Minor/major changes trigger rebaseline per `references/evolution-rules.md`.
 - **Result Verification**: Protocol changes must declare expected outcomes (incremental, <= 20% magnitude). Unmet targets within the verification window trigger rollback evaluation per `references/evolution-rules.md`.
 
@@ -36,8 +37,7 @@ description: >
    ```
 3. If `checkpoint.json` exists (session recovery):
    Read checkpoint, resume from the last completed stage.
-4. If `autoloop-plan.md` already exists but no state JSON (legacy mode):
-   Continue without SSOT; scripts operate in markdown-only mode.
+4. **DEPRECATED — Legacy（不推荐）**：仅有 `autoloop-plan.md` 等工作区 Markdown、**无** `autoloop-state.json` 时，部分脚本可走 markdown-only 回退；**推荐路径**始终为 `autoloop-state.py init` + SSOT JSON + `autoloop-controller.py`。新任务请勿依赖 legacy；旧任务请 `migrate` 或手工补全 state（D-06）。
 
 ---
 
@@ -53,7 +53,7 @@ Match the user request to a template using trigger words and intent:
 | T4 Generate | generate batch, produce N items, 批量生成 | High-volume same-type content production |
 | T5 Deliver | deliver feature, end-to-end, ship, 全流程交付 | Requirements through production deployment |
 | T6 Quality | quality review, enterprise grade, 企业级, 代码审查 | Multi-dimension code/system quality elevation |
-| T7 Optimize | optimize, architecture, performance, stability, 系统诊断 | Architecture / performance / stability improvement |
+| T7 Optimize | optimize, architecture, performance, stability, 系统诊断 | Architecture / performance / stability improvement（与 T3 区分：T3 以**用户 KPI 数值**收敛为主；T7 以**系统多维度工程质量/架构**为主，见 `quality-gates.md` T6/T7） |
 
 **Confidence routing**: When trigger words are ambiguous, apply the confidence matching rules in `references/parameters.md` routing section. If confidence is below threshold, ask the user to clarify.
 
@@ -65,9 +65,9 @@ Match the user request to a template using trigger words and intent:
 
 1. Collect plan parameters interactively or from the user prompt. Use `assets/plan-template.md` as the field reference.
 2. Required fields: goal, template, scope, quality gate dimensions, max rounds, budget.
-3. Gate thresholds auto-populate from `references/quality-gates.md` based on the selected template. Override only when the user specifies custom thresholds.
+3. **Gate thresholds (SSOT)** come exclusively from `references/gate-manifest.json` — the mandatory numeric threshold source of truth for all gate pass/fail decisions. Use `references/quality-gates.md` for scoring semantics, confidence/fail-closed rules, and methodology — not as the numeric threshold source.
 4. Write the plan to `autoloop-plan.md` in the work directory.
-5. For T5 Deliver: phase gates follow `references/delivery-phases.md`; phase 0.5 (documentation) requires user confirmation before proceeding.
+5. For T5 Deliver: phase gates follow `references/delivery-phases.md`; phase 0.5 (documentation) requires user confirmation before proceeding. Optional SSOT: `plan.template_mode: linear_phases` ties EVOLVE budget to `plan.linear_delivery_complete` (see `references/loop-data-schema.md`).
 
 Detail: `commands/autoloop-plan.md`.
 
@@ -77,6 +77,8 @@ Detail: `commands/autoloop-plan.md`.
 
 Run the OODA+ loop. Each iteration passes through 8 stages in order.
 
+**Layering**: AutoLoop owns round progression, gates, TSV variance fail-closed (via EVOLVE), and termination. Implementation work inside ACT can follow Superpowers-style flows (brainstorm → plan → subagents → TDD → review) or your stack’s equivalent — see controller ACT prompts for T3/T4/T5 hints.
+
 ### Per-Stage Responsibilities
 
 | Stage | Agent Role | Action | JiT Reference |
@@ -85,10 +87,12 @@ Run the OODA+ loop. Each iteration passes through 8 stages in order.
 | ORIENT | orchestrator | Gap analysis: current scores vs target gates | -- |
 | DECIDE | orchestrator | Select one strategy; filter `已废弃` strategies, prefer `推荐` strategies; use per-round effect (`保持`/`避免`/`待验证`) from prior REFLECT; run cross-dimension impact analysis | `references/experience-registry.md` |
 | ACT | subagents | Execute via dispatched work orders (parallel when independent, serial when dependent) | `references/agent-dispatch.md` |
-| VERIFY | kpi-evaluator | Score output using `autoloop-score.py`; validate TSV with `autoloop-tsv.py`; compute variance with `autoloop-variance.py` | `references/quality-gates.md` |
+| VERIFY | kpi-evaluator | Score with `autoloop-score.py`（SSOT 下 `overall_pass` 含末行 TSV fail-closed）；TSV 格式用 `autoloop-tsv.py validate`；方差/置信度合规用 `autoloop-variance.py check <tsv>`（`compute` 仅辅助填列） | `references/quality-gates.md` |
 | SYNTHESIZE | orchestrator | Merge subagent outputs; detect and resolve contradictions | -- |
 | EVOLVE | orchestrator | Termination check: all gates pass / budget exhausted / oscillation / stagnation | `references/evolution-rules.md` |
 | REFLECT | orchestrator | Write findings + strategy effects to experience registry + checkpoint | `references/experience-registry.md` |
+
+**REFLECT → 经验库**：将 `iterations[-1].reflect` 写成 JSON：`strategy_id`、`effect` 必填；**推荐** `delta`（单轮变化量，写入经验库的 `--score`）与可选 `rating_1_to_5`（Likert）。键 `score` 仅 **legacy**（若为正整数 1–5 视为 Likert，不当作 delta）。`AUTOLOOP_VALIDATE_STRICT=1` 下还要求 `delta` / `rating_1_to_5` / legacy Likert `score` 至少其一。控制器才能确定性调用 `autoloop-experience.py write`；字段表见 `references/loop-protocol.md` §REFLECT。
 
 ### Mandatory Script Calls
 
@@ -101,13 +105,13 @@ python3 ${SKILL_DIR}/scripts/autoloop-score.py <findings_path>
 # VERIFY stage — validate TSV before write
 python3 ${SKILL_DIR}/scripts/autoloop-tsv.py validate <tsv_path>
 
-# VERIFY stage — compute score variance (optional but recommended)
-python3 ${SKILL_DIR}/scripts/autoloop-variance.py <tsv_path>
+# VERIFY stage — TSV 方差/置信度合规（与 controller phase_verify 一致，须带 check 子命令）
+python3 ${SKILL_DIR}/scripts/autoloop-variance.py check <tsv_path>
 
 # REFLECT stage — render markdown views from SSOT (when ssot_mode: true)
 python3 ${SKILL_DIR}/scripts/autoloop-render.py <work_dir>
 
-# REFLECT stage — cross-file primary key consistency check
+# REFLECT stage — cross-file primary key consistency check（契约加严用 --strict 或 AUTOLOOP_VALIDATE_STRICT=1）
 python3 ${SKILL_DIR}/scripts/autoloop-validate.py <work_dir>
 ```
 
@@ -115,11 +119,11 @@ python3 ${SKILL_DIR}/scripts/autoloop-validate.py <work_dir>
 
 | Template | Key Difference | Gate Dimensions | Detail |
 |----------|---------------|-----------------|--------|
-| T1 Research | Multi-source parallel search | coverage, credibility, consistency, completeness | `commands/autoloop-research.md` |
+| T1 Research | **General research entry**. For market/industry topics, upgrade automatically to a **top-tier market research report** with fixed core chapters, per-chapter data+analysis+conclusion, optional direction modules (e.g. industry + AI job substitution), and a **master-agent / subagent protocol**: the master agent splits chapters, dispatches evidence collection, integrates chapter evidence packets, resolves conflicts, and writes the only final report; OODA rounds optional for gate convergence | coverage, credibility, consistency, completeness | `commands/autoloop-research.md`, `references/t1-formal-report.md` §0 |
 | T2 Compare | Independent option-analyzer per candidate | coverage, credibility, bias, sensitivity | `commands/autoloop-compare.md` |
 | T3 Iterate | KPI-driven with baseline measurement | user-defined KPI target | `commands/autoloop-iterate.md` |
 | T4 Generate | Batch with per-unit QC, auto-retry on low score | pass_rate, avg_score | `commands/autoloop-generate.md` |
-| T5 Deliver | 7-phase with user gates at phase 0.5 and phase 5 | syntax, security, service_health, acceptance | `commands/autoloop-deliver.md` |
+| T5 Deliver | 7-phase with user gates at phase 0.5 and phase 5 | **Machine dims** (manifest): `syntax_errors`, `p1_p2_issues`, `service_health`, `user_acceptance` — 文档口语可称 syntax / P1-P2 / 服务健康 / 验收 | `commands/autoloop-deliver.md` |
 | T6 Quality | 3-dimension unified review framework | security, reliability, maintainability | `commands/autoloop-quality.md` |
 | T7 Optimize | 3-dimension with checkpoint every 5 fixes | architecture, performance, stability | `commands/autoloop-optimize.md` |
 
@@ -150,9 +154,22 @@ Each loop iteration must produce:
 
 ### Final Report
 
-1. Execute `python3 ${SKILL_DIR}/scripts/autoloop-render.py <work_dir>` to generate final views.
-2. The report follows the structure in `assets/report-template.md`.
-3. The report must include: goal recap, final gate scores, iteration count, key findings, and recommendations.
+1. Execute `python3 ${SKILL_DIR}/scripts/autoloop-render.py <work_dir>` to refresh internal markdown views and SSOT-derived artifacts when applicable.
+2. The report follows the structure in `assets/report-template.md`. **T1 Research** uses the **「T1：高标准市场/行业调研报告」** section for market/industry topics: title, topic, goal, date, boundary, fixed core chapters, optional direction modules, and sources only. **Do not include** in that file: task ID, exec summary table, quality scores, internal process notes, issue-tree/methodology headings, or system traces. **T1 content must be grounded in agent-run web/public-source research** in `autoloop-findings.md` per `commands/autoloop-research.md`.
+3. For T1, the master agent should synthesize chapter evidence packets into a single reader-facing report. Subagents collect evidence; they do not each write their own final chapter prose.
+4. Gate scores, iteration count, plan metadata, and internal validation artifacts live in `autoloop-state.json` / `autoloop-progress.md`, not in the T1 reader report. **Iteration count is not what defines T1**; depth, structure, sourced evidence, and clear evidence boundaries define the deliverable.
+5. At the current stage, the T1 reader-facing final report should be treated as **protocol-first composition by the master agent**. Full structured `state/render` generation of that reader report is a **phase-two enhancement**, not a prerequisite for high-quality output.
+
+### T1 Protocol Priorities
+
+When implementing or extending T1, use this order of priority:
+
+1. Stabilize the master-agent / subagent protocol.
+2. Stabilize chapter evidence packet fields and return format.
+3. Stabilize depth gates that block thin drafts.
+4. Only after the above are stable, consider adding full reader-report rendering to structured `state/render`.
+
+Current recommendation: treat structured state/render support for the final T1 reader report as **phase two**, not the first implementation step.
 
 ---
 
@@ -163,8 +180,8 @@ After termination, the REFLECT stage writes strategy effects to `references/expe
 - **strategy_id**: Which strategy was used
 - **template**: Which template type
 - **dimension**: Which quality dimension was targeted
-- **delta**: Score change attributed to this strategy
-- **verdict**: `保持` (positive effect), `避免` (negative/neutral), or `待验证` (insufficient data)
+- **delta**: Score change attributed to this strategy (passed to `autoloop-experience.py --score`)
+- **effect**（经验库与 `iterations[-1].reflect` 字段名）: `保持` / `避免` / `待验证` — 口语「verdict」与此等价，文档以 `effect` 为准
 - **context**: Brief description of when this strategy works
 
 Future OBSERVE stages read this registry to inform DECIDE. Detail: `references/experience-registry.md` effect recording section.
@@ -224,13 +241,14 @@ Detail: `references/agent-dispatch.md`.
 
 | File | Purpose | Updated |
 |------|---------|---------|
-| `autoloop-state.json` | SSOT primary authority (when ssot_mode enabled) | Every stage |
+| `autoloop-state.json` | SSOT primary authority | Every stage |
 | `autoloop-plan.md` | Task plan: goal, template, scope, gates, budget | Task start; scope changes |
 | `autoloop-progress.md` | Per-round start/end records, score progression | Round start and end |
 | `autoloop-findings.md` | Research results, issue lists, fix records | After each subagent return |
 | `autoloop-results.tsv` | Structured iteration log (15 columns per `references/loop-data-schema.md` TSV schema) | VERIFY stage |
 | `checkpoint.json` | Session recovery state | Every stage |
 | `references/experience-registry.md` | Cross-task strategy memory | REFLECT stage |
+| `references/domain-pack-*.md` | Technology-specific gate weights and detection commands (FastAPI, Next.js) | Task start (T6/T7) |
 
 **Cross-File Primary Keys**: Four files share unified keys (`iteration` + `strategy_id` + `dimension` + `problem_id`) for traceability. Detail: `references/loop-data-schema.md` primary key specification.
 
@@ -276,7 +294,7 @@ When configured in `~/.claude/settings.json`:
 
 Install: `bash ${SKILL_DIR}/mcp-server/install.sh`
 Register: `claude mcp add autoloop python3 ${SKILL_DIR}/mcp-server/server.py`
-Provides 5 tools: `autoloop_init`, `autoloop_score`, `autoloop_tsv`, `autoloop_validate`, `autoloop_variance`.
+Provides 10 tools: `autoloop_init`, `autoloop_score`, `autoloop_tsv`, `autoloop_validate`, `autoloop_variance`, `autoloop_state`, `autoloop_render`, `autoloop_experience`, `autoloop_finalize`, `autoloop_controller`.
 
 MCP is an enhancement layer; file-based mode remains the default.
 
