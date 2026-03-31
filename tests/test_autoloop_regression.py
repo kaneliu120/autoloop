@@ -1449,5 +1449,132 @@ class TestRenderFindingsReflectFooter(unittest.TestCase):
         self.assertGreaterEqual(stats.get("L4经验教训", 0), 1)
 
 
+class TestRenderPanorama(unittest.TestCase):
+    """render_panorama 全景视图输出正确。"""
+
+    def _make_state(self):
+        return {
+            "metadata": {"protocol_version": "2.0.0", "completion_authority": "human_review"},
+            "plan": {
+                "task_id": "test-task-001",
+                "template": "T3",
+                "goal": "测试全景视图",
+                "status": "进行中",
+                "budget": {"max_rounds": 10, "current_round": 3, "time_limit": "无限制"},
+                "gates": [
+                    {
+                        "dim": "coverage",
+                        "dimension": "coverage",
+                        "gate": "hard",
+                        "target": 7.0,
+                        "current": 7.2,
+                        "status": "达标",
+                        "unit": "heuristic",
+                    }
+                ],
+            },
+            "iterations": [
+                {
+                    "round": 1,
+                    "phase": "VERIFY",
+                    "status": "完成",
+                    "scores": {"coverage": 6.5},
+                    "strategy": {"strategy_id": "S01", "name": "初始策略", "description": "覆盖率提升"},
+                    "reflect": {"lesson_learned": "需要更多测试", "strategy_review": {"rating": 4, "verdict": "有效"}},
+                },
+                {
+                    "round": 2,
+                    "phase": "VERIFY",
+                    "status": "完成",
+                    "scores": {"coverage": 7.0},
+                    "strategy": {"strategy_id": "S02", "name": "深度策略", "description": "补充边界"},
+                    "reflect": {"lesson_learned": "边界覆盖有效", "strategy_review": {"rating": 5, "verdict": "有效"}},
+                },
+                {
+                    "round": 3,
+                    "phase": "ACT",
+                    "status": "进行中",
+                    "scores": {"coverage": 7.2},
+                    "strategy": {"strategy_id": "S03", "name": "巩固策略", "description": "回归修复"},
+                    "reflect": {"lesson_learned": "", "strategy_review": {"rating": 0, "verdict": ""}},
+                },
+            ],
+            "findings": {
+                "executive_summary": {"topic": "测试", "total_rounds": 3},
+                "rounds": [],
+                "problem_tracker": [
+                    {"id": "P-01", "description": "未覆盖模块 X", "status": "open"},
+                    {"id": "P-02", "description": "已修复的问题", "status": "fixed"},
+                ],
+            },
+        }
+
+    def test_panorama_basic_output(self):
+        rmod = _load_render_module()
+        state = self._make_state()
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            result = rmod.render_panorama(state)
+        output = buf.getvalue()
+        # 基本信息
+        self.assertIn("test-task-001", output)
+        self.assertIn("T3", output)
+        self.assertIn("Round 3/10", output)
+        # 门禁
+        self.assertIn("coverage", output)
+        self.assertIn("7.2", output)
+        self.assertIn("7.0", output)
+        # 趋势 (近3轮 6.5→7.0→7.2)
+        self.assertIn("6.5", output)
+        self.assertIn("↑", output)
+        # 策略
+        self.assertIn("S03", output)
+        # 未解决问题
+        self.assertIn("P-01", output)
+        self.assertIn("未覆盖模块 X", output)
+        # 已修复的不应在 open 列表
+        self.assertNotIn("P-02", output)
+        # 资源
+        self.assertIn("轮次: 3/10 (30%)", output)
+        self.assertIn("human_review", output)
+
+    def test_panorama_no_rounds(self):
+        rmod = _load_render_module()
+        state = {
+            "metadata": {},
+            "plan": {
+                "task_id": "empty-task",
+                "template": "T1",
+                "status": "初始化",
+                "budget": {"max_rounds": 0, "current_round": 0},
+                "gates": [],
+            },
+            "iterations": [],
+            "findings": {"executive_summary": {"topic": "待填写"}, "rounds": [], "problem_tracker": []},
+        }
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            rmod.render_panorama(state)
+        output = buf.getvalue()
+        self.assertIn("empty-task", output)
+        self.assertIn("T1", output)
+        self.assertIn("轮次: 0 (无上限)", output)
+
+    def test_panorama_returns_string(self):
+        rmod = _load_render_module()
+        state = self._make_state()
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            result = rmod.render_panorama(state)
+        self.assertIsInstance(result, str)
+        self.assertIn("test-task-001", result)
+
+
 if __name__ == "__main__":
     unittest.main()

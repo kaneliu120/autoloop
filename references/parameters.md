@@ -232,3 +232,32 @@
 ## 九、可复现性（采样）
 
 若子任务使用随机数或采样，须在 `findings` 或 `iterations` 中记录 **seed**（整数），便于复跑对照；与 `scripts/` 确定性工具链解耦，属任务层约定。
+
+---
+
+## 十、Pipeline 并行执行参数（P3-01）
+
+> 来源：`loop-protocol.md` Pipeline 并行执行规范
+
+| 参数名 | 值 | 适用范围 | 说明 |
+| ------ | -- | ------- | ---- |
+| `pipeline.parallel_groups` | `[]`（默认空，全串行） | Pipeline 模式 | 定义哪些模板可并行执行，每个元素是一组无依赖模板 |
+| `pipeline.worktree_base` | `.worktrees/` | Pipeline 模式 | Git Worktree 的创建目录（相对于 work_dir） |
+| `pipeline.merge_strategy` | `no-ff` | Pipeline 模式 | 合并策略，默认 `--no-ff` 保留分支历史 |
+| `pipeline.conflict_action` | `pause` | Pipeline 模式 | 合并冲突时的行为：`pause`（暂停等待用户）或 `abort`（放弃该分支） |
+
+**parallel_groups 配置示例**：
+
+```yaml
+pipeline:
+  stages:
+    - [T1]           # 串行
+    - [T2]           # 串行（依赖 T1）
+    - [T7, T8]       # 并行组（无依赖）
+```
+
+**约束**：
+
+- 同一并行组内的模板不得有数据依赖（模板 A 的输出不是模板 B 的输入）
+- 同一并行组内的模板不得操作相同文件集合（避免写冲突）
+- 并行组合并失败时，按 `pipeline.conflict_action` 决定行为

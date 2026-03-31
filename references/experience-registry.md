@@ -86,6 +86,7 @@
 - use_count：累计使用次数（= 上述 score 序列长度）
 - success_rate：产生正向效果的比例（各轮 delta **>** 0 的占比；与晋升规则「delta > 0」一致）
 - status：推荐 / 候选默认 / 观察 / 已废弃（生命周期状态枚举）
+- applicable_templates：适用模板列表。如 `[T1,T2]` 表示仅适用于 T1 和 T2；`[*]` 表示全模板通用。默认为当前模板（即 template 字段值）。写入方式：`write --templates "T1,T2"` 或 `--templates "*"`，存储在 description 的 `[templates: ...]` 片段中。
 
 **扩展字段**：
 
@@ -105,6 +106,8 @@
 | contraindications | 是 | 策略的禁忌条件（什么情况下不该用） |
 | optimal_context | 否 | 最佳使用场景（从成功案例中提炼） |
 | failure_mode | 否 | 失败时的典型表现（从失败案例中提炼） |
+| pitfall_description | 否（status=已废弃时建议填写） | 如果做了这个策略会发生什么后果（具体的负面影响描述） |
+| failure_lesson | 否（effect=避免时建议填写） | 结构化失败教训：what(做了什么)/why(为什么失败)/instead(替代建议)。CLI 写入: `--failure-lesson "what:...\|why:...\|instead:..."` |
 
 **示例**：
 
@@ -276,17 +279,20 @@ description: 并行扫描 + 缓存优先的组合策略
 OBSERVE 阶段读取顺序（写入 loop-protocol.md）：
 
 ```text
+0. 有 pitfall_description 或 failure_lesson 的"已废弃"条目（避免踩坑优先于复用成功）
 1. 当前任务的 findings.md（任务本地经验）
 2. references/experience-registry.md 全局策略效果库（跨任务经验）
-3. 同模板 + context_tags重叠 的"推荐"策略（按 success_rate 降序）
+3. (同模板 OR applicable_templates 包含当前模板 OR applicable_templates 为 `[*]`) + context_tags重叠 的"推荐"策略（按 success_rate 降序）
+   - applicable_templates 匹配：策略 description 中 `[templates: ...]` 包含当前模板标识或 `*`
    - context_tags重叠 = 当前任务的标签与策略的context_tags至少有2个相同标签
    - 无重叠标签的策略不推荐，避免跨上下文误迁移
    - 如果策略有 context-scoped status，优先使用与当前上下文匹配的 status，而非全局 status
 
 首轮冷启动时：
 - 无任务本地经验
-- 读取全局经验库中同模板 + context_tags重叠的推荐策略
+- 读取全局经验库中 (同模板 OR applicable_templates匹配) + context_tags重叠的推荐策略
 - 以全局经验作为首轮策略选择依据
+- 有 pitfall_description/failure_lesson 的已废弃条目始终展示（避免踩坑比复用成功更重要）
 ```
 
 ---

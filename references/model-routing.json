@@ -1,0 +1,62 @@
+{
+  "_comment": "AutoLoop Multi-Model Routing Configuration (P3-09)",
+  "_status": "预留配置，当前 pipeline 不支持多会话。P2-19 的 prompt 级任务感知已可用。",
+
+  "default_model": "anthropic:claude-sonnet-4-6",
+
+  "template_models": {
+    "T1": {
+      "preferred": "anthropic:claude-sonnet-4-6",
+      "act_override": "xai:grok-3",
+      "reason": "T1 调研需要联网搜索，Grok 有 web_search 原生支持"
+    },
+    "T2": {
+      "preferred": "anthropic:claude-sonnet-4-6",
+      "reason": "T2 对比分析需要强推理能力"
+    },
+    "T3": {
+      "preferred": "anthropic:claude-opus-4-6",
+      "reason": "T3 设计需要最强推理 + 长上下文"
+    },
+    "T4": {
+      "preferred": "anthropic:claude-sonnet-4-6",
+      "reason": "T4 开发需要快速代码生成"
+    },
+    "T5": {
+      "preferred": "anthropic:claude-sonnet-4-6",
+      "act_override": "xai:grok-3",
+      "reason": "T5 KPI 迭代可能需要联网获取最新数据"
+    },
+    "T6": {
+      "preferred": "anthropic:claude-haiku-4-5",
+      "reason": "T6 批量生成优先速度和成本"
+    },
+    "T7": {
+      "preferred": "anthropic:claude-sonnet-4-6",
+      "reason": "T7 质量审查需要代码理解能力"
+    },
+    "T8": {
+      "preferred": "anthropic:claude-sonnet-4-6",
+      "reason": "T8 优化需要架构理解能力"
+    }
+  },
+
+  "phase_models": {
+    "OBSERVE": {"preferred": "default", "reason": "分析类，用默认模型"},
+    "ORIENT": {"preferred": "default", "reason": "分析类，用默认模型"},
+    "DECIDE": {"preferred": "default", "reason": "决策类，用默认模型"},
+    "ACT": {"preferred": "template_specific", "reason": "执行类，按模板的 act_override 选择"},
+    "VERIFY": {"preferred": "script", "reason": "确定性脚本，不需要模型"},
+    "SYNTHESIZE": {"preferred": "default", "reason": "整合类，用默认模型"},
+    "EVOLVE": {"preferred": "default", "reason": "决策类，用默认模型"},
+    "REFLECT": {"preferred": "default", "reason": "反思类，用默认模型"}
+  },
+
+  "multi_session_pipeline": {
+    "_status": "未实现，预留接口",
+    "enabled": false,
+    "session_launcher": "claude-code",
+    "session_args_template": "--model {model} --headless",
+    "comment": "当 enabled=true 时，pipeline 为每个模板启动独立会话，使用 template_models 中的 preferred 模型"
+  }
+}

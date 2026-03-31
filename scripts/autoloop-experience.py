@@ -2,13 +2,15 @@
 """AutoLoop 经验库读写工具
 
 用法:
-  autoloop-experience.py <work_dir> query --template T{N} [--tags tag1,tag2]
-  autoloop-experience.py <work_dir> write --strategy-id S01-xxx --effect 保持|避免|待验证 --score DELTA [--mechanism "适用机制简述"] [--status 推荐|候选默认|观察|已废弃] [--template T{N}] [--dimension dim] [--context "..."] [--tags python,backend,security]
+  autoloop-experience.py <work_dir> query --template T{N} [--tags tag1,tag2] [--include-global]
+  autoloop-experience.py <work_dir> write --strategy-id S01-xxx --effect 保持|避免|待验证 --score DELTA [--mechanism "适用机制简述"] [--failure-lesson "what:...|why:...|instead:..."] [--status 推荐|候选默认|观察|已废弃] [--template T{N}] [--dimension dim] [--context "..."] [--tags python,backend,security] [--templates "T1,T2" | "*"]
   注: --score 为单轮分数变化量（delta），非绝对分。主表 avg_delta = 各次 write 的 score 之算术平均（与 experience-registry 一致）。
   可选环境变量 AUTOLOOP_EXPERIENCE_REQUIRE_MECHANISM=1：当 use_count≥2 时强制要求本次带 --mechanism（收紧 D-03）。
   autoloop-experience.py <work_dir> list
   autoloop-experience.py <work_dir> list --json
+  autoloop-experience.py <work_dir> audit [--dry-run]          # P2-05：审计策略状态，建议晋升/淘汰
   autoloop-experience.py <work_dir> consolidate [--dry-run]   # P3-01：合并主表中重复 strategy_id 为单行
+  autoloop-experience.py <work_dir> evolve-profile --role ROLE --field FIELD --value VALUE --reason REASON  # P2-08：更新 agent profile 进化区域
   主表：每个 strategy_id 仅保留一行（write 为 upsert）。审计：references/experience-audit.md 追加每次写入。
   strategy_id 以 multi: 开头时仅写审计、不更新主表；须满足 P3-06 multi:{SNN+SNN} 约束（见 experience-registry.md）。
 """
@@ -298,18 +300,23 @@ def _row_positive_signal(row):
 
 def _merge_history_rows(
     historical, effect, score, context, dim_str, tags, now_str, prior_scores=None,
-    mechanism=None,
+    mechanism=None, failure_lesson=None, applicable_templates=None,
 ):
     """由审计中已有 score + 本次 score 计算 use_count、avg_delta、success_rate、description。
 
     prior_scores: 本次写入前从 audit 解析的按时间顺序的 delta 列表；主表仅一行 upsert 时必须提供，
     否则 use_count 会恒为 2。
+    applicable_templates: 适用模板列表（如 ['T1','T2'] 或 ['*']），写入 [templates: ...] 片段。
     """
     parts = ["[{}]".format(effect), "@{}".format(now_str)]
     if tags:
         parts.append("[{}]".format(",".join(tags)))
+    if applicable_templates:
+        parts.append("[templates: {}]".format(",".join(applicable_templates)))
     if mechanism:
         parts.append("[mechanism: {}]".format(str(mechanism).strip()))
+    if failure_lesson:
+        parts.append("[failure_lesson: {}]".format(str(failure_lesson).strip()))
     if context:
         parts.append(context)
     desc = " ".join(parts)
@@ -517,9 +524,28 @@ def _resolve_scoped_status(strategy_id, global_status, scoped_rows, task_tag_set
     return chosen
 
 
-def cmd_query(registry_path, template, tags, include_observation=False):
+def _extract_applicable_templates(desc):
+    """从 description 提取 [templates: ...] 片段，返回模板集合（大写）。
+    [templates: *] 返回 frozenset({'*'})；[templates: T1,T3] 返回 frozenset({'T1','T3'})。
+    无片段返回 None（表示未设置，默认使用行的 template 字段）。
+    """
+    if not desc:
+        return None
+    m = re.search(r'\[templates:\s*([^\]]+)\]', str(desc))
+    if not m:
+        return None
+    raw = m.group(1).strip()
+    if raw == '*':
+        return frozenset({'*'})
+    return frozenset(t.strip().upper() for t in raw.split(',') if t.strip())
+
+
+def cmd_query(registry_path, template, tags, include_observation=False,
+              include_global=False):
     """查询推荐策略：按模板过滤；若提供任务 context_tags，仅保留与策略
     description 内 context_tags 交集≥2 的条目（loop-protocol）；无 tags 时不做重叠过滤（冷启动）。
+
+    include_global=True 时，除了同模板条目，还返回 applicable_templates 包含当前模板或 [*] 的条目。
 
     默认仅返回 effective_status 为「推荐」「候选默认」；「观察」需 --include-observation。
     """
@@ -535,9 +561,14 @@ def cmd_query(registry_path, template, tags, include_observation=False):
 
     results = []
     for s in strategies:
-        # 模板过滤
+        # 模板过滤（含 applicable_templates 跨模板匹配）
         s_tpl = s.get('template', '').upper().split(':')[0].split(' ')[0].strip()
-        if tpl_key and s_tpl != tpl_key and s_tpl != '通用':
+        tpl_match = (not tpl_key) or s_tpl == tpl_key or s_tpl == '通用'
+        if not tpl_match and include_global:
+            at = _extract_applicable_templates(s.get('description', ''))
+            if at is not None and ('*' in at or (tpl_key and tpl_key in at)):
+                tpl_match = True
+        if not tpl_match:
             continue
 
         strategy_tags = _extract_context_tags_from_description(s.get('description', ''))
@@ -655,10 +686,12 @@ def _infer_template(strategy_id):
 
 
 def cmd_write(registry_path, strategy_id, effect, score, context,
-              status=None, template=None, dimension=None, tags=None, mechanism=None):
+              status=None, template=None, dimension=None, tags=None, mechanism=None,
+              failure_lesson=None, applicable_templates=None):
     """主表 upsert（每个 strategy_id 仅一行）并追加 `experience-audit.md`。
 
     multi: 前缀见 experience-registry.md — 只记审计，不更新主表聚合。
+    applicable_templates: 适用模板列表（如 ['T1','T2'] 或 ['*']），写入 description 的 [templates: ...] 片段。
     """
     valid_statuses = ('推荐', '候选默认', '观察', '已废弃')
     if status is not None and status not in valid_statuses:
@@ -742,7 +775,8 @@ def cmd_write(registry_path, strategy_id, effect, score, context,
     prior_scores = _audit_write_scores_chronological(ap, strategy_id)
     m = _merge_history_rows(
         historical, effect, score, context, dim_str, tags, now, prior_scores=prior_scores,
-        mechanism=mechanism,
+        mechanism=mechanism, failure_lesson=failure_lesson,
+        applicable_templates=applicable_templates,
     )
     use_count = m["use_count"]
     positives = m["positives"]
@@ -917,8 +951,183 @@ def cmd_list(registry_path):
 
 
 # ---------------------------------------------------------------------------
+# audit 命令 — P2-05 持续学习闭环
+# ---------------------------------------------------------------------------
+
+def _extract_last_date(desc):
+    """从 description 中提取最新 @YYYY-MM-DD 日期，返回 datetime.date 或 None。"""
+    matches = re.findall(r'@(\d{4}-\d{2}-\d{2})', str(desc))
+    if not matches:
+        return None
+    try:
+        return datetime.datetime.strptime(matches[-1], '%Y-%m-%d').date()
+    except ValueError:
+        return None
+
+
+def cmd_audit(registry_path, dry_run=True):
+    """扫描所有经验条目，基于 use_count/success_rate/avg_delta 自动建议晋升或淘汰。
+
+    返回审计建议列表 list[dict]，每项含 strategy_id / current_status / action / reason。
+    dry_run=True 时仅输出报告；False 时执行变更并记录到 experience-audit.md。
+    """
+    with open(registry_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    strategies = _dedupe_strategies_latest(_parse_strategy_table(content))
+    today = datetime.datetime.now().date()
+    suggestions = []
+
+    for s in strategies:
+        sid = s.get("strategy_id", "")
+        status = s.get("status", "")
+        desc = s.get("description", "")
+        try:
+            uc = int(s.get("use_count", "0"))
+        except (ValueError, TypeError):
+            uc = 0
+        try:
+            sr = float(str(s.get("success_rate", "0")).rstrip("%"))
+        except (ValueError, TypeError):
+            sr = 0.0
+
+        # 规则 1：推荐 → 候选默认
+        if status == "推荐" and uc >= 4 and sr > 80:
+            suggestions.append({
+                "strategy_id": sid,
+                "current_status": status,
+                "action": "晋升为「候选默认」",
+                "reason": f"use_count={uc} ≥4, success_rate={sr}% >80%",
+            })
+            continue
+
+        # 规则 2：任意非废弃 → 已废弃
+        if status != "已废弃" and uc >= 3 and sr < 30:
+            suggestions.append({
+                "strategy_id": sid,
+                "current_status": status,
+                "action": "标记为「已废弃」",
+                "reason": f"use_count={uc} ≥3, success_rate={sr}% <30%",
+            })
+            continue
+
+        # 规则 3：超过 90 天未验证且推荐 → 降为观察
+        if status == "推荐":
+            last_date = _extract_last_date(desc)
+            if last_date and (today - last_date).days > 90:
+                days_ago = (today - last_date).days
+                suggestions.append({
+                    "strategy_id": sid,
+                    "current_status": status,
+                    "action": "降为「观察」",
+                    "reason": f"最后验证 {last_date} ({days_ago}天前), 超过90天未验证",
+                })
+
+    if not dry_run and suggestions:
+        # 执行变更
+        split = _split_main_strategy_table(content)
+        if split:
+            prefix, header_line, sep_line, row_lines, suffix = split
+            headers = _headers_from_line(header_line)
+            rows = []
+            for rl in row_lines:
+                d = _row_dict_from_line(headers, rl)
+                sid_r = d.get("strategy_id", "")
+                if sid_r and not sid_r.startswith("（") and not sid_r.startswith("("):
+                    rows.append(d)
+
+            action_map = {}
+            for sg in suggestions:
+                act = sg["action"]
+                if "候选默认" in act:
+                    action_map[sg["strategy_id"]] = "候选默认"
+                elif "已废弃" in act:
+                    action_map[sg["strategy_id"]] = "已废弃"
+                elif "观察" in act:
+                    action_map[sg["strategy_id"]] = "观察"
+
+            for r in rows:
+                new_st = action_map.get(r.get("strategy_id"))
+                if new_st:
+                    r["status"] = new_st
+
+            new_content = _rebuild_table_content(
+                prefix, header_line, sep_line, rows, headers, suffix
+            )
+            with open(registry_path, "w", encoding="utf-8") as f:
+                f.write(new_content)
+
+        # 记录审计
+        audit_lines = ["- mode: execute", f"- suggestions_count: {len(suggestions)}"]
+        for sg in suggestions:
+            audit_lines.append(
+                f"- {sg['strategy_id']}: {sg['current_status']} → {sg['action']} ({sg['reason']})"
+            )
+        _append_audit(registry_path, "(audit)", "audit", audit_lines)
+
+    return suggestions
+
+
+# ---------------------------------------------------------------------------
 # CLI 入口
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# evolve-profile 命令 — P2-08 Identity Evolution
+# ---------------------------------------------------------------------------
+
+_EVOLUTION_FIELDS = ("擅长领域", "常用策略", "已知局限", "能力自评")
+
+
+def cmd_evolve_profile(role, field, value, reason):
+    """更新 agent profile 的进化区域字段并记录进化历史。"""
+    if field not in _EVOLUTION_FIELDS:
+        print(f"ERROR: --field 必须是 {'/'.join(_EVOLUTION_FIELDS)} 之一", file=sys.stderr)
+        return False
+
+    profiles_dir = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "..", "assets", "agent-profiles"
+    )
+    profile_path = os.path.normpath(os.path.join(profiles_dir, f"{role}.md"))
+    if not os.path.isfile(profile_path):
+        print(f"ERROR: profile 文件不存在: {profile_path}", file=sys.stderr)
+        return False
+
+    with open(profile_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # 在进化区域的指定字段追加新值
+    pattern = rf"(- {re.escape(field)}：)(.*)"
+    match = re.search(pattern, content)
+    if not match:
+        print(f"ERROR: 未在 profile 中找到字段「{field}」", file=sys.stderr)
+        return False
+
+    existing = match.group(2).strip()
+    if existing in ("（随使用积累）", "（随经验库积累）", "（随失败教训积累）", "（随任务完成积累）"):
+        new_val = value
+    else:
+        new_val = f"{existing}; {value}"
+    content = content[:match.start()] + f"- {field}：{new_val}" + content[match.end():]
+
+    # 在进化历史表末尾追加新行
+    today = datetime.date.today().isoformat()
+    history_row = f"| {today} | {field}: {value} | {reason} |"
+    # 找到最后一个表格行并在其后追加
+    table_rows = list(re.finditer(r"^\|.*\|$", content, re.MULTILINE))
+    if table_rows:
+        last_row = table_rows[-1]
+        insert_pos = last_row.end()
+        content = content[:insert_pos] + "\n" + history_row + content[insert_pos:]
+    else:
+        content = content.rstrip() + "\n" + history_row + "\n"
+
+    with open(profile_path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    print(f"OK: 已更新 {role} profile「{field}」← {value}")
+    return True
+
 
 def main():
     if len(sys.argv) < 3:
@@ -942,6 +1151,7 @@ def main():
         template = None
         tags = []
         include_observation = '--include-observation' in sys.argv
+        include_global = '--include-global' in sys.argv
         args = sys.argv[3:]
         i = 0
         while i < len(args):
@@ -951,7 +1161,7 @@ def main():
             elif args[i] == '--tags' and i + 1 < len(args):
                 tags = _parse_tags(args[i + 1])
                 i += 2
-            elif args[i] == '--include-observation':
+            elif args[i] in ('--include-observation', '--include-global'):
                 i += 1
             else:
                 i += 1
@@ -961,7 +1171,8 @@ def main():
             sys.exit(1)
 
         results = cmd_query(
-            registry_path, template, tags, include_observation=include_observation)
+            registry_path, template, tags, include_observation=include_observation,
+            include_global=include_global)
 
         if json_output:
             print(json.dumps(results, ensure_ascii=False, indent=2))
@@ -988,6 +1199,8 @@ def main():
         dimension = None
         write_tags = None
         mechanism = None
+        failure_lesson = None
+        applicable_templates = None
         args = sys.argv[3:]
         i = 0
         while i < len(args):
@@ -1002,6 +1215,9 @@ def main():
                 i += 2
             elif args[i] == '--mechanism' and i + 1 < len(args):
                 mechanism = args[i + 1]
+                i += 2
+            elif args[i] == '--failure-lesson' and i + 1 < len(args):
+                failure_lesson = args[i + 1]
                 i += 2
             elif args[i] == '--context' and i + 1 < len(args):
                 context = args[i + 1]
@@ -1018,6 +1234,13 @@ def main():
             elif args[i] == '--tags' and i + 1 < len(args):
                 write_tags = _parse_tags(args[i + 1])
                 i += 2
+            elif args[i] == '--templates' and i + 1 < len(args):
+                raw_tpl = args[i + 1].strip()
+                if raw_tpl == '*':
+                    applicable_templates = ['*']
+                else:
+                    applicable_templates = [t.strip().upper() for t in raw_tpl.split(',') if t.strip()]
+                i += 2
             else:
                 i += 1
 
@@ -1032,7 +1255,9 @@ def main():
             sys.exit(1)
 
         ok = cmd_write(registry_path, strategy_id, effect, score, context,
-                       status, template, dimension, write_tags, mechanism=mechanism)
+                       status, template, dimension, write_tags, mechanism=mechanism,
+                       failure_lesson=failure_lesson,
+                       applicable_templates=applicable_templates)
         if ok:
             print(
                 "OK: 已 upsert 策略 {} (效果={}, 分数={})".format(
@@ -1045,6 +1270,58 @@ def main():
     elif command == "consolidate":
         dry_run = "--dry-run" in sys.argv
         ok = cmd_consolidate(registry_path, dry_run=dry_run)
+        sys.exit(0 if ok else 1)
+
+    elif command == "audit":
+        # 默认 dry-run（安全）；需 --execute 显式执行变更
+        dry_run = "--execute" not in sys.argv
+        suggestions = cmd_audit(registry_path, dry_run=dry_run)
+        if not suggestions:
+            print("AUDIT: 无需调整，所有策略状态正常")
+        else:
+            mode = "DRY-RUN" if dry_run else "EXECUTED"
+            print(f"AUDIT [{mode}]: {len(suggestions)} 条建议\n")
+            print("{:<20} {:<12} {:<20} {}".format(
+                "strategy_id", "当前状态", "建议操作", "理由"))
+            print("-" * 80)
+            for sg in suggestions:
+                print("{:<20} {:<12} {:<20} {}".format(
+                    sg["strategy_id"],
+                    sg["current_status"],
+                    sg["action"],
+                    sg["reason"],
+                ))
+        sys.exit(0)
+
+    elif command == 'evolve-profile':
+        role = None
+        field = None
+        value = None
+        reason = None
+        args = sys.argv[3:]
+        i = 0
+        while i < len(args):
+            if args[i] == '--role' and i + 1 < len(args):
+                role = args[i + 1]
+                i += 2
+            elif args[i] == '--field' and i + 1 < len(args):
+                field = args[i + 1]
+                i += 2
+            elif args[i] == '--value' and i + 1 < len(args):
+                value = args[i + 1]
+                i += 2
+            elif args[i] == '--reason' and i + 1 < len(args):
+                reason = args[i + 1]
+                i += 2
+            else:
+                i += 1
+
+        if not all([role, field, value, reason]):
+            print("ERROR: evolve-profile 需要 --role, --field, --value, --reason 参数",
+                  file=sys.stderr)
+            sys.exit(1)
+
+        ok = cmd_evolve_profile(role, field, value, reason)
         sys.exit(0 if ok else 1)
 
     elif command == 'list':
