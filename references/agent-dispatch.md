@@ -8,6 +8,25 @@
 
 ---
 
+## 任务类型标签（Task-Aware Dispatch）
+
+每个模板+阶段组合有对应的 task_type 和 prefer_tools 标签，用于引导 subagent 优先选择合适的工具和行为模式。
+
+| 模板+阶段 | task_type | prefer_tools | 行为导向 |
+| ---------- | ----------- | ------------- | --------- |
+| T1 ACT | research | web_search, read_file | 优先使用搜索工具，广泛收集信息 |
+| T2 ACT | analysis | read_file, grep | 优先使用对比分析工具 |
+| T3 ACT | design | read_file, write_file | 优先使用文档编写工具 |
+| T4 ACT | coding | edit_file, bash, grep | 优先使用代码编辑和执行工具 |
+| T5 ACT | iteration | read_file, web_search | 混合使用，数据驱动 |
+| T6 ACT | generation | write_file | 优先使用批量生成工具 |
+| T7 ACT | review | grep, read_file | 优先使用代码搜索和阅读工具 |
+| T8 ACT | optimization | edit_file, bash | 优先使用重构和测试工具 |
+
+controller 在 ACT 阶段根据当前模板自动注入 `[任务类型: {task_type}] {behavior_hint}`，见 `scripts/autoloop-controller.py` 的 `TASK_TYPE_MAP`。
+
+---
+
 ## 并行 vs 串行判断规则
 
 ### 必须并行（同时调度）
@@ -92,6 +111,19 @@ T7 Quality（单文件）：
 ---
 
 ## Subagent 角色定义
+
+### 角色 Profile 引用
+
+每个 agent 角色有对应的可进化 profile 文件（`assets/agent-profiles/{role}.md`）。
+ACT 阶段 subagent 工单中应注入当前 profile 的"进化区域"内容（如果文件存在）。
+
+Profile 更新规则：
+
+- 固定区域：仅人工修改（git 审计）
+- 进化区域：REFLECT 阶段可建议更新，写入 pending_evolution 队列
+- pending_evolution 队列由 `autoloop-experience.py evolve-profile` 子命令管理
+
+---
 
 ### researcher
 
@@ -356,6 +388,47 @@ T7 Quality（单文件）：
 
 ---
 
+## Subagent 即时发现（可选返回字段）
+
+如果 subagent 在执行过程中发现了与当前任务无直接关系、但对未来轮次或其他任务有价值的信息，在返回中包含 `discoveries` 列表。
+
+**适用类型**（不等 REFLECT，立即记录）：
+
+- 环境事实：API 限速、数据源状态、工具兼容性
+- 资源变化：文件路径变更、依赖版本更新、服务迁移
+- 工具发现：某工具在特定场景下不可用或有特殊行为
+
+**不适用**（仍在 REFLECT 阶段处理）：
+
+- 策略评估（保持/避免）——需要 VERIFY 结果才能判断
+- 质量评分——需要独立验证
+
+**返回示例**：
+
+```json
+{
+  "result": "...",
+  "discoveries": [
+    "xAI Grok API 限速 60 次/分钟，建议批量任务间隔 2 秒",
+    "目标网站已启用 Cloudflare 防护，需要使用 headless browser"
+  ]
+}
+```
+
+controller 在 ACT 阶段收到 discoveries 后，立即写入 `autoloop-findings.md` 的"即时发现"区域和 `state.json` 的 `metadata.immediate_discoveries`，不等 REFLECT。
+
+---
+
+## MCP 工具可用性（跨平台）
+
+- **Claude Code**: subagent 自动继承所有已安装 MCP 工具，无需额外配置
+- **Gemini CLI / Codex CLI**: 使用 `autoloop-mcp-bridge.py discover` 检查可用工具
+- **无 MCP 环境**: subagent 应使用内置工具（read_file, grep, bash 等）完成任务
+
+controller 在 ACT 阶段会检测平台并在工单中注明 MCP 可用性。
+
+---
+
 ## 上下文完整性检查清单
 
 每次调度前，确认以下内容已包含在指令中：
@@ -374,6 +447,60 @@ T7 Quality（单文件）：
   - 相关经验教训
 
 **缺少任一项 → 重写指令再调度。**
+
+---
+
+## Subagent 失败返回规范
+
+如果 subagent 无法完成任务，**必须**返回以下结构化信息（写入 `iterations[-1].act`）：
+
+- `failure_type`: 失败类型枚举（见下表）
+- `failure_detail`: 具体描述（一句话说明什么失败了）
+- `completion_ratio`: 完成百分比（0-100，部分完成时填写）
+
+| failure_type | 含义 | 典型场景 |
+|-------------|------|---------|
+| `timeout` | 任务太大，上下文不够 | 需要分析的文件太多、搜索范围太广 |
+| `capability_gap` | 当前角色/工具无法完成 | 需要特定领域知识、需要的工具不可用 |
+| `resource_missing` | 缺少必要信息或权限 | 文件不存在、API 无权限、依赖未安装 |
+| `external_error` | 外部服务故障 | API 限流、网络超时、第三方服务宕机 |
+| `code_error` | 脚本/工具自身报错 | 语法错误、依赖缺失、版本不兼容 |
+| `partial_success` | 部分完成 | 5 个子任务完成了 3 个 |
+
+**示例返回**：
+```json
+{
+  "failure_type": "external_error",
+  "failure_detail": "OpenAI API 429 rate limit exceeded",
+  "completion_ratio": 60
+}
+```
+
+controller 会根据 `failure_type` 自动选择差异化恢复策略（详见 `loop-protocol.md` ACT 失败处理章节）。
+
+---
+
+## Subagent 自检协议（Context Self-Check）
+
+### 返回时必须包含
+
+- `completion_ratio`: 0-100 的整数，估算任务完成百分比（写入 `iterations[-1].act`）
+
+### 自检规则
+
+在执行过程中持续评估：
+
+- 如果主要目标完成 < 50% 且已尝试多种方法：停下来，汇报当前进度和阻塞原因，而非继续硬推
+- 如果发现当前方法根本行不通：提前终止并报告，而非尝试到耗尽
+- 如果遇到超出角色能力范围的问题：明确标注，返回给 controller
+
+### Controller 处理逻辑
+
+controller 在 ACT→VERIFY 过渡时自动解析 `completion_ratio`：
+
+- **≥ 80%**：正常进入 VERIFY
+- **50-79%**：进入 VERIFY 但标注 `partial = true`（VERIFY 评分时参考）
+- **< 50%**：标注 `needs_replanning = true`，建议 DECIDE 重新规划
 
 ---
 

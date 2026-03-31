@@ -7,6 +7,7 @@
   autoloop-render.py <工作目录> --file progress
   autoloop-render.py <工作目录> --file findings
   autoloop-render.py <工作目录> --file tsv
+  autoloop-render.py <工作目录> panorama     全景视图（stdout）
 """
 
 import csv
@@ -288,12 +289,163 @@ RENDERERS = {
 }
 
 
+# ---------------------------------------------------------------------------
+# panorama — 全景视图（stdout only, 不写文件）
+# ---------------------------------------------------------------------------
+
+def render_panorama(state):
+    """从 state.json 提取关键信息，输出全景视图到 stdout。"""
+    plan = state.get("plan") or {}
+    meta = state.get("metadata") or {}
+    iterations = state.get("iterations") or []
+    findings = state.get("findings") or {}
+    budget = plan.get("budget") or {}
+
+    task_name = plan.get("task_id", "unknown")
+    template = plan.get("template", "?")
+    max_rounds = budget.get("max_rounds", 0)
+    current_round = budget.get("current_round", 0)
+    status_label = plan.get("status", "未知")
+
+    # 当前阶段: 取最后一个 iteration 的 phase
+    last_phase = "N/A"
+    if iterations:
+        last_phase = iterations[-1].get("phase", "N/A")
+
+    # 完成度: current_round / max_rounds (if max_rounds > 0)
+    if max_rounds > 0:
+        pct = min(100, round(current_round / max_rounds * 100))
+        budget_line = "轮次: {}/{} ({}%)".format(current_round, max_rounds, pct)
+    else:
+        budget_line = "轮次: {} (无上限)".format(current_round)
+
+    lines = [
+        "## 任务全景 — {} ({})".format(task_name, template),
+        "状态: Round {}/{} | {} | {}".format(
+            current_round, max_rounds if max_rounds else "∞",
+            last_phase, status_label),
+        "",
+    ]
+
+    # --- 门禁一览 ---
+    gates = plan.get("gates") or []
+    if gates:
+        lines += [
+            "### 门禁一览",
+            "| 维度 | 当前 | 目标 | 通过? | 置信度 | 趋势(近3轮) |",
+            "|------|------|------|-------|--------|------------|",
+        ]
+        for g in gates:
+            dim = g.get("dim") or g.get("dimension", "")
+            current_val = g.get("current", "—")
+            target_val = g.get("target", "—")
+            passed = "✓" if g.get("status") == "达标" else "✗"
+            if plan_gate_is_exempt(g):
+                passed = "豁免"
+
+            # 趋势: 从最近 3 轮 iterations 的 scores 中提取该维度
+            recent_scores = []
+            for it in iterations[-3:]:
+                scores = it.get("scores") or {}
+                if dim in scores:
+                    recent_scores.append(scores[dim])
+            if recent_scores:
+                trend_parts = "→".join(str(s) for s in recent_scores)
+                if len(recent_scores) >= 2:
+                    if recent_scores[-1] > recent_scores[-2]:
+                        trend_parts += " ↑"
+                    elif recent_scores[-1] < recent_scores[-2]:
+                        trend_parts += " ↓"
+                    else:
+                        trend_parts += " →"
+            else:
+                trend_parts = "—"
+
+            # 置信度: heuristic (来自 gate 本身没有置信度字段, 用 unit 或默认)
+            confidence = g.get("confidence", g.get("unit", "heuristic"))
+
+            lines.append("| {} | {} | {} | {} | {} | {} |".format(
+                dim, current_val, target_val, passed, confidence, trend_parts))
+        lines.append("")
+
+    # --- 本轮策略 ---
+    if iterations:
+        last_it = iterations[-1]
+        strategy = last_it.get("strategy") or {}
+        sid = strategy.get("strategy_id", "—")
+        desc = strategy.get("description") or strategy.get("name", "")
+        lines += [
+            "### 本轮策略",
+            "- strategy_id: {} — {}".format(sid, desc),
+        ]
+        # reflect 中的 effect
+        reflect = last_it.get("reflect") or {}
+        effect = reflect.get("effect") or reflect.get("strategy_review", {}).get("verdict", "")
+        if effect:
+            lines.append("- effect: {}".format(effect))
+        lines.append("")
+
+    # --- 未解决问题 (Top 5) ---
+    problems = findings.get("problem_tracker") or []
+    open_problems = [p for p in problems if (p.get("status") or "").lower() in ("open", "进行中", "")]
+    if open_problems:
+        lines.append("### 未解决问题 (Top 5)")
+        for i, p in enumerate(open_problems[:5], 1):
+            lines.append("{}. [{}] {}".format(
+                i, p.get("id", "?"), p.get("description", "")))
+        lines.append("")
+    else:
+        lines += ["### 未解决问题", "无", ""]
+
+    # --- 经验教训 (从最近几轮 reflect 中提取) ---
+    effective = []
+    avoid = []
+    for it in iterations[-5:]:
+        reflect = it.get("reflect") or {}
+        lesson = (reflect.get("lesson_learned") or "").strip()
+        if lesson:
+            sr = reflect.get("strategy_review") or {}
+            rating = sr.get("rating", 0)
+            if isinstance(rating, (int, float)) and rating >= 3:
+                effective.append(lesson[:120])
+            elif isinstance(rating, (int, float)) and rating > 0 and rating < 3:
+                avoid.append(lesson[:120])
+            else:
+                effective.append(lesson[:120])
+    if effective or avoid:
+        lines.append("### 经验教训")
+        if effective:
+            lines.append("- 有效: {}".format("; ".join(effective[:3])))
+        if avoid:
+            lines.append("- 避免: {}".format("; ".join(avoid[:3])))
+        lines.append("")
+
+    # --- 资源 ---
+    completion_authority = meta.get("completion_authority", "internal")
+    lines += [
+        "### 资源",
+        "- {}".format(budget_line),
+        "- 完成权威: {}".format(completion_authority),
+    ]
+
+    output = "\n".join(lines)
+    print(output)
+    return output
+
+
 def main():
     if len(sys.argv) < 2:
         print(__doc__)
         sys.exit(1)
 
     work_dir = sys.argv[1]
+
+    # 检查 panorama 子命令
+    if len(sys.argv) >= 3 and sys.argv[2] == "panorama":
+        state = load_state(work_dir)
+        render_panorama(state)
+        return
+
     state = load_state(work_dir)
 
     target = None

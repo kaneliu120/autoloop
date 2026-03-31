@@ -300,6 +300,18 @@ Provides 10 tools: `autoloop_init`, `autoloop_score`, `autoloop_tsv`, `autoloop_
 
 MCP is an enhancement layer; file-based mode remains the default.
 
+### MCP Bridge (Cross-Platform)
+
+For non-Claude Code environments (Gemini CLI, Codex CLI, etc.) where subagents cannot inherit MCP tools:
+
+```bash
+python3 ${SKILL_DIR}/scripts/autoloop-mcp-bridge.py detect-platform  # 检测当前平台
+python3 ${SKILL_DIR}/scripts/autoloop-mcp-bridge.py discover         # 列出可用 MCP 工具
+python3 ${SKILL_DIR}/scripts/autoloop-mcp-bridge.py call <tool> <args>  # 调用 MCP 工具（预留）
+```
+
+Detail: `references/agent-dispatch.md` MCP 工具可用性 section.
+
 ---
 
 ## Quick Reference

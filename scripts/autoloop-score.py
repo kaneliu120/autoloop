@@ -98,7 +98,7 @@ def _manifest_to_scorer_gates(manifest):
             gate_type = g["type"]  # hard/soft
             threshold = g["threshold"]
             label = _MANIFEST_LABEL_MAP.get(dim_raw, dim_raw)
-            gates.append({
+            entry = {
                 "dim": dim,
                 "manifest_dimension": dim_raw,
                 "threshold": threshold,
@@ -106,7 +106,10 @@ def _manifest_to_scorer_gates(manifest):
                 "gate": gate_type,
                 "label": label,
                 "comparator": g.get("comparator", ">="),
-            })
+            }
+            if "llm_grader" in g:
+                entry["llm_grader"] = g["llm_grader"]
+            gates.append(entry)
         result[tkey] = gates
     return result
 
@@ -393,6 +396,62 @@ def _count_findings_completeness(state):
     return sourced, total
 
 
+def _confidence_for_dim(dim):
+    """根据评分维度的数据来源，返回 (confidence, margin)。
+
+    三级置信度：
+    - empirical (margin ≤ 0.3): 基于工具实际输出（syntax_check_cmd、测试通过率、lint 错误数等）
+    - heuristic (margin ≤ 1.5): 基于内容分析模式匹配（来源计数、关键词覆盖率、文本模式匹配）
+    - binary (margin = None): 只能判通过/不通过（无量化工具支持时的回退）
+    """
+    # empirical: T4/T7/T8 中基于工具输出的维度
+    _EMPIRICAL_DIMS = {
+        "syntax",              # T4: syntax_check_cmd 实际输出
+        "p1_p2_issues",        # T4: 工程问题清单计数
+        "service_health",      # T4: 健康检查 URL 实际响应
+        "p1_all",              # T7: 全维度 P1 计数
+        "security_p2",         # T7: 安全 P2 计数
+        "reliability_p2",      # T7: 可靠性 P2 计数
+        "maintainability_p2",  # T7: 可维护性 P2 计数
+    }
+    # heuristic: T1/T2/T3/T5/T6 中基于内容分析的维度，以及 T7/T8 的评审打分
+    _HEURISTIC_DIMS = {
+        "coverage",            # T1/T2: 来源计数 / 维度覆盖率
+        "credibility",         # T1/T2: 多源支撑比例
+        "consistency",         # T1/T2: 无矛盾维度比例
+        "completeness",        # T1/T2: 来源引用比例
+        "sensitivity",         # T2: 敏感性分析
+        "kpi_target",          # T5: KPI 达标（混合判定）
+        "pass_rate",           # T6: 通过率
+        "avg_score",           # T6: 平均分
+        "security_score",      # T7: 安全性评审打分
+        "reliability_score",   # T7: 可靠性评审打分
+        "maintainability_score",  # T7: 可维护性评审打分
+        "architecture",        # T8: 架构评审打分
+        "performance",         # T8: 性能评审打分
+        "stability",           # T8: 稳定性评审打分
+        "design_completeness",      # T3: 设计完整度
+        "feasibility_score",        # T3: 技术可行性
+        "requirement_coverage",     # T3: 需求覆盖度
+        "scope_precision",          # T3: 范围精确度
+        "validation_evidence",      # T3: 验证证据
+    }
+    # binary: 只能判 pass/fail
+    _BINARY_DIMS = {
+        "bias_check",          # T2: 偏见检查（bool 门禁）
+        "user_acceptance",     # T4: 人工验收（bool 门禁）
+    }
+
+    if dim in _EMPIRICAL_DIMS:
+        return "empirical", 0.3
+    if dim in _HEURISTIC_DIMS:
+        return "heuristic", 1.5
+    if dim in _BINARY_DIMS:
+        return "binary", None
+    # 未知维度默认为 heuristic
+    return "heuristic", 1.5
+
+
 def _eval_gate(gate_def, value, evidence=""):
     """评估单个门禁，返回结果 dict。
 
@@ -404,6 +463,7 @@ def _eval_gate(gate_def, value, evidence=""):
     unit = gate_def["unit"]
     gate_type = gate_def["gate"]
     label = gate_def["label"]
+    confidence, margin = _confidence_for_dim(dim)
 
     # threshold 为 None 表示用户自定义（T5 KPI）
     # T5 KPI 的数值比较在 score_from_ssot() 中完成（plan_gates 循环），
@@ -421,6 +481,8 @@ def _eval_gate(gate_def, value, evidence=""):
             "gate_type": gate_type,
             "pass": passed,
             "evidence": evidence,
+            "confidence": confidence,
+            "margin": margin,
         }
 
     # 使用 manifest comparator 字段进行比较（SSOT），unit 作为回退
@@ -477,13 +539,90 @@ def _eval_gate(gate_def, value, evidence=""):
         "gate_type": gate_type,
         "pass": passed,
         "evidence": evidence,
+        "confidence": confidence,
+        "margin": margin,
+    }
+
+
+LLM_GRADER_WEIGHT = 0.7
+HEURISTIC_WEIGHT = 1.0 - LLM_GRADER_WEIGHT  # 0.3
+
+
+def _prepare_llm_grader(gate_def, result, state, work_dir):
+    """为 heuristic 维度准备 LLM Grader 评估请求。
+
+    当 gate 有 llm_grader.enabled=true 且当前评分 confidence 为 heuristic 时：
+    1. 读取 grader prompt 文件
+    2. 构建评估上下文（从 findings 提取当前维度的相关内容）
+    3. 将 grader prompt + 评估上下文写入 state.json 的 metadata.pending_llm_grader
+    4. 打印提示让 controller 在 VERIFY 阶段委派 subagent 执行评分
+
+    返回 pending entry dict（供写入 state），如果不触发则返回 None。
+    """
+    grader_cfg = gate_def.get("llm_grader")
+    if not grader_cfg or not grader_cfg.get("enabled", False):
+        return None
+
+    trigger = grader_cfg.get("trigger", "when_confidence_is_heuristic")
+    confidence = result.get("confidence", "")
+
+    # 仅在 confidence 匹配 trigger 时触发
+    if trigger == "when_confidence_is_heuristic" and confidence != "heuristic":
+        return None
+
+    dim = result.get("dimension", gate_def.get("dim", "unknown"))
+    prompt_file = grader_cfg.get("prompt_file", "")
+
+    # 读取 grader prompt 文件
+    prompt_content = ""
+    if prompt_file:
+        assets_dir = os.path.join(os.path.dirname(__file__), "..", "assets")
+        prompt_path = os.path.join(assets_dir, prompt_file)
+        if os.path.exists(prompt_path):
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                prompt_content = f.read()
+
+    # 提取当前维度的 findings 作为评估上下文
+    context_lines = []
+    rounds = state.get("findings", {}).get("rounds", [])
+    for rnd in rounds:
+        for finding in rnd.get("findings", []):
+            dim_tag = finding.get("dimension", "")
+            body = finding.get("body", finding.get("content", ""))
+            if isinstance(body, list):
+                body = "\n".join(str(b) for b in body)
+            if dim in dim_tag or gate_def.get("manifest_dimension", "") in dim_tag:
+                context_lines.append(str(body)[:500])
+    # 如果没有精确匹配，取最近一轮的全部 findings 作为上下文
+    if not context_lines and rounds:
+        last_round = rounds[-1]
+        for finding in last_round.get("findings", []):
+            body = finding.get("body", finding.get("content", ""))
+            if isinstance(body, list):
+                body = "\n".join(str(b) for b in body)
+            context_lines.append(str(body)[:500])
+
+    context_text = "\n---\n".join(context_lines[:10])  # 最多10段，避免过长
+
+    print("[LLM Grader] Evaluating dimension '{}' with grader: {}".format(dim, prompt_file))
+    print("[LLM Grader] → Controller should delegate a subagent in VERIFY phase.")
+    print("[LLM Grader] → Fusion formula: final = heuristic * {:.1f} + llm * {:.1f}".format(
+        HEURISTIC_WEIGHT, LLM_GRADER_WEIGHT))
+
+    return {
+        "dimension": dim,
+        "prompt_file": prompt_file,
+        "prompt_content": prompt_content,
+        "context": context_text,
+        "heuristic_score": result.get("value"),
+        "fusion_weights": {"heuristic": HEURISTIC_WEIGHT, "llm": LLM_GRADER_WEIGHT},
     }
 
 
 def score_from_ssot(state):
     """从 SSOT JSON 评分，返回 (template, results_list)。
 
-    results_list: [{dimension, label, value, threshold, gate_type, pass, evidence}, ...]
+    results_list: [{dimension, label, value, threshold, gate_type, pass, evidence, confidence, margin}, ...]
     """
     template_raw = state.get("plan", {}).get("template", "")
     template = resolve_template(template_raw)
@@ -500,6 +639,7 @@ def score_from_ssot(state):
         dim = gate_def["dim"]
         pg = _find_plan_gate_row(plan_gates, dim, gate_def.get("manifest_dimension"))
         if pg and plan_gate_is_exempt(pg):
+            conf, marg = _confidence_for_dim(dim)
             results.append(
                 {
                     "dimension": dim,
@@ -511,6 +651,8 @@ def score_from_ssot(state):
                     "gate_type": gate_def["gate"],
                     "pass": True,
                     "evidence": "plan.gates.status=豁免（rollup 视同通过）",
+                    "confidence": conf,
+                    "margin": marg,
                 }
             )
             continue
@@ -816,6 +958,21 @@ def score_from_ssot(state):
 
         results.append(_eval_gate(gate_def, value, evidence))
 
+    # --- LLM Grader 准备阶段 ---
+    # 遍历已评分的 gates，为启用了 llm_grader 且 confidence=heuristic 的维度
+    # 准备 grader prompt + 上下文，写入 state.metadata.pending_llm_grader
+    work_dir = state.get("_work_dir", "")
+    pending_graders = []
+    for gate_def, result in zip(gates, results):
+        entry = _prepare_llm_grader(gate_def, result, state, work_dir)
+        if entry:
+            pending_graders.append(entry)
+
+    if pending_graders:
+        if "metadata" not in state:
+            state["metadata"] = {}
+        state["metadata"]["pending_llm_grader"] = pending_graders
+
     return template, results
 
 
@@ -1000,9 +1157,9 @@ def print_results(template, results, mode="ssot", state=None):
             )
         )
     print()
-    print("{:<16} {:>10} {:>10} {:>6} {:>6}  {}".format(
-        "维度", "得分", "阈值", "类型", "状态", "证据"))
-    print("-" * 90)
+    print("{:<16} {:>10} {:>10} {:>6} {:>6} {:>10} {:>6}  {}".format(
+        "维度", "得分", "阈值", "类型", "状态", "置信度", "误差", "证据"))
+    print("-" * 110)
 
     for r in results:
         if "error" in r:
@@ -1015,9 +1172,12 @@ def print_results(template, results, mode="ssot", state=None):
         gate_type = r.get("gate_type", "?")
         status = "✅" if r.get("pass") else "❌"
         evidence = r.get("evidence", "")
+        confidence = r.get("confidence", "?")
+        margin = r.get("margin")
+        margin_display = "±{:.1f}".format(margin) if margin is not None else "N/A"
 
-        print("{:<16} {:>10} {:>10} {:>6} {:>6}  {}".format(
-            label, val_display, thr_display, gate_type, status, evidence))
+        print("{:<16} {:>10} {:>10} {:>6} {:>6} {:>10} {:>6}  {}".format(
+            label, val_display, thr_display, gate_type, status, confidence, margin_display, evidence))
 
     # 软门禁未通过的提示
     soft_fails = [r for r in results

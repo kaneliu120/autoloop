@@ -553,12 +553,38 @@ def detect_oscillation(score_history):
     return results
 
 
+def _confidence_for_dim(dim):
+    """根据评分维度的数据来源，返回 (confidence, margin)。
+
+    三级置信度（与 autoloop-score._confidence_for_dim 一致）：
+    - empirical (margin ≤ 0.3): 基于工具实际输出
+    - heuristic (margin ≤ 1.5): 基于内容分析模式匹配
+    - binary (margin = None): 只能判通过/不通过
+    """
+    _EMPIRICAL = {
+        "syntax", "p1_p2_issues", "service_health",
+        "p1_all", "security_p2", "reliability_p2", "maintainability_p2",
+    }
+    _BINARY = {"bias_check", "user_acceptance"}
+    if dim in _EMPIRICAL:
+        return "empirical", 0.3
+    if dim in _BINARY:
+        return "binary", None
+    return "heuristic", 1.5
+
+
 def detect_stagnation(score_history, gates, template_key=None):
     """检测停滞和回归
 
     停滞：同一维度连续 N 轮改进低于模板特定阈值（平台期）。
     回归：同一维度连续 N 轮分数下降。
     T6/T4 不适用。
+
+    置信度适配（P1-05）：停滞阈值取 max(固定阈值, margin)。
+    - empirical (margin=0.3): 保留现有固定阈值
+    - heuristic (margin=1.5): 阈值放大到 margin，避免假阳性
+    - binary (margin=None): 只看方向（improving/declining），不做数值比较
+
     返回: (results, eligible_dims)
         results: [(dim, recent_scores, signal_type), ...]，signal_type 为 'stagnating' | 'regressing'
         eligible_dims: 参与本窗口停滞/回归判定的维度集合（已达标 / KPI 已满足者已排除）
@@ -620,6 +646,19 @@ def detect_stagnation(score_history, gates, template_key=None):
 
         eligible_dims.add(dim)
 
+        # P1-05: 获取维度的置信度和误差范围
+        confidence, margin = _confidence_for_dim(dim)
+
+        # binary 维度：只看方向（整体改善 vs 整体恶化），不做数值比较
+        if confidence == "binary":
+            all_regressing = all(
+                vals[i] < vals[i - 1] for i in range(1, len(vals))
+            )
+            if all_regressing:
+                results.append((dim, vals, 'regressing'))
+            # binary 维度不参与数值停滞判定
+            continue
+
         # 检查是否所有转换都是回归（分数持续下降）
         all_regressing = all(
             vals[i] < vals[i - 1] for i in range(1, len(vals))
@@ -628,14 +667,29 @@ def detect_stagnation(score_history, gates, template_key=None):
             results.append((dim, vals, 'regressing'))
             continue
 
+        # P1-05: 停滞阈值适配 margin — 取 max(固定阈值, margin)
+        # empirical (margin=0.3) 通常不影响现有阈值（固定阈值已 ≥ 0.3）
+        # heuristic (margin=1.5) 放大阈值，避免误差范围内的波动被误判为停滞
+        effective_threshold = threshold
+        effective_type = threshold_type
+        if margin is not None and threshold_type == "absolute":
+            effective_threshold = max(threshold, margin)
+        elif margin is not None and threshold_type == "relative":
+            # 将 margin 转换为可比较的绝对值：用窗口内最小非零值估算
+            min_nonzero = min((v for v in vals if v > 0), default=1.0)
+            relative_as_absolute = threshold * min_nonzero
+            if margin > relative_as_absolute:
+                effective_threshold = margin
+                effective_type = "absolute"
+
         # 检查停滞：无足够正向改进
         has_sufficient_improvement = False
         for i in range(1, len(vals)):
             delta = vals[i] - vals[i - 1]
             if delta <= 0:
                 continue
-            if threshold_type == "absolute":
-                if delta >= threshold:
+            if effective_type == "absolute":
+                if delta >= effective_threshold:
                     has_sufficient_improvement = True
                     break
             else:
@@ -643,7 +697,7 @@ def detect_stagnation(score_history, gates, template_key=None):
                     has_sufficient_improvement = True
                     break
                 improvement = delta / vals[i - 1]
-                if improvement >= threshold:
+                if improvement >= effective_threshold:
                     has_sufficient_improvement = True
                     break
 
@@ -866,6 +920,59 @@ def _latest_tsv_fail_closed(state):
     return fc
 
 
+def _record_lesson_quality_issue(work_dir, strategy_id, lesson, missing):
+    """将 lesson_learned 质量不足记录到 autoloop-findings.md 的问题清单中。"""
+    fpath = os.path.join(work_dir, "autoloop-findings.md")
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    entry = (
+        "\n### lesson_learned 质量不足 — {} ({})\n"
+        "- strategy_id: {}\n"
+        "- 问题: {}\n"
+        "- 当前内容: \"{}\"\n"
+    ).format(now, strategy_id, strategy_id, "; ".join(missing), lesson[:200])
+    try:
+        with open(fpath, "a", encoding="utf-8") as f:
+            f.write(entry)
+    except OSError:
+        pass  # findings.md 不存在时静默跳过（不阻塞主流程）
+
+
+def _append_immediate_discovery(work_dir, round_num, text):
+    """将即时发现追加到 autoloop-findings.md 的「即时发现」区域。"""
+    fpath = os.path.join(work_dir, "autoloop-findings.md")
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    entry = f"\n[即时发现 R{round_num}] ({now}) {text}\n"
+    try:
+        with open(fpath, "a", encoding="utf-8") as f:
+            f.write(entry)
+    except OSError:
+        pass  # findings.md 不存在时静默跳过
+
+
+def _detect_cross_round_repeat_patterns(state, round_num):
+    """检测跨轮重复模式：同一问题连续 2+ 轮出现。返回重复描述列表。"""
+    if round_num < 2:
+        return []
+    rnds = (state.get("findings") or {}).get("rounds") or []
+    if len(rnds) < 2:
+        return []
+    # 提取最近两轮的问题描述
+    def _extract_problems(rnd):
+        items = rnd.get("findings", [])
+        return [
+            (f.get("summary") or f.get("description") or f.get("content", "")).strip().lower()
+            for f in items
+            if isinstance(f, dict)
+        ]
+
+    prev = set(_extract_problems(rnds[-2])) if len(rnds) >= 2 else set()
+    curr = set(_extract_problems(rnds[-1]))
+    prev.discard("")
+    curr.discard("")
+    repeated = prev & curr
+    return [p for p in repeated if p]
+
+
 def _maybe_reflect_experience_write(work_dir, state, tmpl):
     """若 iterations[-1].reflect 为结构化 dict，则确定性调用 autoloop-experience write。
 
@@ -928,6 +1035,40 @@ def _maybe_reflect_experience_write(work_dir, state, tmpl):
     st = ref.get("status")
     if st:
         args.extend(["--status", str(st)])
+    # --- lesson_learned 质量检查（effect="避免" 且 delta < 0 时强制）---
+    lesson = str(ref.get("lesson_learned", "")).strip()
+    if effect == "避免" and score_for_write is not None:
+        try:
+            delta_val = float(score_for_write)
+        except (ValueError, TypeError):
+            delta_val = 0.0
+        if delta_val < 0:
+            lesson_ok = True
+            missing = []
+            if not lesson or len(lesson) <= 20:
+                lesson_ok = False
+                missing.append("lesson_learned 为空或过短（≤20字符）")
+            else:
+                # 检查三要素信号：做了什么 / 为什么失败 / 替代建议
+                has_what = any(kw in lesson for kw in ("尝试", "tried", "did", "做了", "执行", "adopted", "used", "applied"))
+                has_why = any(kw in lesson for kw in ("因为", "because", "导致", "caused", "失败", "failed", "问题", "issue", "原因"))
+                has_instead = any(kw in lesson for kw in ("改用", "instead", "替代", "应该", "should", "建议", "recommend", "better"))
+                if not has_what:
+                    missing.append("缺少'做了什么'描述")
+                if not has_why:
+                    missing.append("缺少'为什么失败'原因")
+                if not has_instead:
+                    missing.append("缺少'替代建议'")
+            if not lesson_ok or missing:
+                warn(
+                    "Strategy marked as '避免' with negative delta but lesson_learned is insufficient.\n"
+                    "  Required: describe (1) what was tried, (2) why it failed, (3) what to do instead.\n"
+                    "  Current lesson_learned: \"{}\"\n"
+                    "  Issues: {}".format(lesson[:120], "; ".join(missing))
+                )
+                # 记录到 findings 问题清单
+                _record_lesson_quality_issue(work_dir, sid, lesson, missing)
+
     info("根据 iterations[-1].reflect 写入经验库...")
     _, rc = run_tool("autoloop-experience.py", args, capture=True, work_dir=work_dir)
     if rc != 0:
@@ -1127,6 +1268,17 @@ def phase_observe(work_dir, state, round_num):
             "T5 缺少 KPI 定义或 target；请补全 plan.gates 后 autoloop-controller.py <work_dir> --resume"
         ]
 
+    # 0. 首轮记录 gate-manifest.json mtime（用于 VERIFY 阶段防篡改检查）
+    if round_num == 1:
+        manifest_path = os.path.join(os.path.dirname(__file__), "..", "references", "gate-manifest.json")
+        try:
+            mtime = os.path.getmtime(manifest_path)
+            state.setdefault("metadata", {})["manifest_mtime"] = mtime
+            save_json(os.path.join(work_dir, STATE_FILE), state)
+            info(f"已记录 gate-manifest.json mtime: {mtime}")
+        except OSError:
+            warn("无法读取 gate-manifest.json mtime")
+
     # 1. 当前分数 vs 门禁目标
     info(f"模板: {template} | 轮次: {round_num}/{get_max_rounds(state)}")
     if scores:
@@ -1191,14 +1343,24 @@ def phase_observe(work_dir, state, round_num):
 
     _observe_report_findings_md(work_dir, state)
 
-    # 2. 经验库推荐 — 同模板 + context_tags 重叠≥2（见 loop-protocol）；无 plan.context_tags 时为冷启动
+    # 1d. 即时学习钩子：跨轮重复模式检测（Round 2+）
+    if round_num >= 2:
+        repeats = _detect_cross_round_repeat_patterns(state, round_num)
+        if repeats:
+            info(f"[即时学习] 检测到 {len(repeats)} 个跨轮重复模式，立即写入 findings.md 模式识别部分")
+            for r in repeats:
+                pattern_msg = f"跨轮重复模式：「{r[:120]}」连续 2+ 轮出现，可能存在系统性根因"
+                _append_immediate_discovery(work_dir, round_num, pattern_msg)
+                info(f"  → {pattern_msg[:150]}")
+
+    # 2. 经验库推荐 — (同模板 OR applicable_templates匹配) + context_tags 重叠≥2（见 loop-protocol）；无 plan.context_tags 时为冷启动
     ctx_csv = _plan_context_tags_csv(state.get("plan") or {})
-    qargs = [work_dir, "query", "--template", template]
+    qargs = [work_dir, "query", "--template", template, "--include-global"]
     if ctx_csv:
         qargs.extend(["--tags", ctx_csv])
-        info("查询经验库 (模板={}, context_tags={})...".format(template, ctx_csv))
+        info("查询经验库 (模板={}, context_tags={}, include_global)...".format(template, ctx_csv))
     else:
-        info("查询经验库 (模板={})...".format(template))
+        info("查询经验库 (模板={}, include_global)...".format(template))
     output, rc = run_tool(
         "autoloop-experience.py",
         qargs,
@@ -1214,6 +1376,15 @@ def phase_observe(work_dir, state, round_num):
         )
     else:
         info("经验库无匹配策略（首轮冷启动）")
+
+    # 3. OBSERVE 必须输出字段清单（P2-17）
+    info("--- OBSERVE 必须输出字段 ---")
+    info("1. current_scores: 各维度当前分数 (dict[str, float])")
+    info("2. target_scores: 各维度目标分数 (dict[str, float])")
+    info("3. remaining_budget_pct: 剩余预算% (float)")
+    info("4. focus_dimensions: 本轮重点维度 (list[str])")
+    info("5. carry_over_issues: 跨轮遗留问题 (list[str], 可选)")
+    info("------------------------------")
 
     return "continue", []
 
@@ -1400,6 +1571,153 @@ def phase_decide(work_dir, state, round_num, strict_cli=False, enforce_strategy_
            若有跨维影响，填写 impacted_dimensions（字符串列表）；VERIFY 写入 TSV 时 side_effect 不得填「无」（strict 下 validate 会检查）。
     """)
 
+    # DECIDE 必须输出字段清单（P2-17）
+    info("--- DECIDE 必须输出字段 ---")
+    info("1. strategy_id: S{NN}-{描述} 格式 (str)")
+    info("2. action_plan: 具体行动列表 (list[str])")
+    info("3. fallback: 备用策略 (str)")
+    info("4. impacted_dimensions: 可能受影响的维度 (list[str])")
+    info("------------------------------")
+
+
+##############################################################################
+# ACT 失败类型分类与差异化恢复
+##############################################################################
+
+FAILURE_TYPES = ("timeout", "capability_gap", "resource_missing", "external_error", "code_error", "partial_success")
+
+RECOVERY_STRATEGIES = {
+    "timeout": "拆分任务（任务太大），缩小范围后重试",
+    "capability_gap": "换角色或调整工具配置",
+    "resource_missing": "暂停并请求用户提供缺失资源",
+    "external_error": "指数退避重试（delay = min(base * 2^attempt, 300)）",
+    "code_error": "记录 bug，修复后重试",
+    "partial_success": "从断点继续（保留已完成部分）",
+}
+
+
+def classify_failure(error_msg, exit_code=None):
+    """根据错误信息自动分类失败类型（当 subagent 未显式返回 failure_type 时使用）。"""
+    if exit_code and exit_code == 124:  # timeout exit code
+        return "timeout"
+    error_lower = (error_msg or "").lower()
+    if any(k in error_lower for k in ("timeout", "timed out", "context limit")):
+        return "timeout"
+    if any(k in error_lower for k in ("rate limit", "429", "503", "network")):
+        return "external_error"
+    if any(k in error_lower for k in ("traceback", "syntax error", "import error")):
+        return "code_error"
+    if any(k in error_lower for k in ("not found", "permission denied", "no such file")):
+        return "resource_missing"
+    return "capability_gap"  # 默认
+
+
+def parse_completion_ratio(state):
+    """从 state.json 的 iterations[-1].act 中提取 completion_ratio。
+
+    返回 int (0-100) 或 None（未找到/格式错误）。
+    """
+    iterations = state.get("iterations") or []
+    if not iterations:
+        return None
+    act_data = iterations[-1].get("act")
+    if not act_data:
+        return None
+    # act_data 可能是 dict 或 JSON 字符串
+    if isinstance(act_data, str):
+        try:
+            act_data = json.loads(act_data)
+        except (json.JSONDecodeError, TypeError):
+            return None
+    if not isinstance(act_data, dict):
+        return None
+    raw = act_data.get("completion_ratio")
+    if raw is None:
+        return None
+    try:
+        ratio = int(raw)
+        return max(0, min(100, ratio))
+    except (ValueError, TypeError):
+        return None
+
+
+def process_act_completion(work_dir, state):
+    """ACT→VERIFY 过渡：解析 completion_ratio 并标注 partial / needs_replanning。
+
+    返回 True 表示可继续进入 VERIFY，False 表示建议重新规划（但不阻断）。
+    """
+    ratio = parse_completion_ratio(state)
+    if ratio is None:
+        return True  # 未提供 completion_ratio，默认正常推进
+
+    if ratio >= 80:
+        info(f"Subagent 完成度: {ratio}% — 正常进入 VERIFY")
+        return True
+    elif ratio >= 50:
+        warn(f"Subagent 完成度: {ratio}% — 部分完成，进入 VERIFY 但标注 partial")
+        run_tool(
+            "autoloop-state.py",
+            ["update", work_dir, "iterations[-1].act.partial", "true"],
+            work_dir=work_dir,
+        )
+        return True
+    else:
+        warn(f"Subagent 完成度: {ratio}% — 完成度不足，建议 DECIDE 重新规划")
+        run_tool(
+            "autoloop-state.py",
+            ["update", work_dir, "iterations[-1].act.needs_replanning", "true"],
+            work_dir=work_dir,
+        )
+        return False
+
+
+def log_act_failure(work_dir, state, failure_type, failure_detail="", completion_ratio=0):
+    """将失败类型和恢复策略写入 state.json 的 iterations[-1].act。"""
+    recovery = RECOVERY_STRATEGIES.get(failure_type, RECOVERY_STRATEGIES["capability_gap"])
+    warn(f"ACT 失败类型: {failure_type} — {failure_detail}")
+    info(f"恢复策略: {recovery}")
+
+    # 写入 state.json
+    act_failure = json.dumps({
+        "failure_type": failure_type,
+        "failure_detail": failure_detail,
+        "completion_ratio": completion_ratio,
+        "recovery_action": recovery,
+    }, ensure_ascii=False)
+    run_tool("autoloop-state.py", ["update", work_dir, "iterations[-1].act", act_failure], work_dir=work_dir)
+
+
+TASK_TYPE_MAP = {
+    "T1": ("research", "优先使用 web_search 工具广泛收集信息"),
+    "T2": ("analysis", "优先使用对比分析，关注差异和权衡"),
+    "T3": ("design", "优先使用文档编写，产出结构化方案"),
+    "T4": ("coding", "优先使用 edit_file 和 bash 工具"),
+    "T5": ("iteration", "数据驱动，混合搜索和分析"),
+    "T6": ("generation", "批量生成，注重效率和一致性"),
+    "T7": ("review", "代码搜索和深度阅读，发现隐藏问题"),
+    "T8": ("optimization", "重构和性能测试，验证改进效果"),
+}
+
+
+def get_recommended_model(template, phase="ACT"):
+    """读取模型路由配置，返回推荐模型（信息性，不自动切换）。"""
+    routing_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "..", "references", "model-routing.json",
+    )
+    if not os.path.exists(routing_path):
+        return None
+    try:
+        with open(routing_path) as f:
+            routing = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return None
+
+    tmpl_config = routing.get("template_models", {}).get(template, {})
+    if phase == "ACT" and tmpl_config.get("act_override"):
+        return tmpl_config["act_override"]
+    return tmpl_config.get("preferred", routing.get("default_model"))
+
 
 def phase_act(work_dir, state, round_num, strict=False):
     """ACT: 输出 subagent 调度指令（LLM 执行）。strict 与 run_loop / CLI --strict 一致。"""
@@ -1432,6 +1750,12 @@ def phase_act(work_dir, state, round_num, strict=False):
         brainstorming → writing-plans → subagent-driven-development → TDD → requesting-code-review
         """
 
+    task_type_hint = ""
+    if template in TASK_TYPE_MAP:
+        tt, hint = TASK_TYPE_MAP[template]
+        task_type_hint = f"[任务类型: {tt}] {hint}"
+        info(f"Task-Aware Dispatch: {task_type_hint}")
+
     cmd_chk = f"""\
         【推荐命令清单 — 按需复制】
           python3 scripts/autoloop-score.py {work_dir} --json
@@ -1443,11 +1767,19 @@ def phase_act(work_dir, state, round_num, strict=False):
         （控制器不自动执行上述命令；VERIFY 阶段会调用 score/validate。）
     """
 
+    model_hint = ""
+    recommended = get_recommended_model(template, "ACT")
+    if recommended:
+        model_hint = f"推荐模型: {recommended}（信息性，需手动切换会话模型）"
+        info(f"Model Routing: {model_hint}")
+
     prompt_block("执行策略", f"""\
         根据 DECIDE 阶段选定的策略，执行改进操作:
 
         工作目录: {work_dir}
         模板: {template}
+        {task_type_hint}
+        {model_hint}
         {sup}
         {cmd_chk}
         执行要求:
@@ -1456,16 +1788,109 @@ def phase_act(work_dir, state, round_num, strict=False):
         3. 记录所有变更到 state.json 的当前迭代
         4. 完成后更新评分相关的 findings
 
+        失败时须返回结构化信息（写入 iterations[-1].act）:
+          failure_type: timeout | capability_gap | resource_missing | external_error | code_error | partial_success
+          failure_detail: 一句话描述
+          completion_ratio: 0-100
+
+        即时发现（可选）:
+          如果 subagent 返回中包含 discoveries 列表（环境事实），会立即写入 findings.md，不等 REFLECT。
+          详见 agent-dispatch.md「即时发现」规范。
+
         完成后运行:
           autoloop-state.py update {work_dir} plan.budget.current_round {round_num}
     """)
+    # P2-03: ACT 完成后文件变更确认（T4/T7/T8）
+    check_file_changes(work_dir, state)
+
     return True
+
+
+def check_file_changes(work_dir, state):
+    """检查 ACT 阶段是否有实际文件变更（仅 T4/T7/T8 工程类模板）。
+
+    如果 git diff 为空，在 state 中标记 no_file_changes 并输出警告。
+    """
+    template = get_template(state)
+    if template not in ("T4", "T7", "T8"):
+        return  # 非工程模板不检查
+
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "HEAD"],
+            cwd=work_dir, capture_output=True, text=True, timeout=10
+        )
+        changed_files = [f for f in result.stdout.strip().split("\n") if f]
+    except (subprocess.TimeoutExpired, OSError) as e:
+        warn(f"文件变更检查失败: {e}")
+        return
+
+    if not changed_files:
+        warn("ACT 声称完成但未检测到文件变更（git diff 为空）。")
+        warn("可能原因：subagent 未实际修改文件，或修改未保存。")
+        # 写入 state: iterations[-1].act.no_file_changes = True
+        iterations = state.get("plan", {}).get("iterations", [])
+        if iterations:
+            act = iterations[-1].setdefault("act", {})
+            act["no_file_changes"] = True
+            save_json(os.path.join(work_dir, STATE_FILE), state)
+    else:
+        info(f"ACT 文件变更确认: {len(changed_files)} 个文件已修改")
+        for f in changed_files[:10]:
+            info(f"  {f}")
+        if len(changed_files) > 10:
+            info(f"  ... 共 {len(changed_files)} 个文件")
+
+
+def process_act_discoveries(work_dir, state, round_num, subagent_result):
+    """ACT 即时学习钩子：处理 subagent 返回中的 discoveries 字段。
+
+    从 subagent_result（dict 或 JSON str）中提取 discoveries 列表，
+    立即写入 findings.md 和 state.json metadata.immediate_discoveries。
+    """
+    if isinstance(subagent_result, str):
+        try:
+            subagent_result = json.loads(subagent_result)
+        except (json.JSONDecodeError, TypeError):
+            return []
+    if not isinstance(subagent_result, dict):
+        return []
+    discoveries = subagent_result.get("discoveries", [])
+    if not isinstance(discoveries, list) or not discoveries:
+        return []
+    info(f"[即时学习] 发现 {len(discoveries)} 条环境事实")
+    for d in discoveries:
+        d_str = str(d).strip()
+        if d_str:
+            _append_immediate_discovery(work_dir, round_num, d_str)
+            info(f"  → {d_str[:150]}")
+    # 写入 state.json metadata
+    state.setdefault("metadata", {}).setdefault("immediate_discoveries", []).extend(
+        str(d).strip() for d in discoveries if str(d).strip()
+    )
+    save_json(os.path.join(work_dir, STATE_FILE), state)
+    return discoveries
 
 
 def phase_verify(work_dir, state, round_num, strict=False):
     """VERIFY: 自动调用评分器和方差计算。返回 verify_ok（strict 时任一步失败为 False）。"""
     banner(round_num, "VERIFY", "评分验证")
     verify_ok = True
+
+    # gate-manifest.json 防篡改 mtime 检查
+    recorded_mtime = state.get("metadata", {}).get("manifest_mtime")
+    if recorded_mtime is not None:
+        manifest_path = os.path.join(os.path.dirname(__file__), "..", "references", "gate-manifest.json")
+        try:
+            current_mtime = os.path.getmtime(manifest_path)
+            if current_mtime != recorded_mtime:
+                warn(f"gate-manifest.json 已被修改（mtime {recorded_mtime} → {current_mtime}）。")
+                warn("门禁 SSOT 在任务运行期间发生变更，请确认是否为预期操作。")
+                warn("如确认合法，请 update metadata.manifest_mtime 或重新 init。暂停评分。")
+                return False
+        except OSError:
+            warn("无法读取 gate-manifest.json mtime，跳过防篡改检查")
 
     info("运行评分器...")
     stdout, rc = run_tool(
@@ -1755,10 +2180,22 @@ def phase_evolve(work_dir, state, round_num, strict=False):
         if decision == "continue":
             decision = "pause"
 
-    # 1. 门禁全通过且非 TSV fail-closed → 成功终止
+    # 1. 门禁全通过且非 TSV fail-closed → 根据 completion_authority 决策
     if all_passed and gate_details and not tsv_fc:
-        decision = "stop"
-        reasons.append("所有 hard gate 已通过")
+        tmpl = get_template(state)
+        authority = _MANIFEST.get("completion_authority", {}).get(tmpl, "internal")
+        if authority == "internal":
+            decision = "stop"
+            reasons.append("达标终止（internal authority）")
+        elif authority == "human_review":
+            decision = "pause"
+            reasons.append("门禁达标，进入人工审查确认。请 Kane 审查关键发现后确认完成。")
+        elif authority == "external_validation":
+            decision = "pause"
+            reasons.append("门禁达标，需外部验证（测试/部署）通过后确认完成。")
+        else:
+            decision = "stop"
+            reasons.append("达标终止（未知 authority '{}'，fallback 到 internal）".format(authority))
     elif all_passed and gate_details and tsv_fc:
         reasons.append("门禁数值已通过，但 TSV fail-closed 阻止成功终止")
 
@@ -1837,9 +2274,70 @@ def phase_evolve(work_dir, state, round_num, strict=False):
             status = f"{C_GREEN}PASS{C_RESET}" if d["passed"] else f"{C_RED}FAIL{C_RESET}"
             print(f"  {d['label']:<18} {status:>15} {str(d['current']):>8} {str(d['threshold']):>8} {d['gate']:>6}")
 
+    # P2-13: EVOLVE 结构化建议输出
+    if decision == "continue":
+        failed_dims = [d["label"] for d in gate_details if not d["passed"]] if gate_details else []
+        focus_dims = ", ".join(failed_dims[:3]) if failed_dims else "N/A"
+        remaining_pct = round((1 - round_num / max_rounds) * 100) if max_rounds > 0 else 0
+        info("--- EVOLVE 建议 ---")
+        info("建议: 继续第 {} 轮，聚焦 {}".format(round_num + 1, focus_dims))
+        info("理由: {}".format(", ".join(reasons) if reasons else "标准策略继续"))
+        info("风险: 剩余预算 {}%".format(remaining_pct))
+        info("替代: 如认为当前质量已足够，可手动暂停")
+        info("-------------------")
+
+    # P1-05: 任务终止时输出质量评估摘要（含置信度和误差范围）
+    if decision in ("stop", "pause") and gate_details:
+        print(f"\n{C_BOLD}评分质量摘要（置信度分层）:{C_RESET}")
+        print(f"  {'维度':<20} {'当前':>8} {'目标':>8} {'置信度':>10} {'误差':>6}  {'可信度说明'}")
+        print("  " + "─" * 80)
+        needs_review = []
+        for d in gate_details:
+            dim = d.get("dim", d.get("dimension", ""))
+            label = d.get("label", dim)
+            current = str(d.get("current", "?"))
+            target = str(d.get("threshold", "?"))
+            confidence, margin = _confidence_for_dim(dim)
+            margin_display = "±{:.1f}".format(margin) if margin is not None else "N/A"
+            if confidence == "empirical":
+                note = "工具输出，高可信"
+            elif confidence == "heuristic":
+                note = "启发式，建议人工复核"
+                needs_review.append(label)
+            else:
+                note = "二元判定，仅看方向"
+                needs_review.append(label)
+            print(f"  {label:<20} {current:>8} {target:>8} {confidence:>10} {margin_display:>6}  {note}")
+        if needs_review:
+            print(f"\n  {C_YELLOW}⚠ 以下维度评分误差较大，建议人工复核: {', '.join(needs_review)}{C_RESET}")
+
     _append_evolve_progress_md(work_dir, round_num, decision, reasons, gate_details)
 
+    # P2-04: 成本摘要
+    print_cost_summary(state)
+
     return decision, reasons
+
+
+def print_cost_summary(state):
+    """打印成本摘要（轮次消耗 + subagent 调用数）。"""
+    iterations = state.get("plan", {}).get("iterations", [])
+    round_count = len(iterations)
+    max_rounds = state.get("plan", {}).get("budget", {}).get("max_rounds", "?")
+
+    # 统计 subagent 调用总数
+    subagent_count = 0
+    for it in iterations:
+        act = it.get("act")
+        if isinstance(act, dict):
+            results = act.get("subagent_results", [])
+            if isinstance(results, list):
+                subagent_count += len(results)
+
+    info("--- 资源消耗 ---")
+    info(f"已用轮次: {round_count}/{max_rounds}")
+    info(f"Subagent 调用总数: {subagent_count}")
+    info("----------------")
 
 
 def phase_reflect(work_dir, state, round_num):
@@ -2128,6 +2626,10 @@ def run_loop(
             elif phase == "ACT":
                 if not phase_act(work_dir, state, round_num, strict=strict):
                     abort_task = True
+                else:
+                    # ACT→VERIFY 过渡: 解析 subagent completion_ratio
+                    state = load_state(work_dir)
+                    process_act_completion(work_dir, state)
             elif phase == "VERIFY":
                 vok = phase_verify(work_dir, state, round_num, strict=strict)
                 if strict and not vok:
@@ -2208,6 +2710,75 @@ def run_loop(
     print(f"  输出当前最优结果")
     print(f"{'=' * 60}{C_RESET}\n")
     return None
+
+
+# ---------------------------------------------------------------------------
+# Pipeline Worktree 管理（P3-01 并行隔离）
+# ---------------------------------------------------------------------------
+
+
+def create_pipeline_worktree(work_dir, template, timestamp=None):
+    """为并行 pipeline 创建 Git Worktree。
+
+    返回 (worktree_path, branch_name)。
+    """
+    import subprocess
+    import time
+
+    ts = timestamp or int(time.time())
+    branch = f"autoloop-{template}-{ts}"
+    wt_path = os.path.join(work_dir, ".worktrees", branch)
+    os.makedirs(os.path.dirname(wt_path), exist_ok=True)
+    subprocess.run(
+        ["git", "worktree", "add", wt_path, "-b", branch],
+        cwd=work_dir,
+        check=True,
+        capture_output=True,
+    )
+    info(f"Worktree 已创建: {wt_path} (branch: {branch})")
+    return wt_path, branch
+
+
+def remove_pipeline_worktree(work_dir, wt_path, branch):
+    """清理 Git Worktree 及其临时分支。"""
+    import subprocess
+
+    result = subprocess.run(
+        ["git", "worktree", "remove", wt_path],
+        cwd=work_dir,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        warn(f"Worktree 清理失败 ({wt_path}): {result.stderr.strip()}")
+    subprocess.run(
+        ["git", "branch", "-d", branch],
+        cwd=work_dir,
+        capture_output=True,
+    )
+    info(f"Worktree 已清理: {branch}")
+
+
+def merge_pipeline_worktree(work_dir, branch):
+    """合并并行 pipeline 的 worktree 分支。
+
+    返回 True 表示合并成功，False 表示有冲突需手动解决。
+    """
+    import subprocess
+
+    result = subprocess.run(
+        ["git", "merge", "--no-ff", branch, "-m",
+         f"AutoLoop pipeline merge: {branch}"],
+        cwd=work_dir,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        warn(f"Worktree 合并冲突: {branch}. 需要手动解决。")
+        warn(f"  stderr: {result.stderr.strip()}")
+        return False
+    info(f"Worktree 分支已合并: {branch}")
+    return True
 
 
 # ---------------------------------------------------------------------------

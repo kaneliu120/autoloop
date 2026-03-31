@@ -40,6 +40,14 @@ researcher subagent（如有信息缺口）：
 - 补充 T1/T2 未覆盖的技术或市场信息
 
 ### 产出
+
+- **问题重述（Problem Restatement）**：用一段话重述用户的需求，确认理解。格式：
+  - "用户想要解决的问题是：{...}"
+  - "范围内（IN）：{列表}"
+  - "范围外（OUT）：{列表}"
+  - "关键假设：{列表}"
+  
+  此重述在 Phase 2 开始前由用户确认。如果 planner 对需求有疑问，应在此阶段主动列出。
 - 问题陈述（Problem Statement）
 - JTBD 定义
 - 需求清单（RICE 排序）
@@ -82,6 +90,27 @@ db-specialist subagent（如涉及数据库变更）：
 - 数据模型详细设计
 - 迁移脚本骨架
 - 性能影响评估
+
+### Phase 2 可选：多方案竞争模式
+
+当用户在 autoloop-plan.md 中设置 `attempt_mode: true` 时，Phase 2 采用竞争模式：
+
+1. **并行派遣**：同时启动 2-3 个 technical-architect subagent，每个独立设计方案
+   - 每个 subagent 收到相同的需求输入（Phase 1 产出）
+   - 每个 subagent 独立工作，互不可见
+   - 使用 `isolation: "worktree"` 确保文件隔离
+
+2. **评分选优**：所有方案完成后，VERIFY 阶段对每个方案独立评分
+   - 使用 T3 的 5 个质量门禁维度评分
+   - 选择总分最高的方案进入 Phase 3
+
+3. **记录备选**：未选中的方案摘要记入 findings.md，作为备选参考
+
+**注意**：
+
+- 此模式消耗 2-3x 的 API 预算，仅在方案质量极为关键时启用
+- 不改变 OODA 循环的单策略隔离（经验归因仍然有效）
+- 默认不启用，需在 plan 中显式设置
 
 ### 产出
 方案文档（使用 `assets/delivery-template.md` 格式）：

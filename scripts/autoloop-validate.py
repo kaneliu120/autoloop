@@ -715,6 +715,88 @@ def _extract_dimensions_from_gates(work_dir):
 
 
 # ============================================================
+# P2-17: OODA 阶段输出 Schema 验证
+# ============================================================
+
+PHASE_SCHEMAS = {
+    "observe": {"required": ["current_scores", "target_scores", "remaining_budget_pct", "focus_dimensions"]},
+    "decide": {"required": ["strategy_id", "action_plan", "fallback", "impacted_dimensions"]},
+    "act": {"required": ["subagent_results", "completion_ratio"]},
+    "verify": {"required": ["scores", "regression_detected"]},
+}
+
+
+def validate_phase_output(work_dir, phase, strict=False):
+    """验证指定 OODA 阶段的输出是否包含必需字段。返回 (errors, warnings)。"""
+    phase = phase.lower()
+    if phase not in PHASE_SCHEMAS:
+        return ["未知阶段: '{}' (合法值: {})".format(phase, ", ".join(sorted(PHASE_SCHEMAS)))], []
+
+    path = os.path.join(work_dir, STATE_FILE)
+    if not os.path.isfile(path):
+        return ["未找到 {}".format(STATE_FILE)], []
+
+    with open(path, "r", encoding="utf-8") as f:
+        state = json.load(f)
+
+    iterations = state.get("iterations", [])
+    if not iterations:
+        return ["无迭代数据，无法验证阶段输出"], []
+
+    last = iterations[-1]
+    schema = PHASE_SCHEMAS[phase]
+    required = schema["required"]
+    missing = []
+
+    if phase == "observe":
+        obs = last.get("observe", {})
+        if not isinstance(obs, dict):
+            obs = {}
+        for field in required:
+            if field not in obs or obs[field] is None:
+                missing.append(field)
+    elif phase == "decide":
+        # DECIDE 数据来自 plan.decide_act_handoff 或 iterations[-1].strategy
+        handoff = state.get("plan", {}).get("decide_act_handoff", {})
+        strat = last.get("strategy", {})
+        if not isinstance(handoff, dict):
+            handoff = {}
+        if not isinstance(strat, dict):
+            strat = {}
+        merged = {**strat, **handoff}
+        for field in required:
+            if field not in merged or merged[field] is None:
+                missing.append(field)
+    elif phase == "act":
+        act = last.get("act", {})
+        if not isinstance(act, dict):
+            act = {}
+        for field in required:
+            if field not in act or act[field] is None:
+                missing.append(field)
+    elif phase == "verify":
+        scores = last.get("scores", {})
+        verify_data = last.get("verify", {})
+        if not isinstance(verify_data, dict):
+            verify_data = {}
+        merged = {**verify_data, "scores": scores if scores else None}
+        for field in required:
+            if field not in merged or merged[field] is None:
+                missing.append(field)
+
+    errors = []
+    warnings = []
+    if missing:
+        msg = "阶段 {} 输出缺少必需字段: {}".format(phase.upper(), ", ".join(missing))
+        if strict:
+            errors.append(msg)
+        else:
+            warnings.append(msg)
+
+    return errors, warnings
+
+
+# ============================================================
 # 统一入口
 # ============================================================
 
@@ -771,9 +853,10 @@ def format_json_output(errors, warnings, mode):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("用法: autoloop-validate.py <工作目录> [--json] [--strict]")
+        print("用法: autoloop-validate.py <工作目录> [--json] [--strict] [--phase-output <phase>]")
         print("  验证 autoloop 数据一致性（SSOT JSON 优先，markdown 回退）")
         print("  --strict  契约/阶段产物问题计为错误；亦可设 AUTOLOOP_VALIDATE_STRICT=1")
+        print("  --phase-output <phase>  验证 OODA 阶段输出 Schema（observe/decide/act/verify）")
         sys.exit(1)
 
     work_dir = sys.argv[1]
@@ -785,7 +868,21 @@ if __name__ == "__main__":
         print("ERROR: 目录不存在: {}".format(work_dir))
         sys.exit(1)
 
-    errs, warns, mode = validate(work_dir, strict=strict)
+    # P2-17: --phase-output 模式
+    phase_output = None
+    if "--phase-output" in sys.argv:
+        po_idx = sys.argv.index("--phase-output")
+        if po_idx + 1 < len(sys.argv):
+            phase_output = sys.argv[po_idx + 1]
+        else:
+            print("ERROR: --phase-output 需要指定阶段名 (observe/decide/act/verify)")
+            sys.exit(1)
+
+    if phase_output:
+        errs, warns = validate_phase_output(work_dir, phase_output, strict=strict)
+        mode = "phase-output"
+    else:
+        errs, warns, mode = validate(work_dir, strict=strict)
 
     if use_json_output:
         print(format_json_output(errs, warns, mode))

@@ -314,8 +314,20 @@ def cmd_init(work_dir, template, goal):
     return True
 
 
+PROTECTED_PATH_PATTERNS = [
+    re.compile(r"^plan\.gates\[\d+\]\.threshold$"),
+    re.compile(r"^plan\.budget\.max_rounds$"),
+]
+
+
 def cmd_update(work_dir, field_path, value_str):
     """更新数据源中的特定字段"""
+    for pat in PROTECTED_PATH_PATTERNS:
+        if pat.match(field_path):
+            print("WARNING: Cannot update protected path '{}' via update command.".format(field_path))
+            print("Gate thresholds can only be modified by editing gate-manifest.json directly (leaves git audit trail).")
+            sys.exit(1)
+
     state = load_state(work_dir)
 
     parent, key, old_value = resolve_path(state, field_path)

@@ -254,3 +254,83 @@ iteration	phase	status	dimension	metric_value	delta	strategy_id	action_summary	s
 - `autoloop-score` 对可信度/完整性等统计时，URL 与来源扫描会合并 `source` 与上述正文（`summary`→`content`→`description`）。
 
 ---
+
+## 评分置信度分层（P1-05 Scoring Confidence）
+
+`autoloop-score.py` 每个维度的评分结果现在包含 `confidence` 和 `margin` 字段，表示该评分的可信程度。
+
+### 门禁结果扩展字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `confidence` | string | 置信度等级：`empirical` / `heuristic` / `binary` |
+| `margin` | float \| null | 误差范围（绝对值）；`binary` 时为 `null` |
+
+### 三级置信度规则
+
+| 等级 | margin | 触发条件 | 典型维度 |
+|------|--------|----------|----------|
+| `empirical` | ≤ 0.3 | 评分基于工具实际输出（syntax_check_cmd 结果、测试通过率、lint 错误数、健康检查 URL 响应等） | `syntax`、`p1_p2_issues`、`service_health`、`p1_all`、`security_p2`、`reliability_p2`、`maintainability_p2` |
+| `heuristic` | ≤ 1.5 | 评分基于内容分析模式匹配（来源计数、关键词覆盖率、文本模式匹配、评审打分等） | `coverage`、`credibility`、`consistency`、`completeness`、T7/T8 评审分、T3 设计类 |
+| `binary` | null | 只能判通过/不通过，无量化工具支持 | `bias_check`、`user_acceptance` |
+
+### 停滞检测适配
+
+`autoloop-controller.py` 的 `detect_stagnation` 使用 margin 调整停滞阈值：
+
+- **empirical** (margin=0.3): 保留现有固定阈值（通常 ≥ 0.3）
+- **heuristic** (margin=1.5): 阈值放大到 `max(固定阈值, margin)`，避免误差范围内的微小波动被误判为停滞
+- **binary** (margin=null): 只看方向（整体改善/恶化），不做数值比较
+
+### 任务终止质量摘要
+
+任务终止时（`stop` 或 `pause`），EVOLVE 阶段输出每个维度的质量评估摘要：
+
+```text
+维度 | 当前 | 目标 | 置信度 | 误差 | 可信度说明
+```
+
+`heuristic` 和 `binary` 维度会标注"建议人工复核"，帮助 Kane 快速判断哪些评分可信、哪些需要额外验证。
+
+---
+
+## OODA 阶段输出 Schema（P2-17）
+
+每个 OODA 阶段必须输出以下字段。控制器在阶段 prompt 中提示必需字段，`autoloop-validate.py --phase-output <phase>` 可验证。
+
+### OBSERVE 输出（写入 progress.md）
+
+| 字段 | 类型 | 必需 | 说明 |
+|------|------|------|------|
+| current_scores | dict[str, float] | 是 | 各维度当前分数 |
+| target_scores | dict[str, float] | 是 | 各维度目标分数 |
+| remaining_budget_pct | float | 是 | 剩余预算百分比 |
+| focus_dimensions | list[str] | 是 | 本轮重点维度 |
+| carry_over_issues | list[str] | 否 | 跨轮遗留问题 |
+
+### DECIDE 输出（写入 progress.md）
+
+| 字段 | 类型 | 必需 | 说明 |
+|------|------|------|------|
+| strategy_id | str | 是 | S{NN}-{描述} 格式 |
+| action_plan | list[str] | 是 | 具体行动列表 |
+| fallback | str | 是 | 备用策略 |
+| impacted_dimensions | list[str] | 是 | 可能受影响的维度 |
+
+### ACT 输出（写入 state.json iterations[-1].act）
+
+| 字段 | 类型 | 必需 | 说明 |
+|------|------|------|------|
+| subagent_results | list | 是 | subagent 执行结果 |
+| completion_ratio | int | 是 | 完成百分比 0-100（P2-10） |
+| failure_type | str | 否 | 失败类型枚举（P2-12） |
+| discoveries | list[str] | 否 | 即时发现（P2-15） |
+
+### VERIFY 输出（写入 state.json iterations[-1].scores）
+
+| 字段 | 类型 | 必需 | 说明 |
+|------|------|------|------|
+| scores | dict[str, ScoreResult] | 是 | 含 confidence（P1-05） |
+| regression_detected | bool | 是 | 是否检测到回归 |
+
+---

@@ -4,28 +4,28 @@
     "T1": {
       "name": "Research",
       "gates": [
-        {"dimension": "coverage", "threshold": 85, "unit": "%", "type": "hard", "comparator": ">="},
-        {"dimension": "credibility", "threshold": 80, "unit": "%", "type": "hard", "comparator": ">="},
-        {"dimension": "consistency", "threshold": 90, "unit": "%", "type": "soft", "comparator": ">="},
-        {"dimension": "completeness", "threshold": 85, "unit": "%", "type": "soft", "comparator": ">="}
+        {"dimension": "coverage", "threshold": 85, "unit": "%", "type": "hard", "comparator": ">=", "llm_grader": {"enabled": false, "prompt_file": "graders/research-depth.md", "trigger": "when_confidence_is_heuristic"}},
+        {"dimension": "credibility", "threshold": 80, "unit": "%", "type": "hard", "comparator": ">=", "llm_grader": {"enabled": false, "prompt_file": "graders/research-depth.md", "trigger": "when_confidence_is_heuristic"}},
+        {"dimension": "consistency", "threshold": 90, "unit": "%", "type": "soft", "comparator": ">=", "llm_grader": {"enabled": false, "prompt_file": "graders/research-depth.md", "trigger": "when_confidence_is_heuristic"}},
+        {"dimension": "completeness", "threshold": 85, "unit": "%", "type": "soft", "comparator": ">=", "llm_grader": {"enabled": false, "prompt_file": "graders/research-depth.md", "trigger": "when_confidence_is_heuristic"}}
       ]
     },
     "T2": {
       "name": "Compare",
       "gates": [
-        {"dimension": "coverage", "threshold": 100, "unit": "%", "type": "hard", "comparator": ">="},
-        {"dimension": "credibility", "threshold": 80, "unit": "%", "type": "hard", "comparator": ">="},
+        {"dimension": "coverage", "threshold": 100, "unit": "%", "type": "hard", "comparator": ">=", "llm_grader": {"enabled": false, "prompt_file": "graders/research-depth.md", "trigger": "when_confidence_is_heuristic"}},
+        {"dimension": "credibility", "threshold": 80, "unit": "%", "type": "hard", "comparator": ">=", "llm_grader": {"enabled": false, "prompt_file": "graders/research-depth.md", "trigger": "when_confidence_is_heuristic"}},
         {"dimension": "bias_check", "threshold": 1, "unit": "bool", "type": "hard", "comparator": "=="},
         {"dimension": "sensitivity", "threshold": 1, "unit": "bool", "type": "soft", "comparator": "=="}
       ]
     },
     "T3": {
       "gates": [
-        {"dimension": "design_completeness", "threshold": 7, "unit": "score", "type": "hard", "comparator": ">=", "note": "需求清单中条目有对应设计方案的比例"},
-        {"dimension": "feasibility_score", "threshold": 7, "unit": "score", "type": "hard", "comparator": ">=", "note": "技术可行性（架构、依赖、风险）"},
-        {"dimension": "requirement_coverage", "threshold": 7, "unit": "score", "type": "hard", "comparator": ">=", "note": "每条需求可追溯到设计文档章节"},
-        {"dimension": "scope_precision", "threshold": 7, "unit": "score", "type": "soft", "comparator": ">=", "note": "IN/OUT 明确、依赖已识别"},
-        {"dimension": "validation_evidence", "threshold": 7, "unit": "score", "type": "soft", "comparator": ">=", "note": "可行性检查 + 风险评估已完成"}
+        {"dimension": "design_completeness", "threshold": 7, "unit": "score", "type": "hard", "comparator": ">=", "note": "需求清单中条目有对应设计方案的比例", "llm_grader": {"enabled": false, "prompt_file": "graders/design-feasibility.md", "trigger": "when_confidence_is_heuristic"}},
+        {"dimension": "feasibility_score", "threshold": 7, "unit": "score", "type": "hard", "comparator": ">=", "note": "技术可行性（架构、依赖、风险）", "llm_grader": {"enabled": false, "prompt_file": "graders/design-feasibility.md", "trigger": "when_confidence_is_heuristic"}},
+        {"dimension": "requirement_coverage", "threshold": 7, "unit": "score", "type": "hard", "comparator": ">=", "note": "每条需求可追溯到设计文档章节", "llm_grader": {"enabled": false, "prompt_file": "graders/design-feasibility.md", "trigger": "when_confidence_is_heuristic"}},
+        {"dimension": "scope_precision", "threshold": 7, "unit": "score", "type": "soft", "comparator": ">=", "note": "IN/OUT 明确、依赖已识别", "llm_grader": {"enabled": false, "prompt_file": "graders/design-feasibility.md", "trigger": "when_confidence_is_heuristic"}},
+        {"dimension": "validation_evidence", "threshold": 7, "unit": "score", "type": "soft", "comparator": ">=", "note": "可行性检查 + 风险评估已完成", "llm_grader": {"enabled": false, "prompt_file": "graders/design-feasibility.md", "trigger": "when_confidence_is_heuristic"}}
       ]
     },
     "T4": {
@@ -40,14 +40,14 @@
     "T5": {
       "name": "Iterate",
       "gates": [
-        {"dimension": "kpi_target", "threshold": null, "unit": "user_defined", "type": "hard", "comparator": ">=", "note": "threshold set in plan"}
+        {"dimension": "kpi_target", "threshold": null, "unit": "user_defined", "type": "hard", "comparator": ">=", "note": "threshold set in plan", "llm_grader": {"enabled": false, "prompt_file": "graders/research-depth.md", "trigger": "when_confidence_is_heuristic"}}
       ]
     },
     "T6": {
       "name": "Generate",
       "gates": [
-        {"dimension": "pass_rate", "threshold": 90, "unit": "%", "type": "hard", "comparator": ">="},
-        {"dimension": "avg_score", "threshold": 7, "unit": "/10", "type": "hard", "comparator": ">="}
+        {"dimension": "pass_rate", "threshold": 90, "unit": "%", "type": "hard", "comparator": ">=", "llm_grader": {"enabled": false, "prompt_file": "graders/research-depth.md", "trigger": "when_confidence_is_heuristic"}},
+        {"dimension": "avg_score", "threshold": 7, "unit": "/10", "type": "hard", "comparator": ">=", "llm_grader": {"enabled": false, "prompt_file": "graders/research-depth.md", "trigger": "when_confidence_is_heuristic"}}
       ]
     },
     "T7": {
@@ -70,6 +70,16 @@
         {"dimension": "stability", "threshold": 8, "unit": "/10", "type": "hard", "comparator": ">="}
       ]
     }
+  },
+  "completion_authority": {
+    "T1": "human_review",
+    "T2": "human_review",
+    "T3": "human_review",
+    "T4": "external_validation",
+    "T5": "external_validation",
+    "T6": "internal",
+    "T7": "internal",
+    "T8": "internal"
   },
   "stagnation_thresholds": {
     "T1": {"value": 3, "unit": "%", "type": "relative"},
