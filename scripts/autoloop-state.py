@@ -217,13 +217,15 @@ def resolve_path(obj, path_str):
 
 
 def set_by_path(obj, path_str, value):
-    """按点分路径设置值"""
+    """按点分路径设置值，自动创建缺失的中间 dict 键"""
     segments = path_str.split(".")
     current = obj
 
     for seg in segments[:-1]:
         key, idx = _parse_path_segment(seg)
         if isinstance(current, dict):
+            if key not in current:
+                current[key] = {}
             current = current[key]
         elif isinstance(current, list):
             current = current[int(key)]
@@ -234,6 +236,8 @@ def set_by_path(obj, path_str, value):
     key, idx = _parse_path_segment(last_seg)
 
     if idx is not None:
+        if isinstance(current, dict) and key not in current:
+            current[key] = {}
         current[key][idx] = value
     elif isinstance(current, dict):
         current[key] = value
@@ -338,9 +342,22 @@ def cmd_update(work_dir, field_path, value_str):
 
     parent, key, old_value = resolve_path(state, field_path)
     if parent is None:
-        print("ERROR: 字段路径不存在: {}".format(field_path))
-        print("提示: 使用 query 命令查看现有结构")
-        sys.exit(1)
+        # The leaf key may not exist yet — check that the parent path resolves
+        # to an existing dict before allowing auto-creation of the new key.
+        parent_path = ".".join(field_path.split(".")[:-1])
+        if parent_path:
+            pp, pk, parent_val = resolve_path(state, parent_path)
+            if pp is None or not isinstance(parent_val, dict):
+                print("ERROR: 字段路径不存在: {}".format(field_path))
+                print("提示: 使用 query 命令查看现有结构")
+                sys.exit(1)
+        else:
+            # Single-segment path with no parent — root must be a dict
+            if not isinstance(state, dict):
+                print("ERROR: 字段路径不存在: {}".format(field_path))
+                sys.exit(1)
+        # Parent exists as a dict; new key will be auto-created by set_by_path
+        old_value = None
 
     new_value = _auto_convert(value_str)
 
@@ -430,13 +447,17 @@ def cmd_add_iteration(work_dir):
     round_num = len(state["iterations"]) + 1
     now = now_iso()
 
+    prev_scores = {}
+    if state["iterations"]:
+        prev_scores = dict(state["iterations"][-1].get("scores", {}))
+
     iteration = {
         "round": round_num,
         "start_time": now,
         "end_time": "",
         "status": "进行中",
         "phase": "OBSERVE",
-        "scores": {},
+        "scores": prev_scores,
         "strategy": {
             "strategy_id": "",
             "name": "",

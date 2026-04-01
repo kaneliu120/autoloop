@@ -353,10 +353,17 @@ def run_tool(script_name, args, capture=False, env=None, work_dir=None):
                     "timeout": False,
                     "stderr": ((result.stderr or "")[:500]),
                 })
+            if result.stderr:
+                for line in result.stderr.splitlines():
+                    stripped = line.strip()
+                    if not stripped:
+                        continue
+                    if stripped.startswith("INFO:"):
+                        info(f"  {stripped}")
+                    else:
+                        warn(f"  stderr: {stripped}")
             if result.returncode != 0:
                 warn(f"工具返回非零退出码: {result.returncode}")
-                if result.stderr:
-                    warn(f"  stderr: {result.stderr.strip()}")
                 if work_dir:
                     _metadata_set_last_error(
                         work_dir, script_name, result.returncode, (result.stderr or "")[:2000]
@@ -1807,6 +1814,19 @@ def phase_act(work_dir, state, round_num, strict=False):
     # P2-03: ACT 完成后文件变更确认（T4/T7/T8）
     check_file_changes(work_dir, state)
 
+    # 检查是否有实际 ACT 产出 — 无 act.records 说明编排者尚未分派 subagent
+    state_path = os.path.join(work_dir, STATE_FILE)
+    try:
+        state_fresh = load_json(state_path)
+    except (OSError, json.JSONDecodeError):
+        state_fresh = state  # 回退到传入的 state（测试 stub 场景）
+    iters_fresh = state_fresh.get("iterations", [])
+    act_records = iters_fresh[-1].get("act", {}).get("records", []) if iters_fresh else []
+    if not act_records:
+        warn("ACT 阶段无 act.records — 编排者尚未分派 subagent，暂停等待。")
+        warn("请完成实际执行后用 add-finding 写入结果，再运行 --resume 继续。")
+        return "pause"
+
     return True
 
 
@@ -2701,7 +2721,21 @@ def run_loop(
                     enforce_strategy_history=enforce_strategy_history,
                 )
             elif phase == "ACT":
-                if not phase_act(work_dir, state, round_num, strict=strict):
+                act_result = phase_act(work_dir, state, round_num, strict=strict)
+                if act_result == "pause":
+                    print(f"\n{C_BOLD}{C_YELLOW}{'=' * 60}")
+                    print(f"  AutoLoop ACT 暂停 — Round {round_num}")
+                    print(f"  原因: ACT 阶段无 act.records，等待编排者分派 subagent")
+                    print(f"  恢复: autoloop-controller.py {work_dir} --resume")
+                    print(f"{'=' * 60}{C_RESET}\n")
+                    checkpoint["pause_state"] = {
+                        "reason": "ACT 阶段无 act.records，等待编排者执行后 --resume",
+                        "required_confirmation": "完成实际执行并写入 act.records 后继续",
+                        "paused_at": now_iso(),
+                    }
+                    save_checkpoint(work_dir, checkpoint)
+                    return "pause"
+                elif not act_result:
                     abort_task = True
                 else:
                     # ACT→VERIFY 过渡: 解析 subagent completion_ratio
