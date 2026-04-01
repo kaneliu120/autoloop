@@ -287,12 +287,18 @@ def cmd_init(work_dir, template, goal):
     state = initial_state(template, goal, work_dir)
     gates = _load_plan_gates_for_template(template)
     state["plan"]["gates"] = gates
-    # 从 gates 推导 dimensions（manifest_dimension 优先，fallback dimension/dim）
-    state["plan"]["dimensions"] = [
-        g.get("manifest_dimension") or g.get("dimension") or g.get("dim", "")
-        for g in gates
-        if g.get("manifest_dimension") or g.get("dimension") or g.get("dim")
-    ]
+    # T1/T2/T3: plan.dimensions = research scope, filled by user/controller later.
+    # T4-T8: derive from gate dims (scoring reads from iterations[-1].scores).
+    _RESEARCH_SCOPE_TEMPLATES = {"T1", "T2", "T3"}
+    template_key = template.upper().split()[0] if template else ""
+    if template_key in _RESEARCH_SCOPE_TEMPLATES:
+        state["plan"]["dimensions"] = []
+    else:
+        state["plan"]["dimensions"] = [
+            g.get("manifest_dimension") or g.get("dimension") or g.get("dim", "")
+            for g in gates
+            if g.get("manifest_dimension") or g.get("dimension") or g.get("dim")
+        ]
     # 从 gate-manifest.json 读取模板默认轮次
     if state["plan"]["budget"]["max_rounds"] <= 0:
         manifest_path = os.path.join(

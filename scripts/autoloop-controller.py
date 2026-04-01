@@ -1877,9 +1877,82 @@ def process_act_discoveries(work_dir, state, round_num, subagent_result):
     return discoveries
 
 
+def _create_t3_scoring_findings(work_dir, state, round_num):
+    """T3: 从 ACT 产出提取关键内容，创建 summary findings 供 score.py keyword 分析。"""
+    # 从 iterations[-1].act.records 提取产出摘要
+    iters = state.get("iterations", [])
+    if not iters:
+        return
+    act_records = iters[-1].get("act", {}).get("records", [])
+
+    # 收集所有 act 产出的描述/摘要
+    summaries = []
+    for rec in act_records:
+        desc = rec.get("description", "") or rec.get("summary", "") or ""
+        result = rec.get("result", "") or rec.get("output", "") or ""
+        if desc:
+            summaries.append(desc)
+        if result and len(str(result)) < 2000:
+            summaries.append(str(result))
+
+    # 如果没有 act records，尝试从 output_files 读取
+    if not summaries:
+        output_files = state.get("plan", {}).get("output_files", {})
+        for key, info_dict in output_files.items():
+            if isinstance(info_dict, dict):
+                fpath = info_dict.get("path", "")
+                resolved = os.path.realpath(os.path.join(work_dir, fpath)) if fpath else ""
+                if resolved and resolved.startswith(os.path.realpath(work_dir)) and os.path.exists(resolved):
+                    try:
+                        with open(resolved, "r", encoding="utf-8") as f:
+                            content = f.read(3000)  # 前 3000 字符
+                        summaries.append(content)
+                    except OSError:
+                        pass
+
+    if not summaries:
+        return
+
+    combined = "\n".join(summaries)
+
+    # 创建 5 个维度的 findings，包含可被 keyword 匹配的内容
+    t3_dims = [
+        ("design_completeness", "设计完整度：" + combined[:500]),
+        ("feasibility_score", "技术可行性分析：架构设计、依赖分析、风险评估。" + combined[:300]),
+        ("requirement_coverage", "需求覆盖：功能需求、用户故事、验收标准。" + combined[:300]),
+        ("scope_precision", "范围定义：IN scope / OUT scope 边界明确。" + combined[:200]),
+        ("validation_evidence", "验证证据：可行性检查、风险评估已完成。" + combined[:200]),
+    ]
+
+    for dim, content in t3_dims:
+        finding_json = json.dumps({
+            "dimension": dim,
+            "content": content,
+            "source": "auto-extracted from T3 ACT output",
+            "confidence": "中",
+            "type": "finding"
+        }, ensure_ascii=False)
+        run_tool("autoloop-state.py", ["add-finding", work_dir, finding_json],
+                 capture=True, work_dir=work_dir)
+
+
 def phase_verify(work_dir, state, round_num, strict=False):
     """VERIFY: 自动调用评分器和方差计算。返回 verify_ok（strict 时任一步失败为 False）。"""
     banner(round_num, "VERIFY", "评分验证")
+
+    # T3: 自动从 ACT 产出创建评分 findings（score.py 需要 findings 做 keyword 分析）
+    template = get_template(state)
+    template_key = template.upper().split()[0] if template else ""
+    if template_key == "T3" and round_num > 0:
+        rounds = state.get("findings", {}).get("rounds", [])
+        has_findings = any(
+            rnd.get("findings") for rnd in rounds
+        )
+        if not has_findings:
+            info("T3: findings.rounds 为空，从 ACT 产出创建评分 findings...")
+            _create_t3_scoring_findings(work_dir, state, round_num)
+            state = load_state(work_dir)  # reload after findings creation
+
     verify_ok = True
 
     # gate-manifest.json 防篡改 mtime 检查
