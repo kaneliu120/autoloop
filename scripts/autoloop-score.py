@@ -1247,7 +1247,7 @@ def main():
 
     if mode == "ssot":
         print("INFO: SSOT 模式 — 从 {} 读取评分数据（非 findings.md）".format(
-            os.path.join(context, "autoloop-state.json")))
+            os.path.join(context, "autoloop-state.json")), file=sys.stderr)
         template, results = score_from_ssot(data)
     else:
         template, results = score_from_markdown(data)
