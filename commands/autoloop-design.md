@@ -139,17 +139,31 @@ db-specialist subagent（如涉及数据库变更）：
 
 ### 执行
 
+ACT 阶段完成 PRD 生成后，VERIFY 阶段包含独立评审（评审 agent ≠ 设计 agent）。
+
 feasibility-reviewer subagent（独立评审）：
 - 逐条检查需求覆盖率（每条需求是否映射到设计方案）
-- 评估技术可行性（架构是否合理、依赖是否可控）
+- 评估技术可行性（架构是否合理、依赖是否已识别且可控）
 - 检查范围精确度（IN/OUT 是否明确、工作量是否可估）
 - 验证风险评估完整性
-- 打出 5 维度评分
+- 打出 5 维度评分，写入 `autoloop-findings.md` 和 `iterations[-1].scores`
+
+**评审维度**（对应 gate-manifest T3 门禁）：
+1. **design_completeness**: 每条需求是否有对应的设计方案
+2. **feasibility_score**: 技术架构是否可行，依赖是否已识别
+3. **requirement_coverage**: 需求到设计的追溯链是否完整
+4. **scope_precision**: IN/OUT 边界是否明确
+5. **validation_evidence**: 是否有独立的可行性检查记录
+
+**写入规范**：
+- 评审结果写入 `autoloop-findings.md` findings 章节，dimension 字段使用上述 5 个维度名
+- 评分写入 `iterations[-1].scores`（如 `design_completeness: 8.5`）
+- 如 Phase 2 和 Phase 3 在同一 OODA 轮次中完成，Phase 3 发生在 VERIFY 阶段（score.py 自动评分 + feasibility-reviewer agent 补充人工审查）
 
 ### 产出
-- 评审报告（通过/需修改）
-- 5 维度评分
-- 最终确认的方案文档 → T4 Phase 1 的输入
+- 评审报告（通过/需修改），含每个维度的具体问题和评分依据
+- 5 维度评分（写入 findings + iterations[-1].scores）
+- 最终确认的方案文档 → T4 Phase 1 的直接输入
 
 ### Phase 3 门禁
 质量门禁阈值见 `references/gate-manifest.json` T3：
