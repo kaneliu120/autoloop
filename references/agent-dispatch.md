@@ -388,6 +388,19 @@ Profile 更新规则：
 
 ---
 
+## 文档类 Subagent 产出规范
+
+当 subagent 的任务是生成文档内容（PRD、报告、分析等），必须将产出写入文件：
+
+- **文件路径**: `{work_dir}/output-{agent_name}.md`（如 `output-prd-part1.md`）
+- **禁止**: 仅在 task output 中返回文本而不写文件
+- **合并约定**: SYNTHESIZE 阶段按文件名排序拼接（`output-01-*.md`, `output-02-*.md`）
+- **适用模板**: T1 Research, T2 Compare, T3 Product Design
+
+非文档类 subagent（code-reviewer、backend-dev 等）不受此约束，可通过 task output 返回结构化结果。
+
+---
+
 ## Subagent 即时发现（可选返回字段）
 
 如果 subagent 在执行过程中发现了与当前任务无直接关系、但对未来轮次或其他任务有价值的信息，在返回中包含 `discoveries` 列表。
