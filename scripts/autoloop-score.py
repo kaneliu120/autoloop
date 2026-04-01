@@ -316,6 +316,21 @@ def _count_findings_coverage(state):
                 continue
             n = _finding_substantive_info_count(finding)
             dim_best[dim] = max(dim_best.get(dim, 0), n)
+    # Detect: if plan.dimensions are gate dimension names (not research scope),
+    # fall back to counting all unique finding dimensions
+    template_raw = state.get("plan", {}).get("template", "")
+    tkey = resolve_template(template_raw)
+    if tkey and tkey in TEMPLATE_GATES and plan_dims:
+        gate_dim_names = set()
+        for g in TEMPLATE_GATES[tkey]:
+            gate_dim_names.add(g["dim"])
+            md = g.get("manifest_dimension")
+            if md:
+                gate_dim_names.add(md)
+        # If plan.dimensions are all gate dimension names → not research scope → use fallback
+        if set(plan_dims) <= gate_dim_names:
+            plan_dims = []
+
     if plan_dims:
         total = len(plan_dims)
         covered = sum(1 for d in plan_dims if dim_best.get(d, 0) >= 2)
