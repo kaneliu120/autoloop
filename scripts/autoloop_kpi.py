@@ -61,7 +61,20 @@ def kpi_row_satisfied(gate_row, current_override=None):
         current = current_override
     if current is not None and target is not None:
         try:
-            return float(current) >= float(target)
+            c, t = float(current), float(target)
+            comparator = gate_row.get("comparator", ">=")
+            if comparator == ">=":
+                return c >= t
+            elif comparator == "<=":
+                return c <= t
+            elif comparator == "==":
+                return c == t
+            elif comparator == "<":
+                return c < t
+            elif comparator == ">":
+                return c > t
+            else:
+                return c >= t  # default fallback
         except (ValueError, TypeError):
             return False
     return False
