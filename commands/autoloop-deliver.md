@@ -42,6 +42,17 @@ description: >
 
 接收已确认的方案文档（来自产品设计阶段或 autoloop-plan.md），开始代码实现。
 
+### API 契约对齐（前后端并行时必须）
+
+当 Phase 1 同时委派 frontend-dev 和 backend-dev agent 时，必须先完成此步骤再 dispatch：
+
+1. 从方案文档提取所有新增/修改的 API 端点
+2. 生成契约文档（OpenAPI spec 或 endpoint 清单），包含：路径、方法、请求体、响应体、认证要求
+3. 契约文档保存到 `{work_dir}/api-contract.md`
+4. frontend-dev 和 backend-dev 的 dispatch context 中必须包含此契约文档路径
+
+不执行此步骤的风险：前后端 agent 各自推断 API 设计，可能产生不一致的端点命名或参数格式。
+
 ### 执行顺序
 
 **1a. 数据库迁移（如有）** — 最先执行，其他开发依赖数据库结构
@@ -250,6 +261,24 @@ migration_check_cmd：{从 autoloop-plan.md 读取}
 总体结论：通过 / 失败（{失败步骤}）
 ```
 
+### 数据库迁移检查
+
+verifier 完成自动测试后，检查是否有新增/修改的数据库模型：
+
+- **TypeORM/Prisma 项目**: 确认已生成 migration 文件（`typeorm migration:generate` / `prisma migrate dev`），不依赖 `synchronize: true`
+- **Alembic 项目**: 确认 `alembic revision --autogenerate` 已运行且生成的 migration 文件存在
+- **验证**: migration 文件可执行且有对应的 downgrade/revert 实现，不依赖手动 ALTER TABLE
+
+### i18n 同步检查
+
+如果项目使用多语言（存在 en.json 或类似主语言文件）：
+
+- 检查主语言文件是否有本次新增的 key
+- 确认其他语言文件已同步这些新 key（至少包含英文 fallback）
+- 建议：用 AI 翻译将新 key 写入其他语言文件，不留空缺
+
+如项目无多语言则标记 N/A。
+
 ### 质量门禁（阶段 3）
 
 Phase 3 门禁见 `references/quality-gates.md` T4 行：
@@ -257,6 +286,8 @@ Phase 3 门禁见 `references/quality-gates.md` T4 行：
 - [ ] 语法验证通过（按 `syntax_check_file_arg` 决定是否附加文件参数）
 - [ ] 路由注册：`grep -n '{new_router_name}' {main_entry_file}` 找到注册语句（无新路由则 N/A）
 - [ ] 数据库迁移状态正确：`{migration_check_cmd}`（无迁移则 N/A）
+- [ ] 数据库迁移文件存在且有 downgrade 实现（有新 Entity/列则必须有迁移文件，不可仅靠 synchronize:true）
+- [ ] i18n 同步：其他语言文件已包含主语言新增 key（无多语言则 N/A）
 
 ---
 
