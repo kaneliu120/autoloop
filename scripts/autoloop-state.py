@@ -514,14 +514,19 @@ def cmd_add_finding(work_dir, finding_json):
         finding = json.loads(finding_json)
     except json.JSONDecodeError as e:
         print("ERROR: JSON 解析失败: {}".format(e))
+        print(
+            "示例: autoloop-state.py add-finding /path "
+            '\'{"dimension": "coverage", "content": "分析内容...", '
+            '"source": "https://example.com", "confidence": "高"}\''
+        )
         sys.exit(1)
 
     if "dimension" not in finding:
         print("ERROR: 缺少必需字段: dimension")
         print(
-            '格式: {"dimension": "维度名", "content"|"summary"|"description": "正文", '
-            '"source": "来源", "confidence": "高/中/低", '
-            '"type": "finding/issue/gap"}'
+            "示例: autoloop-state.py add-finding /path "
+            '\'{"dimension": "coverage", "content": "分析内容...", '
+            '"source": "https://example.com", "confidence": "高"}\''
         )
         sys.exit(1)
     body_keys = ("summary", "description", "content")
@@ -531,8 +536,9 @@ def cmd_add_finding(work_dir, finding_json):
     ):
         print("ERROR: 缺少正文字段: 须提供 summary、description 或 content 之一")
         print(
-            '格式: {"dimension": "...", "summary": "...", ...} '
-            "（与 loop-data-schema / validate 口径一致）"
+            "示例: autoloop-state.py add-finding /path "
+            '\'{"dimension": "coverage", "content": "分析内容...", '
+            '"source": "https://example.com", "confidence": "高"}\''
         )
         sys.exit(1)
     if not finding.get("content"):
