@@ -2389,6 +2389,8 @@ def phase_evolve(work_dir, state, round_num, strict=False):
         print(f"  {'维度':<20} {'当前':>8} {'目标':>8} {'置信度':>10} {'误差':>6}  {'可信度说明'}")
         print("  " + "─" * 80)
         needs_review = []
+        heuristic_dims = []
+        scored_dims = []
         for d in gate_details:
             dim = d.get("dim", d.get("dimension", ""))
             label = d.get("label", dim)
@@ -2396,17 +2398,23 @@ def phase_evolve(work_dir, state, round_num, strict=False):
             target = str(d.get("threshold", "?"))
             confidence, margin = _confidence_for_dim(dim)
             margin_display = "±{:.1f}".format(margin) if margin is not None else "N/A"
+            scored_dims.append(label)
             if confidence == "empirical":
                 note = "工具输出，高可信"
             elif confidence == "heuristic":
                 note = "启发式，建议人工复核"
                 needs_review.append(label)
+                heuristic_dims.append(label)
             else:
                 note = "二元判定，仅看方向"
                 needs_review.append(label)
             print(f"  {label:<20} {current:>8} {target:>8} {confidence:>10} {margin_display:>6}  {note}")
         if needs_review:
-            print(f"\n  {C_YELLOW}⚠ 以下维度评分误差较大，建议人工复核: {', '.join(needs_review)}{C_RESET}")
+            all_heuristic = len(heuristic_dims) == len(scored_dims)
+            if all_heuristic:
+                print(f"\n  {C_YELLOW}ℹ 所有维度均为启发式评分（heuristic），属模板预期行为{C_RESET}")
+            else:
+                print(f"\n  {C_YELLOW}⚠ 以下维度评分误差较大，建议人工复核: {', '.join(needs_review)}{C_RESET}")
 
     _append_evolve_progress_md(work_dir, round_num, decision, reasons, gate_details)
 

@@ -829,19 +829,82 @@ def score_from_ssot(state):
 
         # --- T8 优化类 ---
         elif dim == "architecture":
-            value = scores.get("architecture", scores.get("architecture_score", 0.0))
-            value = float(value) if isinstance(value, (int, float)) else 0.0
-            evidence = "架构得分={:.1f}/10".format(value)
+            raw = scores.get("architecture", scores.get("architecture_score", None))
+            if raw is not None and isinstance(raw, (int, float)) and float(raw) > 0:
+                value = float(raw)
+                evidence = "架构得分={:.1f}/10（来自 scores）".format(value)
+            else:
+                rounds = state.get("findings", {}).get("rounds", [])
+                issues = {"P1": 0, "P2": 0, "P3": 0}
+                for rnd in rounds:
+                    for finding in rnd.get("findings", []):
+                        dim_tag = finding.get("dimension", "")
+                        body = _finding_body_text(finding)
+                        if "architect" in dim_tag.lower() or any(kw in body.lower() for kw in
+                                ("架构", "architecture", "模块", "module", "耦合", "coupling",
+                                 "依赖", "dependency", "分层", "layer")):
+                            for sev in ("P1", "P1:", "P1 ", "P1："):
+                                issues["P1"] += body.count(sev)
+                            for sev in ("P2", "P2:", "P2 ", "P2："):
+                                issues["P2"] += body.count(sev)
+                            for sev in ("P3", "P3:", "P3 ", "P3："):
+                                issues["P3"] += body.count(sev)
+                deduction = issues["P1"] * 1.5 + issues["P2"] * 0.8 + issues["P3"] * 0.3
+                value = max(0.0, min(10.0, 10.0 - deduction))
+                evidence = "架构（findings推算）: P1={} P2={} P3={} → {:.1f}/10".format(
+                    issues["P1"], issues["P2"], issues["P3"], value)
 
         elif dim == "performance":
-            value = scores.get("performance", scores.get("performance_score", 0.0))
-            value = float(value) if isinstance(value, (int, float)) else 0.0
-            evidence = "性能得分={:.1f}/10".format(value)
+            raw = scores.get("performance", scores.get("performance_score", None))
+            if raw is not None and isinstance(raw, (int, float)) and float(raw) > 0:
+                value = float(raw)
+                evidence = "性能得分={:.1f}/10（来自 scores）".format(value)
+            else:
+                rounds = state.get("findings", {}).get("rounds", [])
+                issues = {"P1": 0, "P2": 0, "P3": 0}
+                for rnd in rounds:
+                    for finding in rnd.get("findings", []):
+                        dim_tag = finding.get("dimension", "")
+                        body = _finding_body_text(finding)
+                        if "performance" in dim_tag.lower() or any(kw in body.lower() for kw in
+                                ("性能", "performance", "分页", "pagination", "索引", "index",
+                                 "缓存", "cache", "n+1", "查询", "query")):
+                            for sev in ("P1", "P1:", "P1 ", "P1："):
+                                issues["P1"] += body.count(sev)
+                            for sev in ("P2", "P2:", "P2 ", "P2："):
+                                issues["P2"] += body.count(sev)
+                            for sev in ("P3", "P3:", "P3 ", "P3："):
+                                issues["P3"] += body.count(sev)
+                deduction = issues["P1"] * 1.5 + issues["P2"] * 0.8 + issues["P3"] * 0.3
+                value = max(0.0, min(10.0, 10.0 - deduction))
+                evidence = "性能（findings推算）: P1={} P2={} P3={} → {:.1f}/10".format(
+                    issues["P1"], issues["P2"], issues["P3"], value)
 
         elif dim == "stability":
-            value = scores.get("stability", scores.get("stability_score", 0.0))
-            value = float(value) if isinstance(value, (int, float)) else 0.0
-            evidence = "稳定性得分={:.1f}/10".format(value)
+            raw = scores.get("stability", scores.get("stability_score", None))
+            if raw is not None and isinstance(raw, (int, float)) and float(raw) > 0:
+                value = float(raw)
+                evidence = "稳定性得分={:.1f}/10（来自 scores）".format(value)
+            else:
+                rounds = state.get("findings", {}).get("rounds", [])
+                issues = {"P1": 0, "P2": 0, "P3": 0}
+                for rnd in rounds:
+                    for finding in rnd.get("findings", []):
+                        dim_tag = finding.get("dimension", "")
+                        body = _finding_body_text(finding)
+                        if "stabilit" in dim_tag.lower() or any(kw in body.lower() for kw in
+                                ("稳定", "stability", "错误处理", "error", "日志", "logging",
+                                 "健康检查", "health", "shutdown", "限流", "rate limit")):
+                            for sev in ("P1", "P1:", "P1 ", "P1："):
+                                issues["P1"] += body.count(sev)
+                            for sev in ("P2", "P2:", "P2 ", "P2："):
+                                issues["P2"] += body.count(sev)
+                            for sev in ("P3", "P3:", "P3 ", "P3："):
+                                issues["P3"] += body.count(sev)
+                deduction = issues["P1"] * 1.5 + issues["P2"] * 0.8 + issues["P3"] * 0.3
+                value = max(0.0, min(10.0, 10.0 - deduction))
+                evidence = "稳定性（findings推算）: P1={} P2={} P3={} → {:.1f}/10".format(
+                    issues["P1"], issues["P2"], issues["P3"], value)
 
         # --- T3 产品设计类 ---
         elif dim == "design_completeness":
