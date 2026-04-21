@@ -1,32 +1,32 @@
-# AutoLoop 安全说明
+# AutoLoop Security Notes
 
-## 威胁模型（简要）
+## Threat Model (Summary)
 
-AutoLoop 脚本主要在 **用户本机** 上运行，由 Claude Code / MCP / CLI 调用。输入通常包括：
+AutoLoop scripts run mainly on the **user's local machine** and are invoked through Claude Code / MCP / CLI. Typical inputs include:
 
-- 工作目录路径  
-- `autoloop-state.json` 及渲染出的 Markdown/TSV 内容  
-- 通过 `autoloop-state.py update` 等写入的字段路径与值  
+- Workdir path
+- `autoloop-state.json` and the rendered Markdown / TSV content
+- Field paths and values written through `autoloop-state.py update` and similar commands
 
-## 用户可控路径与子进程
+## User-Controlled Paths and Subprocesses
 
-以下入口会将外部传入路径用于文件读写或 `subprocess`：
+The following entry points use externally supplied paths for file I/O or `subprocess`:
 
-- `autoloop-controller.py`、`autoloop-state.py`、`autoloop-score.py`、`autoloop-validate.py` 等均以 **第一个参数为工作目录** 打开 `autoloop-state.json` 及邻接文件。  
-- `autoloop-controller.py` 的 `run_tool` 调用同目录下固定脚本名，不执行任意 shell 字符串。  
-- **严格模式**（`AUTOLOOP_STRICT` / `--strict`）可在 VERIFY 失败时阻断后续阶段，降低「带病继续」风险；ACT 仍由操作者自行约束命令，建议仅调用白名单脚本与项目内命令。
+- `autoloop-controller.py`, `autoloop-state.py`, `autoloop-score.py`, and `autoloop-validate.py` all treat the **first argument as the workdir** and open `autoloop-state.json` plus adjacent files.
+- `autoloop-controller.py`'s `run_tool` calls fixed script names from the same directory and does not execute arbitrary shell strings.
+- **Strict mode** (`AUTOLOOP_STRICT` / `--strict`) can block later stages when VERIFY fails, reducing the risk of continuing in a broken state. ACT is still constrained by the operator, so only whitelist scripts and in-repo commands are recommended.
 
-**建议**：仅在可信工作目录运行；自动化场景下对工作目录路径做规范化并拒绝包含 `..` 的逃逸（若未来暴露多租户接口，应在集成层强制）。
+**Recommendation**: run only in trusted workdirs; in automated contexts, normalize the workdir path and reject escapes containing `..` (if a multi-tenant interface is exposed later, enforce this at the integration layer).
 
-## 可选：ACT 命令白名单（配置）
+## Optional: ACT Command Allowlist (Configuration)
 
-在 SSOT 中可设置 `plan.template_params.allowed_script_globs`（字符串数组）或 `allowed_commands`（字符串片段列表），供 `autoloop-controller.py` **ACT 阶段提示**引用；控制器不据此自动执行 shell。未配置时行为与旧版一致，仍由操作者在 ACT 中自行约束命令来源。
+The SSOT can set `plan.template_params.allowed_script_globs` (string array) or `allowed_commands` (list of string fragments) for `autoloop-controller.py` to reference as **ACT-stage guidance**; the controller does not execute shell commands based on this list. When unset, behavior matches the legacy flow, and the operator remains responsible for constraining command sources during ACT.
 
-## 凭据与密钥
+## Credentials and Secrets
 
-- 勿将 API 密钥写入 `autoloop-state.json` 或提交到 Git。  
-- `.gitignore` 已忽略常见运行时文件；敏感环境使用独立工作目录。
+- Do not write API keys into `autoloop-state.json` or commit them to Git.
+- Common runtime files are already ignored by `.gitignore`; use a dedicated workdir for sensitive environments.
 
-## 报告问题
+## Reporting Issues
 
-若发现命令注入、路径穿越或子进程滥用，请通过你的团队渠道私下报告。
+If you find command injection, path traversal, or subprocess abuse, report it privately through your team channel.

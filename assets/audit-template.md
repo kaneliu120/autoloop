@@ -1,153 +1,153 @@
-# AutoLoop 企业级质量审计报告
+# AutoLoop Enterprise Quality Audit Report
 
-**任务 ID**：autoloop-{YYYYMMDD-HHMMSS}
-**审计时间**：{ISO 8601}
-**审计范围**：{代码库路径} — {模块列表 / 全量}
-**迭代轮次**：{N} 轮
-**结论**：{企业级质量达标 / 接近达标（差距：{说明}）}
-
----
-
-## 评分总览
-
-| 维度 | 初始分 | 最终分 | 目标 | 改善量 | 状态 |
-|------|--------|--------|------|--------|------|
-| 安全性 | {N}/10 | {N}/10 | ≥9/10 | +{N} | 达标/未达标 |
-| 可靠性 | {N}/10 | {N}/10 | ≥8/10 | +{N} | 达标/未达标 |
-| 可维护性 | {N}/10 | {N}/10 | ≥8/10 | +{N} | 达标/未达标 |
-
-**企业级达标判定**：{已达标 / 未达标（原因：{维度} 距目标差 {N}）}
+**Task ID**: autoloop-{YYYYMMDD-HHMMSS}
+**Audit time**: {ISO 8601}
+**Audit scope**: {codebase path} - {module list / all}
+**Iteration rounds**: {N}
+**Conclusion**: {enterprise-quality met / close but not met (gap: {description})}
 
 ---
 
-## 安全性详情
+## Score Overview
 
-**最终得分**：{N}/10
+| Dimension | Initial score | Final score | Target | Improvement | Status |
+|-----------|---------------|-------------|--------|-------------|--------|
+| Security | {N}/10 | {N}/10 | ≥9/10 | +{N} | Met / Not met |
+| Reliability | {N}/10 | {N}/10 | ≥8/10 | +{N} | Met / Not met |
+| Maintainability | {N}/10 | {N}/10 | ≥8/10 | +{N} | Met / Not met |
 
-### 已修复的安全问题
-
-| ID | 文件 | 问题 | 严重级别 | 修复方案 | 验证 |
-|----|------|------|---------|---------|------|
-| S001 | {绝对路径} | {问题描述} | P1 | {修复方案} | 语法验证通过（{syntax_check_cmd}）|
-| S002 | {路径} | {问题} | P1 | {修复} | 通过 |
-
-### 扣分项（最终状态）
-
-| 问题类型 | 数量 | 扣分 | 状态 |
-|---------|------|------|------|
-| SQL 注入 | 0 | 0 | 已清除 |
-| 命令注入 | 0 | 0 | 已清除 |
-| 敏感数据暴露 | 0 | 0 | 已清除 |
-| 输入验证缺失 | {N} | -{N} | 已全修复 / {N} 处遗留（原因） |
-
-### 安全性变化轨迹
-
-初始 → 第1轮 → 第N轮（最终）：{基线分} → {第1轮} → {最终分}
+**Enterprise-quality verdict**: {met / not met (reason: {dimension} is {N} points below target)}
 
 ---
 
-## 可靠性详情
+## Security Details
 
-**最终得分**：{N}/10
+**Final score**: {N}/10
 
-### 已修复的可靠性问题
+### Fixed security issues
 
-| ID | 文件 | 问题 | 严重级别 | 修复方案 | 验证 |
-|----|------|------|---------|---------|------|
-| R001 | {路径} | 静默失败（except: pass）| P1 | 改为 logger.error + 返回错误响应 | 通过 |
+| ID | File | Issue | Severity | Fix | Verification |
+|----|------|-------|----------|-----|--------------|
+| S001 | {absolute path} | {issue description} | P1 | {fix} | Syntax check passed ({syntax_check_cmd}) |
+| S002 | {path} | {issue} | P1 | {fix} | Passed |
 
-### 外部依赖清单（修复后状态）
+### Deduction items (final state)
 
-| 依赖 | 有超时 | 有降级 | 有重试 | 最终状态 |
-|------|--------|--------|--------|---------|
-| Redis | 是 | 是 | 否 | 良好（无重试，但有降级）|
-| 第三方 API | 是 | 是 | 是 | 优秀 |
-| 数据库 | — | — | — | SQLAlchemy 内置 |
+| Issue type | Count | Deduction | Status |
+|------------|-------|-----------|--------|
+| SQL injection | 0 | 0 | Cleared |
+| Command injection | 0 | 0 | Cleared |
+| Sensitive data exposure | 0 | 0 | Cleared |
+| Missing input validation | {N} | -{N} | Fully fixed / {N} remaining (reason) |
 
----
+### Security trend
 
-## 可维护性详情
-
-**最终得分**：{N}/10
-
-### 已修复的可维护性问题
-
-| ID | 文件 | 问题 | 严重级别 | 修复方案 |
-|----|------|------|---------|---------|
-| M001 | {路径} | `any` 类型滥用 | P2 | 替换为具体类型 |
-| M002 | {路径} | 新路由未注册 | P1 | 在 {main_entry_file} 注册路由（按技术栈规范）|
-
-### 代码质量指标（修复后）
-
-| 指标 | 初始 | 最终 |
-|------|------|------|
-| `any` / `Any` 使用次数 | {N} | {N} |
-| `# type: ignore` 次数 | {N} | {N} |
-| 未注册路由 | {N} | 0 |
-| 未导出的新文件 | {N} | 0 |
-| 硬编码配置值 | {N} | {N} |
+Initial → Round 1 → Round N (final): {baseline} → {round 1} → {final}
 
 ---
 
-## 完整修复明细
+## Reliability Details
 
-| 轮次 | ID | 维度 | 优先级 | 文件 | 问题 | 修复方案 | 验证 |
-|------|-----|------|--------|------|------|---------|------|
-| 1 | S001 | 安全性 | P1 | {路径} | {问题} | {方案} | 通过 |
-| 1 | R001 | 可靠性 | P1 | {路径} | {问题} | {方案} | 通过 |
-| 2 | M001 | 可维护 | P2 | {路径} | {问题} | {方案} | 通过 |
-| 3 | M002 | 可维护 | P2 | {路径} | {问题} | {方案} | 通过 |
+**Final score**: {N}/10
 
-**总计**：{N} 个问题（P1: {N}, P2: {N}, P3: {N}）
+### Fixed reliability issues
 
----
+| ID | File | Issue | Severity | Fix | Verification |
+|----|------|-------|----------|-----|--------------|
+| R001 | {path} | Silent failure (except: pass) | P1 | Changed to logger.error + returned an error response | Passed |
 
-## 遗留问题（未修复）
+### External dependency list (post-fix state)
 
-| ID | 维度 | 优先级 | 问题 | 未修复原因 | 影响评估 |
-|----|------|--------|------|-----------|---------|
-| P3-001 | 可维护 | P3 | {问题} | 预算耗尽，影响低 | 低，不影响功能 |
-
-**遗留说明**：{说明为何遗留，以及对整体质量的影响}
+| Dependency | Timeout | Fallback | Retry | Final status |
+|------------|---------|----------|-------|--------------|
+| Redis | Yes | Yes | No | Good (no retry, but has fallback) |
+| Third-party API | Yes | Yes | Yes | Excellent |
+| Database | — | — | — | Built into SQLAlchemy |
 
 ---
 
-## 扫描覆盖范围
+## Maintainability Details
 
-**扫描文件数**：{N} 个
-**重点模块**：{模块列表}
+**Final score**: {N}/10
 
-**未扫描**（及原因）：
-- {未扫描内容}：{原因，如"第三方库，不在审查范围"或"用户明确排除"}
+### Fixed maintainability issues
 
----
+| ID | File | Issue | Severity | Fix |
+|----|------|-------|----------|-----|
+| M001 | {path} | Overuse of `any` types | P2 | Replaced with concrete types |
+| M002 | {path} | New route not registered | P1 | Registered route in {main_entry_file} (following stack conventions) |
 
-## 检测命令参考
+### Code quality metrics (post-fix)
 
-根据技术栈执行对应检测命令。
-
-以下为通用结构，具体命令以 `autoloop-plan.md` 中收集的参数为准：
-
-| 检测类型 | 命令来源 | 说明 |
-|---------|---------|------|
-| 语法验证 | `autoloop-plan.md` 中的 `syntax_check_cmd` | `syntax_check_file_arg=true` 时附加文件名，`false` 时项目级执行 |
-| 安全性验证 | `enterprise-standard.md` §安全性检测 | 针对实际技术栈执行 |
-| 可靠性验证 | `enterprise-standard.md` §可靠性检测 | 针对实际技术栈执行 |
-| 可维护性验证 | `enterprise-standard.md` §可维护性检测 | 针对实际技术栈执行 |
-| 路由注册验证 | `delivery-phases.md` §Phase 3 | 使用 `autoloop-plan.md` 中的 `new_router_name` 和 `main_entry_file` |
+| Metric | Initial | Final |
+|--------|---------|-------|
+| `any` / `Any` usages | {N} | {N} |
+| `# type: ignore` occurrences | {N} | {N} |
+| Unregistered routes | {N} | 0 |
+| Newly added but unexported files | {N} | 0 |
+| Hard-coded configuration values | {N} | {N} |
 
 ---
 
-## 后续建议
+## Full Fix Log
 
-**短期（1-2 周）**：
-1. {建议 1}（针对遗留问题）
-2. {建议 2}
+| Round | ID | Dimension | Priority | File | Issue | Fix | Verification |
+|-------|----|-----------|----------|------|-------|-----|--------------|
+| 1 | S001 | Security | P1 | {path} | {issue} | {fix} | Passed |
+| 1 | R001 | Reliability | P1 | {path} | {issue} | {fix} | Passed |
+| 2 | M001 | Maintainability | P2 | {path} | {issue} | {fix} | Passed |
+| 3 | M002 | Maintainability | P2 | {path} | {issue} | {fix} | Passed |
 
-**中期（1 个月）**：
-1. 添加自动化安全扫描（如 Bandit for Python）
-2. 建立代码质量 CI 检查（在 PR 合并前自动运行）
+**Total**: {N} issues (P1: {N}, P2: {N}, P3: {N})
 
-**长期**：
-1. 建立代码质量基准（定期重新运行 AutoLoop quality 检查）
-2. 将关键质量指标加入监控告警
+---
+
+## Remaining Issues (not fixed)
+
+| ID | Dimension | Priority | Issue | Why not fixed | Impact assessment |
+|----|-----------|----------|-------|---------------|-------------------|
+| P3-001 | Maintainability | P3 | {issue} | Budget exhausted; low impact | Low, no effect on functionality |
+
+**Carryover note**: {explain why the issue remains and its effect on overall quality}
+
+---
+
+## Scan Coverage
+
+**Files scanned**: {N}
+**Key modules**: {module list}
+
+**Not scanned** (and why):
+- {not scanned}: {reason, e.g. "third-party library, outside review scope" or "explicitly excluded by the user"}
+
+---
+
+## Detection Command Reference
+
+Run the appropriate detection commands based on the tech stack.
+
+The structure below is generic; the exact commands should come from the parameters collected in `autoloop-plan.md`:
+
+| Check type | Command source | Description |
+|-----------|----------------|-------------|
+| Syntax check | `syntax_check_cmd` from `autoloop-plan.md` | Append a filename when `syntax_check_file_arg=true`; otherwise run at project level |
+| Security check | `enterprise-standard.md` §Security checks | Run according to the actual tech stack |
+| Reliability check | `enterprise-standard.md` §Reliability checks | Run according to the actual tech stack |
+| Maintainability check | `enterprise-standard.md` §Maintainability checks | Run according to the actual tech stack |
+| Route registration check | `delivery-phases.md` §Phase 3 | Use `new_router_name` and `main_entry_file` from `autoloop-plan.md` |
+
+---
+
+## Next Steps
+
+**Short term (1-2 weeks)**:
+1. {suggestion 1} (for the remaining issue)
+2. {suggestion 2}
+
+**Medium term (1 month)**:
+1. Add automated security scanning (e.g. Bandit for Python)
+2. Add code-quality CI checks (run automatically before PR merge)
+
+**Long term**:
+1. Establish a code-quality baseline (rerun AutoLoop quality checks regularly)
+2. Add key quality metrics to monitoring alerts

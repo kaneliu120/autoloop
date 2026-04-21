@@ -1,448 +1,448 @@
-# AutoLoop 最终报告
+# AutoLoop Final Report
 
-> **使用说明**：本模板包含所有模板类型（T1-T8）的章节。根据实际模板类型只保留对应章节，删除其他模板章节。
+> **Usage notes**: This template contains sections for all template types (T1-T8). Keep only the sections that match the actual template type and delete the others.
 >
-> - **T1 Research**：市场/行业调研主题默认使用下文 **「T1：高标准市场/行业调研报告」**。最终报告只保留读者需要的信息，**不得**出现任何内部运行、门禁、方法论显性标题、系统痕迹或模板提示语。  
-> - **非市场类 T1**：可按同样的“读者版”原则适配章节名称，但仍需满足：**每章都有数据、分析、结论**，且不得混入内部噪声。  
-> - **T1 的默认实现方式**：主 agent 负责编排，子 agent 负责分章节取证。模板是终稿外壳，不是研究协议本身。  
-> - **T2 Compare**：保留「知识类（T2）：核心发现」与「比较类（T2）」等，删除 T1 与 T3–T8 专节。  
-> - **T4 Deliver** 等：类推，只保留对应模板章节。
+> - **T1 Research**: For market / industry research topics, use the section below by default: **"T1: High-Standard Market / Industry Research Report"**. The final report should keep only reader-facing information. It must **not** include internal execution details, gate labels, methodology headings, system traces, or template prompts.  
+> - **Non-market T1**: You may adapt the section titles using the same reader-facing principle, but every section must still include **data, analysis, and conclusions**, with no internal noise.  
+> - **Default T1 implementation**: The main agent coordinates the work, and subagents gather evidence by section. The template is the final shell, not the research protocol itself.  
+> - **T2 Compare**: Keep sections such as "Knowledge-type (T2): Key Findings" and "Comparison-type (T2)", and remove the T1 and T3-T8 special sections.  
+> - **T4 Deliver**: Likewise, keep only the section that matches the actual template.
 >
-> 各模板质量门禁阈值以 `references/quality-gates.md` 为准；T1 的门禁与迭代信息不复制进最终读者报告。
+> Quality-gate thresholds for each template are defined in `references/quality-gates.md`; T1 gate and iteration details should not be copied into the final reader-facing report.
 
-> **以下「任务 ID / 执行摘要 / 质量得分」块：T1 跳过；仅 T2–T8 终稿保留。**
+> **The following "Task ID / Executive Summary / Quality Score" block is skipped for T1; keep it only for final T2-T8 deliverables.**
 
-**任务 ID**：autoloop-{YYYYMMDD-HHMMSS}
-**模板**：T{N}: {名称}
-**生成时间**：{ISO 8601}
-**状态**：{已完成（达标终止）/ 已完成（预算耗尽）/ 已完成（用户终止）/ 已完成（无法继续）}
+**Task ID**: autoloop-{YYYYMMDD-HHMMSS}
+**Template**: T{N}: {Name}
+**Generated at**: {ISO 8601}
+**Status**: {Completed (met target) / Completed (budget exhausted) / Completed (user stopped) / Completed (cannot continue)}
 
 ---
 
-## 执行摘要
+## Executive Summary
 
-| 字段 | 值 |
+| Field | Value |
 |------|-----|
-| 任务目标 | {一句话} |
-| 迭代轮次 | {N} 轮 |
-| 总耗时 | {N} 分钟 |
-| 最终结论 | {一句话结论} |
-| 质量达标 | {全部达标 / {N} 个维度未达标} |
+| Task objective | {one sentence} |
+| Iteration rounds | {N} |
+| Total time | {N} minutes |
+| Final conclusion | {one-sentence conclusion} |
+| Quality met | {all met / {N} dimensions not met} |
 
 ---
 
-## 质量得分
+## Quality Scores
 
-| 维度 | 基线 | 最终 | 目标 | 改善 | 状态 |
-|------|------|------|------|------|------|
-| {维度 1} | {基} | {终} | {目标} | +{N} | 达标 |
-| {维度 2} | {基} | {终} | {目标} | +{N} | 达标 |
-| {维度 3} | {基} | {终} | {目标} | -{N} | 未达标（差 {N}）|
-
----
-
-## 主要产出
-
-### T1：高标准市场/行业调研报告（人读终稿唯一正文）
-
-# {报告标题}
-
-> **主题**：{研究主题}  
-> **研究目标**：{本报告要回答的核心问题}  
-> **分析日期**：{YYYY-MM-DD}  
-> **信息边界**：{地域 / 时间 / 口径 / 不包含项}
-
-{开篇 1–3 段：直接说明这份报告回答什么问题、为什么重要、读者应如何理解下文。不要写任何过程说明。}
+| Dimension | Baseline | Final | Target | Improvement | Status |
+|-----------|----------|-------|--------|------------|--------|
+| {dimension 1} | {base} | {final} | {target} | +{N} | Met |
+| {dimension 2} | {base} | {final} | {target} | +{N} | Met |
+| {dimension 3} | {base} | {final} | {target} | -{N} | Not met (gap {N}) |
 
 ---
 
-## 1. 市场规模与增长
+## Main Deliverables
 
-### 数据
+### T1: High-Standard Market / Industry Research Report (reader-facing final body only)
 
-| 指标 | 数值或区间 | 来源 |
-|------|------------|------|
+# {report title}
+
+> **Topic**: {research topic}  
+> **Research objective**: {core question the report answers}  
+> **Analysis date**: {YYYY-MM-DD}  
+> **Information boundaries**: {region / time / methodology / exclusions}
+
+{Open with 1-3 paragraphs that directly explain what question the report answers, why it matters, and how the reader should interpret the sections below. Do not include process notes.}
+
+---
+
+## 1. Market Size and Growth
+
+### Data
+
+| Metric | Value or range | Source |
+|--------|----------------|--------|
 | … | … | … |
 
-{优先放：区间值、时间变化、区域对照、口径差异、结构拆分。不要只放一个总量数字。}
+{Prefer ranges, time trends, regional comparisons, methodological differences, and structural breakdowns. Do not rely on a single total-market number.}
 
-### 分析
+### Analysis
 
-- {解释市场规模、增速、周期、驱动因素与口径差异。应回答：为什么不同来源会不同、增长来自哪里、哪些结构变化比单点 TAM 更重要。}
+- {Explain market size, growth rate, cycle, drivers, and methodological differences. Answer: why sources differ, where growth comes from, and which structural changes matter more than a single TAM number.}
 
-### 结论
+### Conclusion
 
-- {本章的明确判断}
-
----
-
-## 2. 需求侧 / 客户结构
-
-### 数据
-
-| 维度 | 观察 | 来源 |
-|------|------|------|
-| 客群 | … | … |
-| 使用场景 / JTBD | … | … |
-
-{优先放：产品 mix、活跃/ARPU 差异、mobile 行为、多账户/多平台、cross-sell、成熟市场与新市场的价值差异。}
-
-### 分析
-
-- {解释客户分层、需求差异、购买与留存机制。应回答：哪些用户只是带来流量、哪些用户真正形成厚变现、不同产品为什么对应不同需求逻辑。}
-
-### 结论
-
-- {本章的明确判断}
+- {clear judgment for this chapter}
 
 ---
 
-## 3. 价值链与利润池
+## 2. Demand Side / Customer Structure
 
-### 数据
+### Data
 
-| 环节 | 主要参与者 | 价值 / 利润特征 | 来源 |
-|------|------------|------------------|------|
+| Dimension | Observation | Source |
+|-----------|-------------|--------|
+| Customer segment | … | … |
+| Use case / JTBD | … | … |
+
+{Prefer product mix, active/ARPU differences, mobile behavior, multi-account / multi-platform behavior, cross-sell, and value differences between mature and emerging markets.}
+
+### Analysis
+
+- {Explain customer segmentation, demand differences, and acquisition / retention mechanisms. Answer: which users are only traffic, which users create durable monetization, and why different products map to different demand logic.}
+
+### Conclusion
+
+- {clear judgment for this chapter}
+
+---
+
+## 3. Value Chain and Profit Pool
+
+### Data
+
+| Segment | Main participants | Value / profit characteristics | Source |
+|---------|-------------------|-------------------------------|--------|
 | … | … | … | … |
 
-### 分析
+### Analysis
 
-- {解释谁拿走价值、壁垒在哪里、利润如何流动。应回答：收入与利润是否集中在同一环节、哪些环节像入口、哪些环节像长期利润池。}
+- {Explain who captures value, where the barriers are, and how profits flow. Answer: whether revenue and profit are concentrated in the same segment, which segments act as entry points, and which are long-term profit pools.}
 
-### 结论
+### Conclusion
 
-- {本章的明确判断}
+- {clear judgment for this chapter}
 
 ---
 
-## 4. 竞争格局与主要玩家
+## 4. Competitive Landscape and Key Players
 
-### 数据
+### Data
 
-| 公司 / 类型 | 规模或份额 | 角色 | 关键特征 | 来源 |
-|-------------|------------|------|----------|------|
+| Company / type | Size or share | Role | Key characteristics | Source |
+|---------------|---------------|------|---------------------|--------|
 | … | … | … | … | … |
 
-### 分析
+### Analysis
 
-- {解释梯队、集中度、竞争结构、并购动态、差异化。应回答：不同层级玩家争夺的到底是什么，壁垒是牌照、品牌、数据权、内容还是系统集成。}
+- {Explain tiers, concentration, competition structure, M&A dynamics, and differentiation. Answer: what different layers of players are actually competing for, and whether the moat is licensing, brand, data rights, content, or systems integration.}
 
-### 结论
+### Conclusion
 
-- {本章的明确判断}
+- {clear judgment for this chapter}
 
 ---
 
-## 5. 监管与政策环境
+## 5. Regulatory and Policy Environment
 
-### 数据
+### Data
 
-| 法域 / 政策点 | 当前状态 | 对行业影响 | 来源 |
-|---------------|----------|------------|------|
+| Jurisdiction / policy point | Current status | Industry impact | Source |
+|----------------------------|----------------|----------------|--------|
 | … | … | … | … |
 
-{优先放：牌照结构、税费/费用、广告与玩家保护规则、执法动作、商业含义。不要只写“监管趋严/趋松”。}
+{Prefer license structure, taxes / fees, advertising and player-protection rules, enforcement actions, and business implications. Do not merely say "regulation is tightening" or "loosening".}
 
-### 分析
+### Analysis
 
-- {解释监管如何影响增长、进入门槛、商业模式和风险。应回答：该法域到底是高门槛全国市场、州/省碎片市场、灰转白市场，还是限制性市场。}
+- {Explain how regulation affects growth, entry barriers, business models, and risk. Answer: is this a high-barrier national market, a fragmented state / provincial market, a gray-to-white transition market, or a restrictive market?}
 
-### 结论
+### Conclusion
 
-- {本章的明确判断}
+- {clear judgment for this chapter}
 
 ---
 
-## 6. 技术与关键变化因素
+## 6. Technology and Key Change Factors
 
-### 数据
+### Data
 
-| 技术 / 变化因素 | 应用现状 | 影响 | 来源 |
-|-----------------|----------|------|------|
+| Technology / change factor | Current adoption | Impact | Source |
+|---------------------------|------------------|--------|--------|
 | … | … | … | … |
 
-{优先放：技术链条、公司案例、量化 uplift、适用边界。不要只写“AI 正在渗透”。}
+{Prefer the tech chain, company examples, quantified uplift, and applicability boundaries. Do not simply write "AI is penetrating".}
 
-### 分析
+### Analysis
 
-- {解释技术、渠道、宏观或其他变量如何改变行业结构。应回答：哪些技术链已接近成熟生产应用，哪些仍只是效率增强，哪些 uplift 只能作为案例而非行业平均。}
+- {Explain how technology, channels, macro conditions, or other variables change the industry structure. Answer: which technical chains are close to mature production use, which are still just efficiency gains, and which uplift figures are only case studies rather than industry averages.}
 
-### 结论
+### Conclusion
 
-- {本章的明确判断}
-
----
-
-## 7. 商业模式 / 收入成本结构 / 经营杠杆
-
-### 数据
-
-| 项目 | 典型特征 | 来源 |
-|------|----------|------|
-| 收入来源 | … | … |
-| 成本结构 | … | … |
-| 杠杆点 | … | … |
-
-### 分析
-
-- {解释收入模型、成本约束、经营杠杆和利润弹性。应回答：哪些产品负责获客、哪些产品负责厚变现、哪些技术或流程真正影响单位经济模型。}
-
-### 结论
-
-- {本章的明确判断}
+- {clear judgment for this chapter}
 
 ---
 
-## 8. 专项主题：{方向 / 主题}（如无则删除）
+## 7. Business Model / Revenue-Cost Structure / Operating Leverage
 
-### 8.1 {专项子议题 1}
+### Data
 
-#### 数据
+| Item | Typical characteristics | Source |
+|------|-------------------------|--------|
+| Revenue sources | … | … |
+| Cost structure | … | … |
+| Leverage points | … | … |
 
-| 指标 / 事实 | 内容 | 来源 |
-|-------------|------|------|
+### Analysis
+
+- {Explain the revenue model, cost constraints, operating leverage, and profit elasticity. Answer: which products drive acquisition, which drive durable monetization, and which technologies or processes actually move unit economics.}
+
+### Conclusion
+
+- {clear judgment for this chapter}
+
+---
+
+## 8. Special Topic: {direction / topic} (delete if not applicable)
+
+### 8.1 {special subtopic 1}
+
+#### Data
+
+| Metric / fact | Content | Source |
+|--------------|---------|--------|
 | … | … | … |
 
-{专项方向优先放“工作包级”证据，而不是只放抽象观点。}
+{For special topics, prefer working-package-level evidence instead of abstract commentary.}
 
-#### 分析
+#### Analysis
 
-- {解释专项方向下的机制、影响和差异。应回答：哪些部分有强直接证据，哪些只是审慎推断，哪些工作包先被改写。}
+- {Explain the mechanisms, impact, and differences in the special topic. Answer: which parts have strong direct evidence, which are cautious inferences, and which work packages are rewritten first.}
 
-#### 结论
+#### Conclusion
 
-- {本节的明确判断}
+- {clear judgment for this subsection}
 
-### 8.2 {专项子议题 2}
+### 8.2 {special subtopic 2}
 
-#### 数据
+#### Data
 
-| 指标 / 事实 | 内容 | 来源 |
-|-------------|------|------|
+| Metric / fact | Content | Source |
+|--------------|---------|--------|
 | … | … | … |
 
-#### 分析
+#### Analysis
 
 - …
 
-#### 结论
+#### Conclusion
 
 - …
 
-{若方向为“行业 + AI 岗位替代性”，本章至少覆盖：AI 技术渗透、岗位 / 职能映射、工作包拆解、可替代与不可替代机制、公司案例、组织与人才趋势、专项结论。}
+{If the direction is "industry + AI job replacement potential", this chapter must cover at least: AI adoption, role / function mapping, work-package decomposition, replaceable and non-replaceable mechanisms, company examples, organizational and talent trends, and the special-topic conclusion.}
 
 ---
 
-## 9. 主要风险、争议点与不确定性
+## 9. Major Risks, Controversies, and Uncertainty
 
-### 数据
+### Data
 
-| 风险 / 争议点 | 触发条件或表现 | 来源 |
-|---------------|----------------|------|
+| Risk / controversy | Trigger condition or manifestation | Source |
+|-------------------|------------------------------------|--------|
 | … | … | … |
 
-### 分析
+### Analysis
 
-- {解释哪些判断仍不确定、争议来自哪里、需要如何理解。应明确区分：直接证据、组织信号、分析推断，以及哪些数字不能横比。}
+- {Explain which judgments are still uncertain, where the disputes come from, and how they should be interpreted. Clearly distinguish direct evidence, organizational signals, analytical inferences, and which numbers are not directly comparable.}
 
-### 结论
+### Conclusion
 
-- {本章的明确判断}
-
----
-
-## 10. 综合判断与启示
-
-### 核心结论
-
-1. {结论 1}
-2. {结论 2}
-3. {结论 3}
-
-### 分析
-
-- {把前文各章收束为完整故事线}
-
-### 结论
-
-- {对策略 / 投资 / 组织 / 下一步研究的总体判断}
+- {clear judgment for this chapter}
 
 ---
 
-## 数据来源
+## 10. Overall Judgment and Implications
 
-### 市场规模与增长
+### Core conclusions
 
-- {来源 1}
+1. {conclusion 1}
+2. {conclusion 2}
+3. {conclusion 3}
 
-### 需求侧 / 客户结构
+### Analysis
 
-- {来源 2}
+- {Tie all chapters together into a complete narrative}
 
-### 价值链、竞争格局与商业模式
+### Conclusion
 
-- {来源 3}
-
-### 监管与政策环境
-
-- {来源 4}
-
-### 技术与 AI 落地
-
-- {来源 5}
-
-### 岗位替代、组织与不确定性
-
-- {来源 6}
+- {overall judgment for strategy / investment / organization / next research steps}
 
 ---
 
-**（T1 终稿到此结束；以下勿写入 T1 同文件）**
+## Data Sources
+
+### Market size and growth
+
+- {source 1}
+
+### Demand side / customer structure
+
+- {source 2}
+
+### Value chain, competitive landscape, and business model
+
+- {source 3}
+
+### Regulatory and policy environment
+
+- {source 4}
+
+### Technology and AI adoption
+
+- {source 5}
+
+### Job displacement, organization, and uncertainty
+
+- {source 6}
 
 ---
 
-### 知识类（T2）：核心发现
-
-**{比较主题}的关键结论摘要**（完整矩阵与推荐见下节「比较类（T2）」）：
-
-1. **{结论 1}**
-   {详细说明，2-3 句话}
-   支撑证据：（{来源 1}）（{来源 2}）
-
-2. **{结论 2}**
-   {详细说明}
-   支撑证据：（{来源}）
-
-3. **{结论 3}**
-   {详细说明}
-
-### 比较类（T2）：推荐决策
-
-**推荐**：{选项名}（置信度：{N}%）
-
-推荐理由：
-{2-3 段具体说明}
-
-对比矩阵（摘要）：
-
-| 维度 | {选项A} | {选项B} | {选项C} |
-|------|---------|---------|---------|
-| 加权总分 | {N} | {N} | {N} |
-| 排名 | 第1 | 第2 | 第3 |
-
-### 迭代类（T5）：KPI 达成
-
-**KPI**：{指标名}
-**基线**：{值} → **最终**：{值}（改善 {X}%）
-**目标**：{值} — **状态**：{达标/未达标}
-
-关键改进（按贡献度）：
-1. {改进 1}：贡献 {X}% 的改善量
-2. {改进 2}：贡献 {X}%
-
-### 生成类（T6）：批量结果
-
-**生成数量**：{N} 个
-**通过率**：{X}%（目标阈值见 references/quality-gates.md T6 门禁）
-**平均得分**：{N}/10（目标阈值见 references/quality-gates.md T6 门禁）
-
-输出文件：{路径}
-
-质量分布：
-- 9-10 分：{N} 个
-- 7-8 分：{N} 个
-- 需人工审查：{N} 个
-
-### 交付类（T4）：功能交付
-
-**功能**：{名称}
-**交付状态**：{已完成 / 进行中}
-
-变更清单：
-| 类型 | 内容 |
-|------|------|
-| 新增文件 | {路径列表} |
-| 修改文件 | {路径列表} |
-| 数据库迁移 | {迁移名称} |
-| 新增路由 | {路由列表} |
-
-### T7 Quality 审计结果
-
-> 详细审计报告见 `autoloop-audit.md`（由 audit-template 生成）。以下为摘要：
-
-| 维度 | 最终得分 | 门禁状态 |
-|------|---------|---------|
-| 安全性 | {引用 audit} | {引用 audit} |
-| 可靠性 | {引用 audit} | {引用 audit} |
-| 可维护性 | {引用 audit} | {引用 audit} |
-
-### 优化类（T8）：系统优化
-
-| 维度 | 优化前 | 优化后 | 达标 |
-|------|--------|--------|------|
-| 架构 | {N}/10 | {N}/10 | 达标/未达标 |
-| 性能 | {N}/10 | {N}/10 | 达标/未达标 |
-| 稳定性 | {N}/10 | {N}/10 | 达标/未达标 |
-
-关键优化：
-1. {最高影响的优化}：{量化效果}
-2. {第二}：{效果}
+**(T1 final report ends here; do not write the following into the same file for T1)**
 
 ---
 
-## 迭代轨迹
+### Knowledge-type (T2): Key Findings
 
-> **T1**：本节不写入 `autoloop-report-*.md`；见 `autoloop-progress.md`。
+**Summary of key conclusions for {comparison topic}** (see the next section, "Comparison-type (T2)", for the full matrix and recommendation):
 
-| 轮次 | 主要行动 | 得分变化 | 策略调整 |
-|------|---------|---------|---------|
-| 第 1 轮 | {行动} | {变化} | {无/调整内容} |
-| 第 2 轮 | {行动} | {变化} | {无/调整内容} |
-| 第 N 轮 | {行动} | {变化} | — |
+1. **{Conclusion 1}**
+   {detailed explanation, 2-3 sentences}
+   Supporting evidence: ({Source 1}) ({Source 2})
+
+2. **{Conclusion 2}**
+   {detailed explanation}
+   Supporting evidence: ({Source})
+
+3. **{Conclusion 3}**
+   {detailed explanation}
+
+### Comparison-type (T2): Recommendation
+
+**Recommendation**: {option name} (confidence: {N}%)
+
+Reasoning:
+{2-3 paragraphs with concrete explanation}
+
+Comparison matrix (summary):
+
+| Dimension | {Option A} | {Option B} | {Option C} |
+|----------|-----------|-----------|-----------|
+| Weighted total | {N} | {N} | {N} |
+| Rank | 1st | 2nd | 3rd |
+
+### Iteration-type (T5): KPI Achievement
+
+**KPI**: {metric name}
+**Baseline**: {value} → **Final**: {value} (improvement {X}%)
+**Target**: {value} - **Status**: {met / not met}
+
+Key improvements (by contribution):
+1. {improvement 1}: contributed {X}% of the improvement
+2. {improvement 2}: contributed {X}%
+
+### Generation-type (T6): Batch Results
+
+**Generated**: {N}
+**Pass rate**: {X}% (see references/quality-gates.md for the T6 threshold)
+**Average score**: {N}/10 (see references/quality-gates.md for the T6 threshold)
+
+Output files: {path}
+
+Quality distribution:
+- 9-10 points: {N}
+- 7-8 points: {N}
+- Requires manual review: {N}
+
+### Delivery-type (T4): Feature Delivery
+
+**Feature**: {name}
+**Delivery status**: {completed / in progress}
+
+Change list:
+| Type | Content |
+|------|---------|
+| Added files | {path list} |
+| Modified files | {path list} |
+| Database migrations | {migration name} |
+| Added routes | {route list} |
+
+### T7 Quality Audit Results
+
+> See `autoloop-audit.md` for the detailed audit report generated from the audit template. Summary below:
+
+| Dimension | Final score | Gate status |
+|----------|-------------|-------------|
+| Security | {audit reference} | {audit reference} |
+| Reliability | {audit reference} | {audit reference} |
+| Maintainability | {audit reference} | {audit reference} |
+
+### Optimization-type (T8): System Optimization
+
+| Dimension | Before | After | Met |
+|----------|--------|-------|-----|
+| Architecture | {N}/10 | {N}/10 | Met / Not met |
+| Performance | {N}/10 | {N}/10 | Met / Not met |
+| Stability | {N}/10 | {N}/10 | Met / Not met |
+
+Key optimizations:
+1. {highest-impact optimization}: {quantified effect}
+2. {second optimization}: {effect}
 
 ---
 
-## 遗留问题
+## Iteration Trace
 
-以下问题在本次任务中未解决：
+> **T1**: Do not write this section into `autoloop-report-*.md`; see `autoloop-progress.md`.
 
-| 问题 | 原因 | 影响 | 建议 |
-|------|------|------|------|
-| {问题 1} | {原因（P3 优先级/预算不足/技术限制）} | P1/P2/P3 | {建议后续行动} |
-
----
-
-## 争议与不确定性
-
-以下结论存在不确定性，在使用时需要注意：
-
-| 结论 | 不确定原因 | 置信度 | 建议验证方法 |
-|------|-----------|--------|------------|
-| {结论} | {原因} | 中 | {验证方法} |
+| Round | Main action | Score change | Strategy adjustment |
+|------|-------------|--------------|---------------------|
+| Round 1 | {action} | {change} | {none / adjustment} |
+| Round 2 | {action} | {change} | {none / adjustment} |
+| Round N | {action} | {change} | — |
 
 ---
 
-## 后续建议
+## Remaining Issues
 
-基于本次任务的发现，建议：
+The following issues were not resolved in this task:
 
-1. **立即行动**（高优先级）：
-   - {建议 1}：{具体行动}
-
-2. **短期计划**（1-2 周内）：
-   - {建议 2}：{具体行动}
-
-3. **长期规划**（1 个月以上）：
-   - {建议 3}：{方向}
+| Issue | Reason | Impact | Recommendation |
+|------|--------|--------|----------------|
+| {issue 1} | {reason (P3 priority / insufficient budget / technical limitation)} | P1/P2/P3 | {suggested next action} |
 
 ---
 
-## 产出文件清单
+## Controversies and Uncertainty
 
-| 文件 | 路径 | 说明 |
-|------|------|------|
-| 任务计划 | {路径}/autoloop-plan.md | 任务配置和变更记录 |
-| 发现记录 | {路径}/autoloop-findings.md | 完整的发现和问题清单 |
-| 进度追踪 | {路径}/autoloop-progress.md | 每轮迭代详细记录 |
-| 本报告 | {路径}/ | 最终报告（文件命名见 references/loop-data-schema.md 统一输出文件命名章节）|
-| 结构化数据 | {路径}/autoloop-results.tsv | 结构化迭代日志（所有模板通用）|
+The following conclusions are uncertain and should be used carefully:
+
+| Conclusion | Why uncertain | Confidence | Suggested validation method |
+|-----------|---------------|------------|-----------------------------|
+| {conclusion} | {reason} | Medium | {validation method} |
+
+---
+
+## Next Steps
+
+Based on the findings from this task, recommend:
+
+1. **Immediate action** (high priority):
+   - {suggestion 1}: {specific action}
+
+2. **Short-term plan** (within 1-2 weeks):
+   - {suggestion 2}: {specific action}
+
+3. **Long-term plan** (1 month or more):
+   - {suggestion 3}: {direction}
+
+---
+
+## Deliverable List
+
+| File | Path | Description |
+|------|------|-------------|
+| Task plan | {path}/autoloop-plan.md | Task configuration and change log |
+| Findings log | {path}/autoloop-findings.md | Complete findings and issue list |
+| Progress tracker | {path}/autoloop-progress.md | Detailed record of each iteration round |
+| This report | {path}/ | Final report (file naming follows the unified output naming section in references/loop-data-schema.md) |
+| Structured data | {path}/autoloop-results.tsv | Structured iteration log (shared by all templates) |

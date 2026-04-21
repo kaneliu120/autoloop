@@ -1,221 +1,221 @@
-# AutoLoop Findings — 发现记录
+# AutoLoop Findings — Findings Log
 
-**任务 ID**：autoloop-{YYYYMMDD-HHMMSS}
-**模板**：T{N}: {名称}
-**创建时间**：{ISO 8601}
-**最后更新**：{ISO 8601}
-
----
-
-## 执行摘要
-
-**调研/分析主题**：{主题}
-**总轮次**：{N}
-**最终质量得分**：{维度 1}: {分}/10, {维度 2}: {分}/10
-
-**关键结论（TOP 5）**：
-1. {结论 1}（置信度：{N}%；N 为 0–100 整数）
-2. {结论 2}
-3. {结论 3}
-4. {结论 4}
-5. {结论 5}
+**Task ID**: autoloop-{YYYYMMDD-HHMMSS}
+**Template**: T{N}: {Name}
+**Created at**: {ISO 8601}
+**Last updated**: {ISO 8601}
 
 ---
 
-## 第 1 轮发现（{时间}）
+## Executive Summary
 
-### 维度：{维度 1 名称}
+**Research / analysis topic**: {topic}
+**Total rounds**: {N}
+**Final quality score**: {dimension 1}: {score}/10, {dimension 2}: {score}/10
 
-**关键发现**：
-- {发现 1}（来源：[{来源名}]({URL})，可信度：高）
-- {发现 2}（来源：[{来源名}]({URL})，可信度：中）
-
-**数据点**：
-- {指标}：{值}（来源：{URL}）
-- {指标}：{值}（来源：{URL}）
-
-**信息缺口**：
-- {缺口 1}（影响级别：P1/P2/P3）
-
-**冲突记录**（可选 — 当同一维度内发现矛盾信息时填写）：
-- **冲突来源**：{来源 A} vs {来源 B}，差异：{具体差异描述}
-- **解释/降级**：{口径不同 / 时间差异 / 统计方法差异 / 真争议}
-- **置信度影响**：{维持原置信度 / 降为中 / 降为低，原因}
-
-**相关发现**（范围外）：
-- {意外发现，供进化决策参考}
+**Key conclusions (top 5)**:
+1. {conclusion 1} (confidence: {N}%; N is an integer from 0 to 100)
+2. {conclusion 2}
+3. {conclusion 3}
+4. {conclusion 4}
+5. {conclusion 5}
 
 ---
 
-### 维度：{维度 2 名称}
+## Round 1 Findings ({time})
 
-**关键发现**：
-- {发现 1}（来源：[{来源名}]({URL})，可信度：高）
-- {发现 2}（来源：[{来源名}]({URL})，可信度：中）
+### Dimension: {dimension 1 name}
 
-**数据点**：
-- {指标}：{值}（来源：{URL}）
+**Key findings**:
+- {finding 1} (source: [{source name}]({URL}), confidence: high)
+- {finding 2} (source: [{source name}]({URL}), confidence: medium)
 
-**信息缺口**：
-- {缺口 1}（影响级别：P1/P2/P3）
+**Data points**:
+- {metric}: {value} (source: {URL})
+- {metric}: {value} (source: {URL})
 
-**相关发现**（范围外）：
-- {意外发现，供进化决策参考}
+**Information gaps**:
+- {gap 1} (impact level: P1/P2/P3)
 
----
+**Conflict log** (optional - fill this in when contradictory information is found within the same dimension):
+- **Conflicting sources**: {source A} vs {source B}, difference: {specific difference description}
+- **Explanation / downgrade**: {different definitions / time lag / statistical methodology difference / real dispute}
+- **Confidence impact**: {keep original confidence / downgrade to medium / downgrade to low, with reason}
 
-### 矛盾记录（第 1 轮）
-
-| 维度 | 说法 A（来源）| 说法 B（来源）| 分析 | 处理方式 |
-|------|------------|------------|------|---------|
-| {维度} | {说法 A}（{URL}）| {说法 B}（{URL}）| {分析} | {采用 A / 两者保留 / 待调研} |
-
----
-
-## 第 2 轮追加发现（{时间}）
-
-### 新增维度：{新维度名称}（第 2 轮扩展）
-
-{同格式}
-
-### 更新：{已有维度名称}（补充信息）
-
-**新增发现**：
-- {新发现}（来源：{URL}）
-
-**矛盾解决**：
-- {之前的矛盾 ID}：已解决（原因：{解释}）
+**Related findings** (out of scope):
+- {unexpected finding, for evolution decisions}
 
 ---
 
-## 工程类问题清单（T4/T7/T8 使用）
+### Dimension: {dimension 2 name}
 
-### 安全性问题
+**Key findings**:
+- {finding 1} (source: [{source name}]({URL}), confidence: high)
+- {finding 2} (source: [{source name}]({URL}), confidence: medium)
 
-| ID | 文件（绝对路径） | 行号 | 类型 | 优先级 | 状态 | 描述 |
-|----|---------------|------|------|--------|------|------|
-| S001 | {路径} | {行} | SQL注入 | P1 | 新发现/已修复/待处理/跨轮遗留 | {描述} |
+**Data points**:
+- {metric}: {value} (source: {URL})
 
-### 可靠性问题
+**Information gaps**:
+- {gap 1} (impact level: P1/P2/P3)
 
-| ID | 文件 | 行号 | 类型 | 优先级 | 状态 | 描述 |
-|----|------|------|------|--------|------|------|
-| R001 | {路径} | {行} | 静默失败 | P1 | 新发现/已修复/待处理/跨轮遗留 | {描述} |
-
-### 可维护性问题
-
-| ID | 文件 | 行号 | 类型 | 优先级 | 状态 | 描述 |
-|----|------|------|------|--------|------|------|
-| M001 | {路径} | {行} | any 类型 | P2 | 新发现/已修复/待处理/跨轮遗留 | {描述} |
-
-### 架构问题
-
-| ID | 影响范围 | 类型 | 优先级 | 状态 | 描述 |
-|----|---------|------|--------|------|------|
-| A001 | {文件/模块} | 循环依赖 | P1 | 新发现/已修复/待处理/跨轮遗留 | {描述} |
-
-### 性能问题
-
-| ID | 文件 | 行号 | 类型 | 预期收益 | 状态 | 描述 |
-|----|------|------|------|---------|------|------|
-| P001 | {路径} | {行} | N+1查询 | 减少N次查询/请求 | 新发现/已修复/待处理/跨轮遗留 | {描述} |
-
-### 稳定性问题
-
-| ID | 文件 | 类型 | 优先级 | 状态 | 描述 |
-|----|------|------|--------|------|------|
-| ST001 | {路径} | 无降级 | P1 | 新发现/已修复/待处理/跨轮遗留 | {描述} |
+**Related findings** (out of scope):
+- {unexpected finding, for evolution decisions}
 
 ---
 
-## 修复记录（T5/T6/T7 使用）
+### Conflict Log (Round 1)
 
-| ID | 修复时间 | 修复内容 | 修改文件 | 验证结果 | 是否引入新问题 |
-|----|---------|---------|---------|---------|-------------|
-| S001 | {时间} | {修复描述} | {文件路径} | {syntax_check_cmd} 通过 | 否 |
-
----
-
-## 争议与不确定性
-
-| 议题 | 说法 A | 说法 B | 各自来源 | 本报告立场 | 立场置信度(0–100%) | 严重度 |
-|------|--------|--------|---------|-----------|-------------------|--------|
-| {议题} | {A} | {B} | {来源A}/{来源B} | {立场} | {如 70%} | P1/P2/P3 |
+| Dimension | Claim A (source) | Claim B (source) | Analysis | Handling |
+|-----------|------------------|------------------|----------|----------|
+| {dimension} | {claim A} ({URL}) | {claim B} ({URL}) | {analysis} | {use A / keep both / investigate later} |
 
 ---
 
-## 信息缺口汇总
+## Additional Findings in Round 2 ({time})
 
-以下重要信息未能找到或充分验证（在最终报告中需要说明）：
+### New dimension: {new dimension name} (added in round 2)
 
-| 缺口 | 所属维度 | 影响级别 | 已尝试方法 | 建议后续行动 |
-|------|---------|---------|-----------|------------|
-| {缺口 1} | {维度} | P1/P2/P3 | {已尝试} | {建议} |
+{same format}
 
----
+### Update: {existing dimension name} (additional information)
 
-## 拓展方向（范围外发现，供后续参考）
+**New finding**:
+- {new finding} (source: {URL})
 
-以下发现超出本次调研范围，记录供后续使用：
-
-- {发现 1}：{简要描述}（发现于第 {N} 轮，维度：{维度}）
-- {发现 2}：...
+**Conflict resolved**:
+- {previous conflict ID}: resolved (reason: {explanation})
 
 ---
 
-## 来源清单
+## Engineering Issue List (for T4/T7/T8)
 
-### 高可信来源
-- [{名称}]({URL}) — 官方文档/一手资料
-- [{名称}]({URL})
+### Security issues
 
-### 中等可信来源
-- [{名称}]({URL}) — 技术媒体/专家博客
-- [{名称}]({URL})
+| ID | File (absolute path) | Line | Type | Priority | Status | Description |
+|----|----------------------|------|------|----------|--------|-------------|
+| S001 | {path} | {line} | SQL injection | P1 | New / Fixed / Open / Carryover | {description} |
 
-### 低可信来源（仅辅助参考）
-- [{名称}]({URL}) — 已与其他来源交叉验证
+### Reliability issues
+
+| ID | File | Line | Type | Priority | Status | Description |
+|----|------|------|------|----------|--------|-------------|
+| R001 | {path} | {line} | silent failure | P1 | New / Fixed / Open / Carryover | {description} |
+
+### Maintainability issues
+
+| ID | File | Line | Type | Priority | Status | Description |
+|----|------|------|------|----------|--------|-------------|
+| M001 | {path} | {line} | any type usage | P2 | New / Fixed / Open / Carryover | {description} |
+
+### Architecture issues
+
+| ID | Impact scope | Type | Priority | Status | Description |
+|----|--------------|------|----------|--------|-------------|
+| A001 | {file/module} | circular dependency | P1 | New / Fixed / Open / Carryover | {description} |
+
+### Performance issues
+
+| ID | File | Line | Type | Expected gain | Status | Description |
+|----|------|------|------|---------------|--------|-------------|
+| P001 | {path} | {line} | N+1 query | reduce N queries/requests | New / Fixed / Open / Carryover | {description} |
+
+### Stability issues
+
+| ID | File | Type | Priority | Status | Description |
+|----|------|------|----------|--------|-------------|
+| ST001 | {path} | no fallback | P1 | New / Fixed / Open / Carryover | {description} |
 
 ---
 
-## 问题清单（REFLECT 第 1 层 — 累积追踪）
+## Fix Log (for T5/T6/T7)
 
-状态枚举：**新发现** | **已修复** | **待处理** | **跨轮遗留**
+| ID | Fix time | Fix content | Modified file | Verification result | Introduced new issue? |
+|----|----------|-------------|---------------|---------------------|----------------------|
+| S001 | {time} | {fix description} | {file path} | {syntax_check_cmd} passed | No |
 
-| 轮次 | 问题描述 | 来源 | 严重度 | 状态 | 根因分析 |
-|------|---------|------|--------|------|---------|
-| R1 | {问题} | {subagent/验证步骤} | P1/P2/P3 | 新发现/已修复/待处理/跨轮遗留 | {为什么} |
+---
 
-## 策略评估（REFLECT 第 2 层 — 策略效果知识库）
+## Disputes and Uncertainty
 
-| 轮次 | strategy_id | 策略 | 效果评分(1-5) | 分数变化 | 保持 \| 避免 \| 待验证 | 原因 |
-|------|-------------|------|-------------|---------|---------------------|------|
-| R1 | S01-{简称} | {策略描述} | {1-5} | {+/-分数} | **保持** / **避免** / **待验证** | {为什么有效/无效} |
+| Topic | Claim A | Claim B | Source of each | Our position | Position confidence (0-100%) | Severity |
+|-------|---------|---------|---------------|--------------|------------------------------|----------|
+| {topic} | {A} | {B} | {source A}/{source B} | {position} | {e.g. 70%} | P1/P2/P3 |
 
-> 策略评价枚举见 references/loop-data-schema.md 统一状态枚举
+---
 
-## 模式识别（REFLECT 第 3 层 — 跨轮次趋势）
+## Information Gaps Summary
 
-### 反复出现的问题
-- {问题类型} — 出现在 R{x}, R{y}, R{z}，系统性根因：{分析}
+The following important information could not be found or sufficiently verified (must be explained in the final report):
 
-### 收益递减信号
-- R1→R2 改善 {x}%, R2→R3 改善 {y}% — 趋势：{上升/下降/平稳}
+| Gap | Dimension | Impact level | Methods tried | Suggested next action |
+|-----|-----------|--------------|---------------|-----------------------|
+| {gap 1} | {dimension} | P1/P2/P3 | {attempted} | {suggestion} |
 
-### 跨维度关联
-- {改动 A} 导致 {维度 B} 变化：{描述}
+---
 
-### 瓶颈
-- {维度/领域} 连续 {n} 轮卡在 {分数}，尝试过 {策略列表}
+## Expansion Ideas (out-of-scope findings for later use)
 
-## 经验教训（REFLECT 第 4 层 — 可复用认知）
+The following findings are outside the scope of this research but are recorded for future use:
 
-### 验证的假设
-- ✅ {假设} — 成立，证据：{证据}
-- ❌ {假设} — 推翻，原因：{原因}
+- {finding 1}: {brief description} (found in round {N}, dimension: {dimension})
+- {finding 2}: ...
 
-### 可泛化的方法论
-- {方法} — 适用场景：{场景}，效果：{效果}
+---
 
-### 对 AutoLoop 自身流程的改进建议
-- {建议} — 触发原因：{本次任务中发现的流程问题}
+## Source List
+
+### High-confidence sources
+- [{name}]({URL}) - official documentation / primary source
+- [{name}]({URL})
+
+### Medium-confidence sources
+- [{name}]({URL}) - technical media / expert blog
+- [{name}]({URL})
+
+### Low-confidence sources (reference only)
+- [{name}]({URL}) - cross-validated against other sources
+
+---
+
+## Issue List (REFLECT Layer 1 - cumulative tracking)
+
+Status enum: **New** | **Fixed** | **Open** | **Carryover**
+
+| Round | Issue description | Source | Severity | Status | Root cause analysis |
+|-------|-------------------|--------|----------|--------|---------------------|
+| R1 | {issue} | {subagent / verification step} | P1/P2/P3 | New / Fixed / Open / Carryover | {why} |
+
+## Strategy Evaluation (REFLECT Layer 2 - strategy effect knowledge base)
+
+| Round | strategy_id | Strategy | Effect score (1-5) | Score change | Keep | Avoid | To verify | Reason |
+|-------|-------------|----------|--------------------|-------------|------|-------|-----------|--------|
+| R1 | S01-{short name} | {strategy description} | {1-5} | {+/− score} | **Keep** / **Avoid** / **To verify** | {why effective / ineffective} |
+
+> See references/loop-data-schema.md for the canonical status enum.
+
+## Pattern Recognition (REFLECT Layer 3 - cross-round trends)
+
+### Recurring issues
+- {issue type} - appears in R{x}, R{y}, R{z}; systemic root cause: {analysis}
+
+### Diminishing returns signals
+- R1→R2 improvement {x}%, R2→R3 improvement {y}% - trend: {rising / falling / flat}
+
+### Cross-dimension links
+- {change A} caused {dimension B} to change: {description}
+
+### Bottlenecks
+- {dimension / area} has been stuck for {n} rounds at {score}; strategies tried: {strategy list}
+
+## Lessons Learned (REFLECT Layer 4 - reusable knowledge)
+
+### Validated hypotheses
+- ✅ {hypothesis} - confirmed, evidence: {evidence}
+- ❌ {hypothesis} - disproved, reason: {reason}
+
+### Generalizable methods
+- {method} - applicable in: {scenario}, effect: {effect}
+
+### Improvement ideas for AutoLoop itself
+- {suggestion} - trigger: {workflow issue discovered during this task}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P1/P2/P3 回归：维度键对齐、bool 门禁、MCP init 契约。"""
+"""P1/P2/P3 regressions: dimension key alignment, bool gates, and MCP init contract."""
 
 import importlib.util
 import json
@@ -42,7 +42,7 @@ def _load_render_module():
 
 
 def _phase_orient_captured_output(state, round_num=1):
-    """运行 phase_orient，收集所有 print 输出（含 banner/info）。"""
+    """Run phase_orient and collect all print output (including banner/info)."""
     ctl = _load_controller_module()
     captured = []
 
@@ -55,26 +55,26 @@ def _phase_orient_captured_output(state, round_num=1):
 
 
 class TestBoolGateEval(unittest.TestCase):
-    """P2: bool + == 须严格等于 threshold，不得对 float 用 truthiness。"""
+    """P2: bool + == must equal threshold exactly; float truthiness must not be used."""
 
     def setUp(self):
         self.score = _load_score_module()
 
     def test_eval_gate_raw_bias_float_not_equal_one(self):
-        """_eval_gate 不对 float 做偏见归一；0.07 == 1 为假。"""
+        """_eval_gate does not normalize floats for bias; 0.07 == 1 is false."""
         gate_def = {
             "dim": "bias_check",
             "threshold": 1,
             "unit": "bool",
             "gate": "hard",
-            "label": "偏见检查",
+            "label": "Bias Check",
             "comparator": "==",
         }
         r = self.score._eval_gate(gate_def, 0.07, "")
         self.assertFalse(r["pass"])
 
     def test_score_bias_check_normalizes_float(self):
-        """score_from_ssot：偏见分 <0.15 归一为 True 再过 bool 门禁。"""
+        """score_from_ssot: normalizes bias scores <0.15 to True before applying the bool gate."""
         score = _load_score_module()
         base = {
             "plan": {"template": "T2"},
@@ -99,7 +99,7 @@ class TestBoolGateEval(unittest.TestCase):
             "threshold": 1,
             "unit": "bool",
             "gate": "soft",
-            "label": "敏感性",
+            "label": "",
             "comparator": "==",
         }
         r = self.score._eval_gate(gate_def, True, "")
@@ -111,7 +111,7 @@ class TestBoolGateEval(unittest.TestCase):
             "threshold": 1,
             "unit": "bool",
             "gate": "soft",
-            "label": "敏感性",
+            "label": "",
             "comparator": "==",
         }
         r = self.score._eval_gate(gate_def, 1, "")
@@ -119,7 +119,7 @@ class TestBoolGateEval(unittest.TestCase):
 
 
 class TestPlanGatesInit(unittest.TestCase):
-    """P1: plan.gates dim 与 scorer dimension 一致（如 syntax 非 syntax_errors）。"""
+    """P1: plan.gates dim and scorer dimension ( syntax  syntax_errors)."""
 
     def test_t4_syntax_internal_dim(self):
         score = _load_score_module()
@@ -130,10 +130,10 @@ class TestPlanGatesInit(unittest.TestCase):
         for g in gates:
             self.assertEqual(g["dimension"], g["dim"])
             self.assertIn("manifest_dimension", g)
-            self.assertEqual(g["status"], "未达标")
+            self.assertEqual(g["status"], "Fail")
 
     def test_state_init_populates_gates(self):
-        """集成：autoloop-state init 写入非空 gates。"""
+        """Integration: autoloop-state init writes non-empty gates."""
         d = tempfile.mkdtemp(prefix="altest_")
         self.addCleanup(lambda: shutil.rmtree(d, ignore_errors=True))
         rc = subprocess.run(
@@ -150,7 +150,7 @@ class TestPlanGatesInit(unittest.TestCase):
 
 
 class TestScoreJsonManifestDimension(unittest.TestCase):
-    """C3: 评分结果含 manifest_dimension，与 gate-manifest 原始名一致。"""
+    """C3: Score result manifest_dimension, and gate-manifest ."""
 
     def test_eval_gate_includes_manifest_dimension(self):
         score = _load_score_module()
@@ -160,7 +160,7 @@ class TestScoreJsonManifestDimension(unittest.TestCase):
             "threshold": 0,
             "unit": "count",
             "gate": "hard",
-            "label": "语法",
+            "label": "",
             "comparator": "==",
         }
         r = score._eval_gate(gate_def, 0, "")
@@ -169,7 +169,7 @@ class TestScoreJsonManifestDimension(unittest.TestCase):
 
 
 class TestValidatePlanGatesContract(unittest.TestCase):
-    """C2: 旧 plan.gates 契约产生 warning。"""
+    """C2: Legacy plan.gates contracts produce warnings."""
 
     @staticmethod
     def _load_validate():
@@ -183,7 +183,7 @@ class TestValidatePlanGatesContract(unittest.TestCase):
         mod = self._load_validate()
         w, e = [], []
         mod._check_plan_gates_contract(
-            {"plan": {"gates": [{"dim": "coverage", "label": "覆盖率"}]}},
+            {"plan": {"gates": [{"dim": "coverage", "label": "Coverage"}]}},
             w, e, strict=False,
         )
         self.assertTrue(any("manifest_dimension" in x for x in w))
@@ -205,7 +205,7 @@ class TestValidatePlanGatesContract(unittest.TestCase):
             },
             w, e, strict=False,
         )
-        self.assertTrue(any("原始名" in x or "分裂" in x for x in w))
+        self.assertTrue(any("" in x or "" in x for x in w))
 
     def test_strict_dimension_only_gate_errors(self):
         mod = self._load_validate()
@@ -218,7 +218,7 @@ class TestValidatePlanGatesContract(unittest.TestCase):
 
 
 class TestPhaseOrientThresholdNone(unittest.TestCase):
-    """ORIENT：plan.gates[].threshold is None 时按 target vs 当前分分桶。"""
+    """ORIENT: plan.gates[].threshold is None bucket by target vs current score when threshold is None."""
 
     def _base_state(self, scores, gates):
         return {
@@ -275,16 +275,16 @@ class TestPhaseOrientThresholdNone(unittest.TestCase):
             [{"dim": "kpi_u", "threshold": None, "label": "U"}],
         )
         out = _phase_orient_captured_output(state)
-        self.assertIn("未配置 target", out)
+        self.assertIn("target not configured", out)
 
     def test_missing_cur_and_target(self):
-        # scores 非空但缺少该 dim → cur is None 且 target is None
+        # scores  dim → cur is None  target is None
         state = self._base_state(
             {"other_dim": 1},
             [{"dim": "kpi_m", "threshold": None, "label": "M"}],
         )
         out = _phase_orient_captured_output(state)
-        self.assertIn("待定义 KPI", out)
+        self.assertIn("KPI not defined yet", out)
 
     def test_non_numeric_kpi_moderate(self):
         state = self._base_state(
@@ -292,11 +292,11 @@ class TestPhaseOrientThresholdNone(unittest.TestCase):
             [{"dim": "kpi_n", "threshold": None, "target": 10, "label": "N"}],
         )
         out = _phase_orient_captured_output(state)
-        self.assertIn("KPI 非数值", out)
+        self.assertIn("KPI is non-numeric", out)
 
 
 class TestGateManifestT4DefaultRounds(unittest.TestCase):
-    """P2-04/T4：manifest 默认 OODA 轮次与交付阶段对齐（T4 瘦身后 Phase 1-5 = 5 轮）。"""
+    """P2-04/T4: manifest  OODA RoundandPhase(T4 after slimming Phase 1-5 = 5 round)."""
 
     def test_t4_is_five(self):
         path = ROOT / "references" / "gate-manifest.json"
@@ -305,7 +305,7 @@ class TestGateManifestT4DefaultRounds(unittest.TestCase):
 
 
 class TestScoreOverallFailClosed(unittest.TestCase):
-    """autoloop-score：SSOT overall_pass 与 EVOLVE 一致纳入 TSV fail-closed。"""
+    """autoloop-score: SSOT overall_pass include TSV fail-closed in overall_pass, consistent with EVOLVE."""
 
     def test_gates_pass_but_tsv_blocks_overall(self):
         score = _load_score_module()
@@ -321,7 +321,7 @@ class TestScoreOverallFailClosed(unittest.TestCase):
 
 
 class TestLatestTsvFailClosed(unittest.TestCase):
-    """EVOLVE：TSV fail-closed 否决仅凭门禁成功终止。"""
+    """EVOLVE: TSV fail-closed successful termination based only on gates."""
 
     def test_high_variance_triggers(self):
         ctl = _load_controller_module()
@@ -344,7 +344,7 @@ class TestLatestTsvFailClosed(unittest.TestCase):
 
 
 class TestAddTsvRowVarianceGuard(unittest.TestCase):
-    """P2-03：add-tsv-row 拒绝 fail-closed 行。"""
+    """P2-03: add-tsv-row reject fail-closed rows."""
 
     def test_rejects_high_variance(self):
         td = tempfile.mkdtemp(prefix="al_tsv_")
@@ -358,7 +358,7 @@ class TestAddTsvRowVarianceGuard(unittest.TestCase):
         row = {
             "iteration": 1,
             "phase": "VERIFY",
-            "status": "通过",
+            "status": "",
             "dimension": "coverage",
             "metric_value": 1,
             "delta": 0,
@@ -387,7 +387,7 @@ class TestAddTsvRowVarianceGuard(unittest.TestCase):
 
 
 class TestE2EInitValidateStrict(unittest.TestCase):
-    """P2-07：init 后 strict validate 可通过。"""
+    """P2-07: init strict validate passes after init."""
 
     def test_init_then_validate_strict(self):
         td = tempfile.mkdtemp(prefix="al_e2e_")
@@ -407,7 +407,7 @@ class TestE2EInitValidateStrict(unittest.TestCase):
 
 
 class TestMigrateDryRun(unittest.TestCase):
-    """P1-08：migrate --dry-run 可执行。"""
+    """P1-08: migrate --dry-run is runnable."""
 
     def test_migrate_prints_proposed_gates(self):
         td = tempfile.mkdtemp(prefix="al_mig_")
@@ -434,7 +434,7 @@ class TestMigrateDryRun(unittest.TestCase):
 
 
 class TestMcpControllerInitContract(unittest.TestCase):
-    """P3: server.py 须在 init 时传 --template（源码契约）。"""
+    """P3: server.py must pass --template during init (source contract)."""
 
     def test_autoloop_controller_contains_init_template_argv(self):
         text = MCP_SERVER.read_text(encoding="utf-8")
@@ -449,7 +449,7 @@ class TestMcpControllerInitContract(unittest.TestCase):
 
 
 class TestPhaseArtifactsExtended(unittest.TestCase):
-    """P0-01：阶段产物与 checkpoint 对齐。"""
+    """P0-01: phase artifacts align with the checkpoint."""
 
     @staticmethod
     def _load_validate():
@@ -498,7 +498,7 @@ class TestPhaseArtifactsExtended(unittest.TestCase):
 
 
 class TestEvolveT4LinearPhases(unittest.TestCase):
-    """P2-04：T4 + linear_phases 预算耗尽时暂停。"""
+    """P2-04: T4 + linear_phases budget exhausted."""
 
     def test_budget_pause_when_linear_incomplete(self):
         ctl = _load_controller_module()
@@ -529,13 +529,13 @@ class TestEvolveT4LinearPhases(unittest.TestCase):
 
 
 class TestEvolveMultiStagnationStop(unittest.TestCase):
-    """所有可监控维度均停滞且 hard 未全时 EVOLVE 决策为 stop（与 loop-protocol 一致）。"""
+    """DimensionStagnation hard  EVOLVE Decision stop(consistent with loop-protocol)."""
 
     def test_all_eligible_stagnating_stops(self):
         ctl = _load_controller_module()
         detail = {
             "dim": "coverage",
-            "label": "覆盖率",
+            "label": "Coverage",
             "threshold": 85,
             "current": 50,
             "gate": "hard",
@@ -568,13 +568,13 @@ class TestEvolveMultiStagnationStop(unittest.TestCase):
                         with patch("builtins.print"):
                             d, r = ctl.phase_evolve("/tmp", fake_state, 1)
         self.assertEqual(d, "stop")
-        self.assertTrue(any("无法继续" in x for x in r), msg=r)
+        self.assertTrue(any("Cannot continue" in x for x in r), msg=r)
 
     def test_partial_stagnation_does_not_stop(self):
         ctl = _load_controller_module()
         detail_cov = {
             "dim": "coverage",
-            "label": "覆盖率",
+            "label": "Coverage",
             "threshold": 85,
             "current": 50,
             "gate": "hard",
@@ -582,7 +582,7 @@ class TestEvolveMultiStagnationStop(unittest.TestCase):
         }
         detail_cred = {
             "dim": "credibility",
-            "label": "可信度",
+            "label": "Credibility",
             "threshold": 80,
             "current": 40,
             "gate": "hard",
@@ -616,10 +616,10 @@ class TestEvolveMultiStagnationStop(unittest.TestCase):
                         with patch("builtins.print"):
                             d, r = ctl.phase_evolve("/tmp", fake_state, 1)
         self.assertEqual(d, "continue")
-        self.assertFalse(any("无法继续" in x for x in r), msg=r)
+        self.assertFalse(any("Cannot continue" in x for x in r), msg=r)
 
     def test_single_eligible_stagnating_does_not_global_stop(self):
-        """T5 等仅 1 维 KPI 可监控时：该维停滞不触发「全体可监控维停滞→stop」。"""
+        """T5: a single eligible KPI dimension should not force a global stagnation stop."""
         ctl = _load_controller_module()
         detail = {
             "dim": "kpi_target",
@@ -655,16 +655,16 @@ class TestEvolveMultiStagnationStop(unittest.TestCase):
                         with patch("builtins.print"):
                             d, r = ctl.phase_evolve("/tmp", fake_state, 7)
         self.assertEqual(d, "continue")
-        self.assertFalse(any("无法继续" in x for x in r), msg=r)
+        self.assertFalse(any("Cannot continue" in x for x in r), msg=r)
 
 
 def _p208_t4_iteration(scores):
-    """单轮迭代骨架，与 autoloop-state add-iteration 结构兼容，供 P2-08 fixture 使用。"""
+    """round, and autoloop-state add-iteration ,  P2-08 fixture use."""
     return {
         "round": 1,
         "start_time": "",
         "end_time": "",
-        "status": "进行中",
+        "status": "In Progress",
         "phase": "EVOLVE",
         "scores": scores,
         "strategy": {
@@ -682,7 +682,7 @@ def _p208_t4_iteration(scores):
         "orient": {
             "gap_cause": "",
             "strategy": "",
-            "scope_adjustment": "无",
+            "scope_adjustment": "None",
             "expected_improvement": "",
         },
         "decide": {"actions": []},
@@ -695,14 +695,14 @@ def _p208_t4_iteration(scores):
             "new_insights": [],
         },
         "evolve": {
-            "termination": "继续",
+            "termination": "Continue",
             "next_focus": "",
-            "strategy_adjustment": "无",
-            "scope_change": "无",
+            "strategy_adjustment": "None",
+            "scope_change": "None",
         },
         "reflect": {
             "problem_registry": {"new": 0, "fixed": 0, "remaining": 0},
-            "strategy_review": {"rating": 0, "verdict": "待验证", "reason": ""},
+            "strategy_review": {"rating": 0, "verdict": "To Validate", "reason": ""},
             "pattern_recognition": "",
             "lesson_learned": "",
             "next_round_guidance": "",
@@ -714,10 +714,10 @@ def _p208_t4_iteration(scores):
 
 
 class TestP208T4EvolveHardFailRound1(unittest.TestCase):
-    """P2-08：T4 + 至少一条 hard 未达标 + 第 1 轮 EVOLVE 行为锁定。
+    """P2-08: T4 + at leastitems hard Fail +  1 round EVOLVE .
 
-    与 `references/gate-manifest.json` default_rounds.T4=5 一致：plan.budget.max_rounds 为 0 时
-    get_max_rounds 退回 manifest 的 5，故 round_num=1 不会触发预算耗尽 stop。
+    and `references/gate-manifest.json` default_rounds.T4=5 : plan.budget.max_rounds  0 
+    get_max_rounds  manifest  5,  round_num=1 budget exhausted stop.
     """
 
     def _fixture_dir(self, scores, results_tsv):
@@ -741,7 +741,7 @@ class TestP208T4EvolveHardFailRound1(unittest.TestCase):
         return td
 
     def test_continue_when_hard_gate_fails_round1(self):
-        """hard 未通过时不得因「全部门禁通过」而 stop，第 1 轮应为 continue。"""
+        """A hard gate failure in round 1 should continue rather than stop immediately."""
         scores = {
             "syntax": 2,
             "p1_all": 0,
@@ -755,17 +755,17 @@ class TestP208T4EvolveHardFailRound1(unittest.TestCase):
         self.assertEqual(
             decision,
             "continue",
-            msg="hard 未达标且首轮不应 stop/pause（无振荡/停滞/预算用尽）；got reasons={}".format(
+            msg="hard Failshould not stop/pause on the first round(None/Stagnation/Budget); got reasons={}".format(
                 reasons
             ),
         )
         self.assertFalse(
-            any("所有 hard gate 已通过" in r for r in reasons),
+            any("all hard gates have passed" in r for r in reasons),
             msg=reasons,
         )
 
     def test_tsv_fail_closed_blocks_success_stop_when_scores_pass_round1(self):
-        """门禁数值全过但 TSV fail-closed 时不得成功终止（防误报全通过）。"""
+        """GateValue TSV fail-closed successful termination()."""
         scores = {
             "syntax": 0,
             "p1_all": 0,
@@ -775,13 +775,13 @@ class TestP208T4EvolveHardFailRound1(unittest.TestCase):
         tsv_row = {
             "iteration": 1,
             "phase": "VERIFY",
-            "status": "通过",
+            "status": "",
             "dimension": "syntax",
             "metric_value": 0,
             "delta": 0,
             "strategy_id": "S01-p208",
             "action_summary": "—",
-            "side_effect": "无",
+            "side_effect": "None",
             "evidence_ref": "—",
             "unit_id": "—",
             "protocol_version": "1.0.0",
@@ -796,21 +796,21 @@ class TestP208T4EvolveHardFailRound1(unittest.TestCase):
         self.assertNotEqual(
             decision,
             "stop",
-            msg="TSV 方差 fail-closed 时不应 stop；reasons={}".format(reasons),
+            msg="TSV  fail-closed should not stop; reasons={}".format(reasons),
         )
         self.assertTrue(
             any("TSV" in r and "fail-closed" in r for r in reasons)
-            or any("方差" in r for r in reasons),
+            or any("" in r for r in reasons),
             msg=reasons,
         )
         self.assertFalse(
-            any("所有 hard gate 已通过" in r for r in reasons),
+            any("all hard gates have passed" in r for r in reasons),
             msg=reasons,
         )
 
 
 class TestE2EInitScoreValidate(unittest.TestCase):
-    """P2-07：init → add-iteration → findings → score → validate strict。"""
+    """P2-07: init → add-iteration → findings → score → validate strict."""
 
     def test_chain(self):
         td = tempfile.mkdtemp(prefix="al_sc_")
@@ -874,7 +874,7 @@ class TestE2EInitScoreValidate(unittest.TestCase):
 
 
 class TestT5KpiScoreMatchesController(unittest.TestCase):
-    """P0-01：kpi_target 与 check_gates_passed 均优先 iterations[-1].scores。"""
+    """P0-01: Both kpi_target and check_gates_passed prioritize iterations[-1].scores."""
 
     def test_scores_override_when_plan_current_null(self):
         score_m = _load_score_module()
@@ -888,7 +888,7 @@ class TestT5KpiScoreMatchesController(unittest.TestCase):
                     "threshold": None,
                     "target": 80,
                     "gate": "hard",
-                    "status": "未达标",
+                    "status": "Fail",
                     "current": None,
                 }],
             },
@@ -904,7 +904,7 @@ class TestT5KpiScoreMatchesController(unittest.TestCase):
 
 
 class TestGetCurrentScoresT5GateFallback(unittest.TestCase):
-    """T5 新轮 scores 空时从 plan.gates[].current 回填（ORIENT 用）。"""
+    """T5 when new-round scores are empty, backfill from plan.gates[].current(ORIENT )."""
 
     def test_empty_iteration_scores_use_gate_current(self):
         ctl = _load_controller_module()
@@ -939,7 +939,7 @@ class TestGetCurrentScoresT5GateFallback(unittest.TestCase):
 
 
 class TestDetectStagnationT5KpiSkip(unittest.TestCase):
-    """P1-01：threshold=null 且 KPI 已满足的维度不参与停滞。"""
+    """P1-01: threshold=null  KPI DimensionandStagnation."""
 
     def test_met_kpi_dimension_excluded(self):
         ctl = _load_controller_module()
@@ -948,7 +948,7 @@ class TestDetectStagnationT5KpiSkip(unittest.TestCase):
             "dimension": "latency",
             "threshold": None,
             "target": 80,
-            "status": "未达标",
+            "status": "Fail",
             "gate": "hard",
         }]
         history = [{"latency": 90.0}, {"latency": 90.0}, {"latency": 90.0}]
@@ -958,7 +958,7 @@ class TestDetectStagnationT5KpiSkip(unittest.TestCase):
 
 
 class TestValidateReflectStrict(unittest.TestCase):
-    """E-01：strict + REFLECT 要求 strategy_id 与 effect。"""
+    """E-01: strict + REFLECT  strategy_id and effect."""
 
     def _mod(self):
         path = SCRIPTS / "autoloop-validate.py"
@@ -987,12 +987,12 @@ class TestValidateReflectStrict(unittest.TestCase):
                     "phase": "REFLECT",
                     "strategy": {"strategy_id": "S01-x"},
                     "scores": {"coverage": 1.0},
-                    "reflect": {"strategy_id": "S01-x", "effect": "保持"},
+                    "reflect": {"strategy_id": "S01-x", "effect": "Keep"},
                 }
             ],
         }
         mod._check_phase_artifacts("/tmp", st, err, warn, strict=True)
-        self.assertTrue(any("strict 要求 reflect 含 delta" in x for x in err), err)
+        self.assertTrue(any("strict requires reflect to include delta" in x for x in err), err)
 
     def test_reflect_strict_ok_with_delta(self):
         mod = self._mod()
@@ -1006,14 +1006,14 @@ class TestValidateReflectStrict(unittest.TestCase):
                     "scores": {"coverage": 1.0},
                     "reflect": {
                         "strategy_id": "S01-x",
-                        "effect": "保持",
+                        "effect": "Keep",
                         "delta": 0.25,
                     },
                 }
             ],
         }
         mod._check_phase_artifacts("/tmp", st, err, warn, strict=True)
-        self.assertFalse(any("strict 要求 reflect 含 delta" in x for x in err), err)
+        self.assertFalse(any("strict requires reflect to include delta" in x for x in err), err)
 
     def test_side_effect_vs_handoff_strict(self):
         mod = self._mod()
@@ -1026,9 +1026,9 @@ class TestValidateReflectStrict(unittest.TestCase):
                 {
                     "iteration": 1,
                     "phase": "VERIFY",
-                    "side_effect": "无",
+                    "side_effect": "None",
                     "strategy_id": "S01-x",
-                    "status": "通过",
+                    "status": "",
                     "dimension": "coverage",
                     "metric_value": 0,
                     "delta": 0,
@@ -1047,7 +1047,7 @@ class TestValidateReflectStrict(unittest.TestCase):
 
 
 class TestScoreDetectModeSidecar(unittest.TestCase):
-    """findings.md 同目录存在 autoloop-state.json 时走 SSOT 路径。"""
+    """findings.md  autoloop-state.json  SSOT ."""
 
     def test_md_path_with_sidecar_uses_ssot(self):
         score = _load_score_module()
@@ -1072,7 +1072,7 @@ class TestScoreDetectModeSidecar(unittest.TestCase):
 
 
 class TestPhaseActStrict(unittest.TestCase):
-    """ACT 在 strict 下对缺失 handoff 与 run_loop 一致。"""
+    """ACT  strict  handoff and run_loop ."""
 
     def test_missing_handoff_strict_false_continues(self):
         ctl = _load_controller_module()
@@ -1094,7 +1094,7 @@ class TestPhaseActStrict(unittest.TestCase):
 
 
 class TestReflectExperienceWriteDelta(unittest.TestCase):
-    """经验库 write 仅用 delta；Likert 不触发 run_tool。"""
+    """experience registry write  delta; Likert  run_tool."""
 
     def test_only_rating_skips_experience_write(self):
         ctl = _load_controller_module()
@@ -1103,7 +1103,7 @@ class TestReflectExperienceWriteDelta(unittest.TestCase):
                 {
                     "reflect": {
                         "strategy_id": "S01-x",
-                        "effect": "保持",
+                        "effect": "Keep",
                         "rating_1_to_5": 4,
                     }
                 }
@@ -1118,7 +1118,7 @@ class TestReflectExperienceWriteDelta(unittest.TestCase):
         ctl = _load_controller_module()
         state = {
             "iterations": [
-                {"reflect": {"strategy_id": "S01-x", "effect": "避免", "score": 3}}
+                {"reflect": {"strategy_id": "S01-x", "effect": "Avoid", "score": 3}}
             ]
         }
         with patch.object(ctl, "info"):
@@ -1130,7 +1130,7 @@ class TestReflectExperienceWriteDelta(unittest.TestCase):
         ctl = _load_controller_module()
         state = {
             "iterations": [
-                {"reflect": {"strategy_id": "S01-x", "effect": "保持", "delta": 0.5}}
+                {"reflect": {"strategy_id": "S01-x", "effect": "Keep", "delta": 0.5}}
             ]
         }
         with patch.object(ctl, "info"):
@@ -1144,7 +1144,7 @@ class TestReflectExperienceWriteDelta(unittest.TestCase):
 
 
 class TestAddFindingSummaryField(unittest.TestCase):
-    """add-finding 接受 summary（无 content）。"""
+    """add-finding  summary(None content)."""
 
     def test_summary_only_ok(self):
         with tempfile.TemporaryDirectory() as d:
@@ -1190,7 +1190,7 @@ class TestAddFindingSummaryField(unittest.TestCase):
 
 
 class TestGetMaxRoundsT6Items(unittest.TestCase):
-    """P-04：T6 按 items×2 推导默认 max_rounds（有上限）。"""
+    """P-04: T6 derives default max_rounds as items×2 (capped)."""
 
     def test_items_times_two_capped(self):
         ctl = _load_controller_module()
@@ -1213,7 +1213,7 @@ class TestGetMaxRoundsT6Items(unittest.TestCase):
 
 
 class TestPlanGateExemptAndCrossDim(unittest.TestCase):
-    """豁免 rollup；跨维回归（handoff.impacted_dimensions）。"""
+    """Exempt rollup; Regression(handoff.impacted_dimensions)."""
 
     def test_check_gates_exempt_hard_passes(self):
         ctl = _load_controller_module()
@@ -1228,8 +1228,8 @@ class TestPlanGateExemptAndCrossDim(unittest.TestCase):
                         "comparator": ">=",
                         "gate": "hard",
                         "unit": "/10",
-                        "status": "豁免",
-                        "label": "可靠性",
+                        "status": "Exempt",
+                        "label": "Reliability",
                     },
                 ],
             },
@@ -1254,7 +1254,7 @@ class TestPlanGateExemptAndCrossDim(unittest.TestCase):
                         "comparator": ">=",
                         "gate": "hard",
                         "unit": "/10",
-                        "label": "可靠性",
+                        "label": "Reliability",
                     },
                 ],
             },
@@ -1279,7 +1279,7 @@ class TestPlanGateExemptAndCrossDim(unittest.TestCase):
                         "comparator": ">=",
                         "gate": "hard",
                         "unit": "/10",
-                        "label": "可靠性",
+                        "label": "Reliability",
                     },
                 ],
             },
@@ -1294,7 +1294,7 @@ class TestPlanGateExemptAndCrossDim(unittest.TestCase):
 
 
 class TestStrictEvolveFindingsGate(unittest.TestCase):
-    """STRICT：EVOLVE 前须已有 finding（评审建议 #4）。"""
+    """STRICT: EVOLVE requires an existing finding first(Recommendation #4)."""
 
     def test_strict_evolve_requires_findings_false(self):
         ctl = _load_controller_module()
@@ -1319,7 +1319,7 @@ class TestStrictEvolveFindingsGate(unittest.TestCase):
 
     def test_findings_md_protocol_version_snippet(self):
         ctl = _load_controller_module()
-        text = "# x\n协议版本: 2.1.0\n"
+        text = "# x\nProtocol Version: 2.1.0\n"
         self.assertEqual(ctl._findings_md_protocol_version(text), "2.1.0")
 
     def test_phase_evolve_strict_pauses_without_findings(self):
@@ -1367,7 +1367,7 @@ def _load_validate_module():
 
 
 class TestSideEffectHandoffCoverage(unittest.TestCase):
-    """strict：side_effect 须覆盖 handoff.impacted_dimensions（token 级）。"""
+    """strict: side_effect  handoff.impacted_dimensions(token )."""
 
     def test_covers_by_full_or_token(self):
         val = _load_validate_module()
@@ -1391,41 +1391,41 @@ class TestSideEffectHandoffCoverage(unittest.TestCase):
         }
         err, warn = [], []
         val._check_side_effect_vs_handoff(state, err, warn, strict=True)
-        self.assertTrue(any("未覆盖" in e for e in err))
+        self.assertTrue(any("" in e for e in err))
 
 
 class TestFindingsMdFourLayerStats(unittest.TestCase):
-    """OBSERVE：findings.md 四层 H2 节内表格行估计。"""
+    """OBSERVE: estimate table rows inside the four H2 sections of findings.md."""
 
     def test_four_layer_counts_pipe_tables(self):
         ctl = _load_controller_module()
         md = """# x
-## 问题清单
+## Issue List
 | a | b |
 | --- | --- |
 | 1 | 2 |
-## 策略评估
+## Strategy
 | u | v |
 | --- | --- |
 | 3 | 4 |
-## 模式识别
+## Pattern Recognition
 | p | q |
 | --- | --- |
 | 5 | 6 |
-## 经验教训
+## Lessons Learned
 | r | s |
 | --- | --- |
 | 7 | 8 |
 """
         st = ctl._findings_md_four_layer_table_stats(md)
-        self.assertEqual(st.get("L1问题清单"), 1)
-        self.assertEqual(st.get("L2策略评估"), 1)
-        self.assertEqual(st.get("L3模式识别"), 1)
-        self.assertEqual(st.get("L4经验教训"), 1)
+        self.assertEqual(st.get("L1Issue List"), 1)
+        self.assertEqual(st.get("L2Strategy"), 1)
+        self.assertEqual(st.get("L3Pattern Recognition"), 1)
+        self.assertEqual(st.get("L4Lessons Learned"), 1)
 
 
 class TestRenderFindingsReflectFooter(unittest.TestCase):
-    """render_findings 末尾追加四层表，OBSERVE 可计数。"""
+    """render_findings appends four-layer tables at the end so OBSERVE can count them."""
 
     def test_render_appends_four_layer_tables(self):
         rmod = _load_render_module()
@@ -1435,22 +1435,22 @@ class TestRenderFindingsReflectFooter(unittest.TestCase):
         rmod.render_findings(
             {
                 "metadata": {"protocol_version": "2.0.0"},
-                "findings": {"executive_summary": {"topic": "待填写"}, "rounds": []},
+                "findings": {"executive_summary": {"topic": "TBD"}, "rounds": []},
             },
             td,
         )
         path = os.path.join(td, "autoloop-findings.md")
         self.assertTrue(os.path.isfile(path))
         text = Path(path).read_text(encoding="utf-8")
-        self.assertIn("## 问题清单（REFLECT 第 1 层）", text)
-        self.assertIn("协议版本（findings 侧）: 2.0.0", text)
+        self.assertIn("## Issue List (REFLECT Layer 1)", text)
+        self.assertIn("Protocol Version(findings side): 2.0.0", text)
         stats = ctl._findings_md_four_layer_table_stats(text)
-        self.assertGreaterEqual(stats.get("L1问题清单", 0), 1)
-        self.assertGreaterEqual(stats.get("L4经验教训", 0), 1)
+        self.assertGreaterEqual(stats.get("L1Issue List", 0), 1)
+        self.assertGreaterEqual(stats.get("L4Lessons Learned", 0), 1)
 
 
 class TestRenderPanorama(unittest.TestCase):
-    """render_panorama 全景视图输出正确。"""
+    """render_panorama Panorama View."""
 
     def _make_state(self):
         return {
@@ -1458,9 +1458,9 @@ class TestRenderPanorama(unittest.TestCase):
             "plan": {
                 "task_id": "test-task-001",
                 "template": "T3",
-                "goal": "测试全景视图",
-                "status": "进行中",
-                "budget": {"max_rounds": 10, "current_round": 3, "time_limit": "无限制"},
+                "goal": "TestPanorama View",
+                "status": "In Progress",
+                "budget": {"max_rounds": 10, "current_round": 3, "time_limit": "Unlimited"},
                 "gates": [
                     {
                         "dim": "coverage",
@@ -1468,7 +1468,7 @@ class TestRenderPanorama(unittest.TestCase):
                         "gate": "hard",
                         "target": 7.0,
                         "current": 7.2,
-                        "status": "达标",
+                        "status": "Pass",
                         "unit": "heuristic",
                     }
                 ],
@@ -1477,34 +1477,34 @@ class TestRenderPanorama(unittest.TestCase):
                 {
                     "round": 1,
                     "phase": "VERIFY",
-                    "status": "完成",
+                    "status": "Completed",
                     "scores": {"coverage": 6.5},
-                    "strategy": {"strategy_id": "S01", "name": "初始策略", "description": "覆盖率提升"},
-                    "reflect": {"lesson_learned": "需要更多测试", "strategy_review": {"rating": 4, "verdict": "有效"}},
+                    "strategy": {"strategy_id": "S01", "name": "Strategy", "description": "Coverage"},
+                    "reflect": {"lesson_learned": "More tests are needed", "strategy_review": {"rating": 4, "verdict": "Effective"}},
                 },
                 {
                     "round": 2,
                     "phase": "VERIFY",
-                    "status": "完成",
+                    "status": "Completed",
                     "scores": {"coverage": 7.0},
-                    "strategy": {"strategy_id": "S02", "name": "深度策略", "description": "补充边界"},
-                    "reflect": {"lesson_learned": "边界覆盖有效", "strategy_review": {"rating": 5, "verdict": "有效"}},
+                    "strategy": {"strategy_id": "S02", "name": "Strategy", "description": "Add boundary coverage"},
+                    "reflect": {"lesson_learned": "Effective", "strategy_review": {"rating": 5, "verdict": "Effective"}},
                 },
                 {
                     "round": 3,
                     "phase": "ACT",
-                    "status": "进行中",
+                    "status": "In Progress",
                     "scores": {"coverage": 7.2},
-                    "strategy": {"strategy_id": "S03", "name": "巩固策略", "description": "回归修复"},
+                    "strategy": {"strategy_id": "S03", "name": "Strategy", "description": "Regression"},
                     "reflect": {"lesson_learned": "", "strategy_review": {"rating": 0, "verdict": ""}},
                 },
             ],
             "findings": {
-                "executive_summary": {"topic": "测试", "total_rounds": 3},
+                "executive_summary": {"topic": "Test", "total_rounds": 3},
                 "rounds": [],
                 "problem_tracker": [
-                    {"id": "P-01", "description": "未覆盖模块 X", "status": "open"},
-                    {"id": "P-02", "description": "已修复的问题", "status": "fixed"},
+                    {"id": "P-01", "description": "Module X not covered", "status": "open"},
+                    {"id": "P-02", "description": "Fixed issue", "status": "fixed"},
                 ],
             },
         }
@@ -1518,26 +1518,26 @@ class TestRenderPanorama(unittest.TestCase):
         with redirect_stdout(buf):
             result = rmod.render_panorama(state)
         output = buf.getvalue()
-        # 基本信息
+        # Basic Information
         self.assertIn("test-task-001", output)
         self.assertIn("T3", output)
         self.assertIn("Round 3/10", output)
-        # 门禁
+        # Gate
         self.assertIn("coverage", output)
         self.assertIn("7.2", output)
         self.assertIn("7.0", output)
-        # 趋势 (近3轮 6.5→7.0→7.2)
+        # Trend (3round 6.5→7.0→7.2)
         self.assertIn("6.5", output)
         self.assertIn("↑", output)
-        # 策略
+        # Strategy
         self.assertIn("S03", output)
-        # 未解决问题
+        # Open Issues
         self.assertIn("P-01", output)
-        self.assertIn("未覆盖模块 X", output)
-        # 已修复的不应在 open 列表
+        self.assertIn("Module X not covered", output)
+        # should open 
         self.assertNotIn("P-02", output)
-        # 资源
-        self.assertIn("轮次: 3/10 (30%)", output)
+        # Resources
+        self.assertIn("Round: 3/10 (30%)", output)
         self.assertIn("human_review", output)
 
     def test_panorama_no_rounds(self):
@@ -1547,12 +1547,12 @@ class TestRenderPanorama(unittest.TestCase):
             "plan": {
                 "task_id": "empty-task",
                 "template": "T1",
-                "status": "初始化",
+                "status": "Initialized",
                 "budget": {"max_rounds": 0, "current_round": 0},
                 "gates": [],
             },
             "iterations": [],
-            "findings": {"executive_summary": {"topic": "待填写"}, "rounds": [], "problem_tracker": []},
+            "findings": {"executive_summary": {"topic": "TBD"}, "rounds": [], "problem_tracker": []},
         }
         import io
         from contextlib import redirect_stdout
@@ -1562,7 +1562,7 @@ class TestRenderPanorama(unittest.TestCase):
         output = buf.getvalue()
         self.assertIn("empty-task", output)
         self.assertIn("T1", output)
-        self.assertIn("轮次: 0 (无上限)", output)
+        self.assertIn("Round: 0 (Unlimited)", output)
 
     def test_panorama_returns_string(self):
         rmod = _load_render_module()

@@ -1,278 +1,278 @@
 ---
 name: autoloop-research
 description: >
-  AutoLoop T1: 调研任务。T1 保持通用 research 入口；当主题属于市场/行业调研时，默认进入高标准模式：
-  固定核心章节、每章必须有数据+分析+结论，并支持按“行业 + 方向/主题”叠加专项分析模块。
-  质量门禁阈值见 references/quality-gates.md T1 行。
-  触发：/autoloop:research 或任何需要系统性调研的任务。
+  AutoLoop T1: Research task. T1 remains the general research entry point; when the topic is a market/industry study, it defaults to the high-standard mode:
+  fixed core chapters, every chapter must include data + analysis + conclusion, and supports adding special analysis modules by "industry + direction/topic".
+  See references/quality-gates.md row T1 for the quality gate threshold.
+  Trigger: /autoloop:research or any task that requires systematic research.
 ---
 
-# AutoLoop T1: Research — 高标准调研
+# AutoLoop T1: Research — High-Standard Research
 
-## T1 任务定义（必读）
+## T1 Task Definition (Required Reading)
 
-- **T1 仍是广义 research 入口**：适用于系统性调研、全景研究、方案研究、行业研究等。
-- **市场/行业主题默认最高标准**：若调研对象是行业、赛道、市场、法域、产业链、商业生态，默认使用 `assets/report-template.md` 中 **「T1：高标准市场/行业调研报告」**。
-- **方向/主题可叠加专项模块**：若题目为“主体对象 + 方向/主题”，如“博彩行业 + AI 岗位替代性”，则在行业主报告之外，再增加专项分析模块。
-- **成功形态**：最终报告必须是读者可直接使用的正式报告，且正文论点主要由本任务内完成的网络 / 公开源检索支撑，而非内部旧稿改写。
-- **默认实现方式是多 agent 编排**：主 agent 负责拆章节、派发 researcher / verifier 子 agent、回收章节证据包、处理冲突、决定是否补轮、统一成稿。
-- **多轮可选**：多轮 OODA 是补证与收敛机制，不是 T1 的定义；单轮若已达到深度与来源要求，也可结项。
+- **T1 remains the broad research entry point**: suitable for systematic research, landscape studies, solution research, industry research, and similar work.
+- **Market/industry topics default to the highest standard**: if the research object is an industry, track, market, jurisdiction, value chain, or business ecosystem, use **"T1: High-Standard Market/Industry Research Report"** from `assets/report-template.md` by default.
+- **Direction/topic can add special modules**: if the topic is "subject object + direction/topic", such as "gambling industry + AI job replaceability", add special analysis modules on top of the core industry report.
+- **Success state**: the final report must be a formal report that readers can use directly, and its core arguments must be supported primarily by web/public-source research completed within this task, not by rewriting old internal drafts.
+- **Default implementation is multi-agent orchestration**: the lead agent breaks down chapters, dispatches researcher / verifier subagents, collects chapter evidence packs, resolves conflicts, decides whether another round is needed, and unifies the final draft.
+- **Multiple rounds are optional**: multi-round OODA is a mechanism for evidence strengthening and convergence, not the definition of T1; if a single round already meets the depth and sourcing requirements, the task can conclude.
 
-## 执行前提
+## Prerequisites for Execution
 
-读取 `autoloop-plan.md` 获取任务参数。如果文件不存在，先通过 `/autoloop:plan` 配置。
+Read `autoloop-plan.md` to get the task parameters. If the file does not exist, configure it first through `/autoloop:plan`.
 
-Round 2+ 的 OBSERVE 起点：
+Round 2+ OBSERVE starting point:
 
-- 先读取 `autoloop-findings.md` 的反思章节，获取遗留问题、有效 / 无效策略、已识别模式、经验教训。
-- 读取 `references/experience-registry.md` 中与当前主题匹配的推荐策略，传递到 DECIDE 阶段参考。
-
----
-
-## 报告输出边界（最终报告）
-
-最终给人看的 T1 报告中，**一律不得**出现：
-
-- 内部运行信息：如“证据策略”、轮次、subagent、并行搜索、SSOT、JSON、render、progress、state 等。
-- 质量与流程信息：如质量得分、coverage / credibility、门禁、迭代轨迹、终止条件。
-- 方法论显式标题：如“问题界定”“议题树 / MECE”“假设驱动”“研究方法”。
-- 内部校验说明：如置信度规则、证据优先级、交叉验证机制、缺口登记机制。
-- 文件 / 系统痕迹：如脚本名、仓库路径、工作目录、`AutoLoop` 字样。
-- 模板提示与编辑注。
-
-报告开头允许保留：
-
-- 标题
-- 主题
-- 目标
-- 分析日期
-- 信息边界
+- First read the reflection section in `autoloop-findings.md` to obtain remaining issues, effective / ineffective strategies, identified patterns, and lessons learned.
+- Read recommended strategies in `references/experience-registry.md` that match the current topic, and pass them into the DECIDE stage as reference.
 
 ---
 
-## 主题识别：主体对象 + 附加方向
+## Report Output Boundaries (Final Report)
 
-开始调研前，先将题目拆成两层：
+The final reader-facing T1 report must **never** include:
 
-1. **主体对象**：如行业、市场、赛道、公司群、法域、问题域。
-2. **附加方向**：如 AI、监管、投资逻辑、出海、岗位替代性、供应链、组织、技术趋势等。
+- Internal runtime information: such as "evidence strategy", round number, subagent, parallel search, SSOT, JSON, render, progress, state, and similar wording.
+- Quality and process information: such as quality scores, coverage / credibility, gates, iteration trail, and stop conditions.
+- Explicit methodology headings: such as "problem definition", "issue tree / MECE", "hypothesis-driven", or "research method".
+- Internal validation notes: such as confidence rules, evidence priority, cross-verification mechanism, or gap-registration mechanism.
+- File / system traces: such as script names, repository paths, working directories, or the word `AutoLoop`.
+- Template prompts and editor notes.
 
-### 判定规则
+The beginning of the report may retain:
 
-- 若主体对象属于行业 / 市场 / 赛道 / 产业链分析，进入**高标准行业模式**。
-- 若同时出现“行业 + 方向/主题”，进入：
-  - **核心行业章节**
-  - **专项方向模块**
-- 若不是市场/行业主题，仍可走 T1，但章节名称可适配主题；不过仍必须保持读者版边界，并尽量满足“数据 + 分析 + 结论”。
-
----
-
-## 主 agent / 子 agent 协议
-
-T1 的默认协作方式如下：
-
-- **主 agent**
-  - 识别是否进入 T1 与是否进入高标准行业模式
-  - 将题目拆成核心章节与专项模块
-  - 为每个章节或专项子题派发 researcher / verifier 子任务
-  - 回收章节证据包，统一去重、消解冲突、判断哪些章节仍薄
-  - 负责最终读者版终稿的唯一写作与整合
-- **researcher 子 agent**
-  - 只负责特定章节或专项子题的外部检索与取证
-  - 返回统一格式的章节证据包
-- **verifier / cross-check 子 agent**
-  - 对关键判断做口径、来源、可强推性与冲突检查
-
-**规则**：
-
-- 子 agent 默认不直接写终稿章文。
-- 终稿口吻、结构与叙事由主 agent 统一控制，避免多 agent 直接拼接正文造成重复或风格漂移。
+- Title
+- Topic
+- Objective
+- Analysis date
+- Information boundary
 
 ---
 
-## 主 Agent 任务拆解指南
+## Topic Identification: Subject Object + Additional Direction
 
-主 agent 在拆解调研任务时，应参考以下策略选择和质量基线。
+Before starting research, break the topic into two layers:
 
-### 拆解方式选择
+1. **Subject object**: such as industry, market, track, company cluster, jurisdiction, or problem domain.
+2. **Additional direction**: such as AI, regulation, investment logic, overseas expansion, job replaceability, supply chain, organization, or technology trends.
 
-根据调研主题特征，选择最适合的拆法：
+### Decision Rules
 
-| 拆解方式 | 适用场景 | 示例 |
+- If the subject object is an industry / market / track / value-chain analysis, enter **high-standard industry mode**.
+- If "industry + direction/topic" appears together, include:
+  - **Core industry chapters**
+  - **Special direction modules**
+- If it is not a market/industry topic, T1 still applies, but chapter names may be adapted to the topic; however, the reader-facing boundary must still be maintained, and it should still satisfy "data + analysis + conclusion" as much as possible.
+
+---
+
+## Lead Agent / Subagent Protocol
+
+The default T1 collaboration model is:
+
+- **Lead agent**
+  - Determine whether the task enters T1 and whether it enters high-standard industry mode
+  - Break the topic into core chapters and special modules
+  - Dispatch researcher / verifier subtasks for each chapter or special subtopic
+  - Collect chapter evidence packs, deduplicate them, resolve conflicts, and judge which chapters are still thin
+  - Own the final reader-facing writing and integration
+- **Researcher subagent**
+  - Only handles external search and evidence gathering for a specific chapter or special subtopic
+  - Returns a chapter evidence pack in the required format
+- **Verifier / cross-check subagent**
+  - Checks key judgments for framing, sourcing, strength of claim, and conflicts
+
+**Rules**:
+
+- Subagents do not directly write final report prose by default.
+- The lead agent must unify the tone, structure, and narrative of the final draft to avoid repetition or style drift caused by directly stitching together multi-agent outputs.
+
+---
+
+## Lead Agent Task Breakdown Guide
+
+When the lead agent breaks down a research task, it should use the following strategy choices and quality baselines.
+
+### Breakdown Method Selection
+
+Choose the most suitable breakdown method based on the topic characteristics:
+
+| Breakdown Method | Applicable Scenario | Example |
 |---------|---------|------|
-| **按主题拆** | 行业全景、多维度分析 | 市场规模 / 价值链 / 监管 / 劳动力 / AI 技术栈 / 岗位趋势 |
-| **按数据源拆** | 数据驱动型调研、需要交叉验证 | 公开报告 / 招聘平台 / 社交媒体 / 专利数据 / 财报 |
-| **按子问题拆** | 问题导向型研究、决策支持 | 谁在用 AI？/ 替代了什么？/ 阻力在哪？/ 成本结构如何？ |
-| **混合拆** | 复杂主题 | 核心章节按主题拆 + 专项模块按子问题拆 |
+| **By topic** | Industry landscape, multi-dimensional analysis | Market size / value chain / regulation / labor / AI stack / job trends |
+| **By data source** | Data-driven research, cross-verification required | Public reports / job platforms / social media / patent data / financial statements |
+| **By subquestion** | Question-driven research, decision support | Who is using AI? / What is being replaced? / Where is the resistance? / What does the cost structure look like? |
+| **Hybrid** | Complex topics | Break core chapters by topic + break special modules by subquestion |
 
-### 并行 vs 串行判断
+### Parallel vs. Serial Decision Rules
 
-| 条件 | 调度方式 |
+| Condition | Dispatch Mode |
 |------|---------|
-| 章节之间**无数据依赖**（如"市场规模"和"监管环境"） | **并行**派 subagent |
-| 章节 B 需要章节 A 的结论作为输入（如"AI 技术栈"依赖"价值链"的产出） | **串行**，A 完成后再派 B |
-| 同一章节需要多个独立来源验证 | **并行**派多个 researcher 搜索不同来源 |
+| **No data dependency** between chapters (such as "market size" and "regulatory environment") | Dispatch subagents **in parallel** |
+| Chapter B needs the conclusion of Chapter A as input (such as "AI stack" depending on the output of "value chain") | Run **serially**; dispatch B after A completes |
+| The same chapter requires validation from multiple independent sources | Dispatch multiple researchers **in parallel** to search different sources |
 
-### 章节深度基线
+### Chapter Depth Baseline
 
-每个章节（或研究块）达到以下基线才视为"足够交付"：
+Each chapter (or research block) is only considered "deliverable enough" if it meets the following baseline:
 
-- **≥3 个独立数据源**：避免单一来源依赖
-- **≥2 个定量数据点**：数字/百分比/金额，而非纯定性描述
-- **≥1 个公司/区域实例**：具体化，避免空泛概括
-- **明确区分**：直接证据 vs 组织信号 vs 审慎推断
+- **≥3 independent data sources**: avoid dependence on a single source
+- **≥2 quantitative data points**: numbers / percentages / monetary figures, not purely qualitative description
+- **≥1 company or regional example**: make the chapter concrete and avoid empty generalization
+- **Explicit distinction**: direct evidence vs. organizational signals vs. cautious inference
 
-**低于基线** → 主 agent 应在当前轮追证或标记为下一轮重点，而非直接提交。
+**Below baseline** → the lead agent should either gather more evidence in the current round or mark it as a next-round priority, rather than submitting it directly.
 
-### 拆解数量建议
+### Recommended Breakdown Count
 
-- 行业全景调研：核心章节 **8-10 个** + 专项模块 **3-6 个**
-- 方案对比调研：按候选方案数 × 评估维度数拆
-- 问题导向调研：按核心问题数拆，每个问题独立研究块
-
----
-
-## 高标准行业模式：强制核心章节
-
-市场/行业调研默认使用以下核心章节：
-
-1. 标题 + 主题 + 目标
-2. 市场规模与增长
-3. 需求侧 / 客户结构
-4. 价值链与利润池
-5. 竞争格局与主要玩家
-6. 监管与政策环境
-7. 技术与关键变化因素
-8. 商业模式 / 收入成本结构 / 经营杠杆
-9. 主要风险、争议点与不确定性
-10. 综合判断与启示
-11. 数据来源
-
-**信息边界**写在标题区，不单列为正文章节。
-
-### 每章最低标准
-
-每个核心章节都必须同时具备：
-
-- **数据**：至少 1 组关键数据、表格、或可核对事实
-- **分析**：解释关系、结构、驱动或比较
-- **结论**：该章节的明确判断
-
-若任何章节缺一项，该章节视为**深度不足**，必须在下一轮补足。
-
-### 每章默认目标
-
-高标准行业模式下，每章都应优先形成“章节证据包”，而不是先写摘要。章节证据包至少要支持主 agent 完成：
-
-- 事实层：可核对数据、结构拆分、时间变化、公司实例、区域差异
-- 解释层：驱动、机制、比较、分层、边界
-- 判断层：章节结论与可强推程度
-- 溯源层：来源 URL 与证据限制
+- Industry landscape research: **8-10** core chapters + **3-6** special modules
+- Solution comparison research: break down by number of candidate solutions × number of evaluation dimensions
+- Problem-driven research: break down by number of core questions, with each question as an independent research block
 
 ---
 
-## 专项方向模块规则
+## High-Standard Industry Mode: Mandatory Core Chapters
 
-若题目带有附加方向，则在核心行业章节之上增加专项模块。
+Market/industry research uses the following core chapters by default:
 
-### 常见专项方向
+1. Title + Topic + Objective
+2. Market Size and Growth
+3. Demand Side / Customer Structure
+4. Value Chain and Profit Pool
+5. Competitive Landscape and Major Players
+6. Regulatory and Policy Environment
+7. Technology and Key Change Factors
+8. Business Model / Revenue-Cost Structure / Operating Leverage
+9. Major Risks, Disputes, and Uncertainties
+10. Overall Judgment and Implications
+11. Data Sources
 
-- AI / 自动化
-- 监管深化
-- 投资逻辑
-- 出海
-- 供应链
-- 组织与人才
-- 岗位替代性
+Write the **information boundary** in the title section, not as a standalone body chapter.
 
-### 示例：行业 + AI 岗位替代性
+### Minimum Standard for Each Chapter
 
-专项模块至少包含：
+Each core chapter must contain all of the following:
 
-1. AI 技术渗透与应用现状
-2. 岗位 / 职能映射
-3. 可替代与不可替代机制
-4. 头部公司案例
-5. 组织与人才趋势
-6. 专项结论
+- **Data**: at least 1 set of key data, table, or verifiable fact
+- **Analysis**: explain relationships, structure, drivers, or comparisons
+- **Conclusion**: a clear chapter-level judgment
 
-专项模块同样必须满足：**数据 + 分析 + 结论**。
+If any chapter is missing one of these elements, it is considered **insufficient in depth** and must be supplemented in the next round.
 
-### 专项模块的任务拆法
+### Default Goal for Each Chapter
 
-若专项方向属于 AI / 自动化 / 组织 / 岗位替代性等，默认优先按**工作包**拆，而不是只按岗位名称拆：
+In high-standard industry mode, each chapter should first produce a "chapter evidence pack" rather than a summary. The chapter evidence pack must at least support the lead agent in producing:
 
-- 哪些任务先被自动化
-- 哪些任务仍保留人工
-- 哪些任务带有监管责任、例外裁量或高价值关系属性
-- 哪些判断有强直接证据，哪些仅属审慎推断
-
----
-
-## 维度 / 章节生成规则
-
-### A. 市场 / 行业调研（默认最高标准）
-
-如果用户未显式给维度，按以下顺序自动生成：
-
-#### 核心章节维度
-
-1. 市场规模与增长
-2. 需求侧 / 客户结构
-3. 价值链与利润池
-4. 竞争格局与主要玩家
-5. 监管与政策环境
-6. 技术与关键变化因素
-7. 商业模式 / 收入成本结构 / 经营杠杆
-8. 风险、争议与不确定性
-
-#### 专项方向维度（如有）
-
-按题目附加方向生成 3–6 个子维度。
-
-示例：AI 岗位替代性
-
-1. AI 技术成熟度与渗透
-2. 岗位 / 职能分层
-3. 替代机制与保留机制
-4. 头部公司案例
-5. 人才趋势与组织影响
-6. 专项结论与边界
-
-### B. 其他 T1 主题
-
-其他 research 主题可继续按问题域自定义维度，但应尽量保证：
-
-- 结构完整
-- 关键判断可被证据支撑
-- 最终成稿读者可读
+- Fact layer: verifiable data, structural breakdowns, changes over time, company examples, regional differences
+- Explanation layer: drivers, mechanisms, comparisons, segmentation, boundaries
+- Judgment layer: chapter conclusions and how strongly they can be asserted
+- Traceability layer: source URLs and evidence limits
 
 ---
 
-## 第一轮：章节规划 + 初始搜索
+## Rules for Special Direction Modules
 
-### OBSERVE（第 1 轮基线采集）
+If the topic includes an additional direction, add special modules on top of the core industry chapters.
 
-第 1 轮无历史数据，执行基线采集：当前发现数 = 0，已覆盖章节 / 维度 = 0，所有质量门禁得分 = 0。将此作为 iteration 0 基线写入 `autoloop-progress.md`。
+### Common Special Directions
 
-### 1.1 章节 / 维度规划
+- AI / Automation
+- Regulation deep-dive
+- Investment logic
+- Overseas expansion
+- Supply chain
+- Organization and talent
+- Job replaceability
 
-- 在 `autoloop-plan.md` 中写入：
-  - 研究主题
-  - 主体对象
-  - 附加方向（如有）
-  - 核心章节
-  - 专项方向模块（如有）
-  - 排除范围与信息边界
-- 市场/行业调研模式建议总维度数：**8–12 个**，少量精准胜过无意义泛化。
+### Example: Industry + AI Job Replaceability
 
-### 1.2 并行搜索
+The special module should contain at least:
 
-为每个核心章节维度 / 专项维度分配一个 researcher subagent，并行执行（调度规范见 `references/agent-dispatch.md`）。
+1. AI technology penetration and current application status
+2. Role / function mapping
+3. Replaceable and non-replaceable mechanisms
+4. Leading-company case studies
+5. Organization and talent trends
+6. Special-module conclusion
 
-### 1.2.1 researcher 子 agent 统一输出：章节证据包
+The special module must also satisfy: **data + analysis + conclusion**.
 
-每个 researcher 子 agent 必须返回统一格式的**章节证据包**，至少包含：
+### Task Breakdown for Special Modules
+
+If the special direction is AI / automation / organization / job replaceability, prioritize breaking it down by **work package** rather than only by job title:
+
+- Which tasks are automated first
+- Which tasks remain human-handled
+- Which tasks carry regulatory responsibility, exception handling discretion, or high-value relationship attributes
+- Which judgments have strong direct evidence and which are only cautious inference
+
+---
+
+## Dimension / Chapter Generation Rules
+
+### A. Market / Industry Research (Default Highest Standard)
+
+If the user does not explicitly provide dimensions, generate them in the following order:
+
+#### Core Chapter Dimensions
+
+1. Market size and growth
+2. Demand side / customer structure
+3. Value chain and profit pool
+4. Competitive landscape and major players
+5. Regulatory and policy environment
+6. Technology and key change factors
+7. Business model / revenue-cost structure / operating leverage
+8. Risks, disputes, and uncertainties
+
+#### Special Direction Dimensions (If Any)
+
+Generate 3-6 subdimensions based on the additional direction in the topic.
+
+Example: AI job replaceability
+
+1. AI technology maturity and penetration
+2. Role / function segmentation
+3. Replacement mechanisms and retention mechanisms
+4. Leading-company case studies
+5. Talent trends and organizational impact
+6. Special conclusion and boundaries
+
+### B. Other T1 Topics
+
+Other research topics may continue to define custom dimensions based on the problem domain, but should still try to ensure:
+
+- Complete structure
+- Key judgments supported by evidence
+- The final draft is readable for end readers
+
+---
+
+## Round 1: Chapter Planning + Initial Search
+
+### OBSERVE (Round 1 Baseline Collection)
+
+Round 1 has no historical data, so perform baseline collection: current finding count = 0, covered chapters / dimensions = 0, all quality gate scores = 0. Write this into `autoloop-progress.md` as the iteration 0 baseline.
+
+### 1.1 Chapter / Dimension Planning
+
+- Write the following into `autoloop-plan.md`:
+  - Research topic
+  - Subject object
+  - Additional direction (if any)
+  - Core chapters
+  - Special direction modules (if any)
+  - Exclusion scope and information boundary
+- For market/industry research mode, the recommended total number of dimensions is **8-12**; a smaller number of precise dimensions is better than meaningless over-generalization.
+
+### 1.2 Parallel Search
+
+Assign one researcher subagent to each core chapter dimension / special dimension and run them in parallel (see `references/agent-dispatch.md` for dispatch rules).
+
+### 1.2.1 Standard Researcher Subagent Output: Chapter Evidence Pack
+
+Each researcher subagent must return a **chapter evidence pack** in a unified format, containing at least:
 
 - `chapter_id`
 - `chapter_name`
@@ -284,7 +284,7 @@ T1 的默认协作方式如下：
 - `evidence_limits`
 - `draft_conclusions`
 
-如果是 AI / 岗位替代性等专项模块，还应增加：
+If the work is a special module such as AI / job replaceability, it should also include:
 
 - `work_package_breakdown`
   - `role`
@@ -293,321 +293,321 @@ T1 的默认协作方式如下：
   - `retained_human_part`
   - `evidence_strength`
 
-每个 subagent 的任务模板：
+Task template for each subagent:
 
 ```text
-你是 researcher subagent，负责以下研究块：
+You are the researcher subagent responsible for the following research block:
 
-主题：{调研主题}
-研究块：{章节名或专项子主题}
-目标：为最终报告沉淀“章节证据包”，支持主 agent 后续整合为：
-- 数据
-- 分析
-- 结论
+Topic: {research topic}
+Research block: {chapter name or special subtopic}
+Objective: produce a "chapter evidence pack" for the final report so the lead agent can later integrate it into:
+- Data
+- Analysis
+- Conclusion
 
-要求：
-1. 至少找到 3 个独立来源
-2. 提取关键数据点（数字、事实、可引用原话）
-3. 标注每个信息点的来源 URL 与可信度
-4. 若发现矛盾信息，必须并列记录
-5. 优先返回可核对事实、结构拆分、公司实例、区域差异、时间变化、口径说明
-6. 不要直接写完整报告段落，重点返回可被主 agent 复核、去重、补轮的证据包
+Requirements:
+1. Find at least 3 independent sources
+2. Extract key data points (numbers, facts, directly quotable lines)
+3. Label each information point with its source URL and credibility
+4. If conflicting information is found, record both sides in parallel
+5. Prioritize verifiable facts, structural breakdowns, company examples, regional differences, changes over time, and methodology notes
+6. Do not write full report paragraphs directly; focus on returning an evidence pack that the lead agent can review, deduplicate, and strengthen in later rounds
 
-输出格式：
-## 章节证据包：{研究块名称}
+Output format:
+## Chapter Evidence Pack: {research block name}
 
-chapter_id: {固定章节名或专项子题ID}
-chapter_name: {名称}
+chapter_id: {fixed chapter name or special subtopic ID}
+chapter_name: {name}
 
 ### key_datapoints
-- {数据点 / 事实 / 指标}（来源：{URL}，可信度：高/中/低）
+- {data point / fact / metric} (Source: {URL}, Credibility: high/medium/low)
 
 ### company_examples
-- {公司例子}（来源：{URL}）
+- {company example} (Source: {URL})
 
 ### regional_differences
-- {区域差异或法域差异}
+- {regional or jurisdictional difference}
 
 ### mechanism_explanations
-- {为什么会这样 / 差异来自哪里 / 机制是什么}
+- {why this happens / where the difference comes from / what the mechanism is}
 
 ### source_urls
 - {URL 1}
 - {URL 2}
 
 ### evidence_limits
-- {口径差异 / 不可强推之处 / 只适用于某类市场的边界}
+- {differences in methodology / places where strong claims are not justified / boundaries that only apply to certain market types}
 
 ### draft_conclusions
-- {本研究块可支撑的审慎判断}
+- {cautious judgment supported by this research block}
 
 ### information_gaps
-- {仍未找到的关键信息}
+- {key information still not found}
 
-### work_package_breakdown （仅专项模块需要）
-- role: {岗位/职能}
-  task_bundle: {任务包}
-  automatable_part: {先被自动化部分}
-  retained_human_part: {仍保留人工部分}
-  evidence_strength: {强直接证据 / 组织信号 / 审慎推断}
+### work_package_breakdown (required only for special modules)
+- role: {role/function}
+  task_bundle: {task bundle}
+  automatable_part: {part automated first}
+  retained_human_part: {part still handled by humans}
+  evidence_strength: {strong direct evidence / organizational signal / cautious inference}
 ```
 
-### 1.3 结果整合
+### 1.3 Result Integration
 
-所有 researcher subagent 完成后：
+After all researcher subagents complete:
 
-1. 将发现追加到 `autoloop-findings.md`
-2. 建立章节 / 专项模块对应关系
-3. 检查每个章节证据包是否已经具备：
+1. Append findings to `autoloop-findings.md`
+2. Build the mapping between chapters / special modules
+3. Check whether each chapter evidence pack includes:
    - key_datapoints
    - mechanism_explanations
    - draft_conclusions
    - source_urls
-4. 识别信息缺口、口径冲突与证据强弱
-5. 标记哪些章节仍然“薄”：
-   - 缺数据层
-   - 缺结构拆分
-   - 缺公司 / 区域实例
-   - 缺来源与章节对应
-   - 结论先于证据
-   - 子 agent 返回格式不完整
+4. Identify information gaps, framing conflicts, and evidence strength
+5. Mark which chapters are still "thin":
+   - Missing the data layer
+   - Missing structural breakdown
+   - Missing company / regional examples
+   - Missing source-to-chapter mapping
+   - Conclusions appearing before evidence
+   - Incomplete subagent return format
 
 ---
 
-## 质量门禁评分
+## Quality Gate Scoring
 
-质量门禁阈值见 `references/quality-gates.md` T1 行：
+See row T1 in `references/quality-gates.md` for the quality gate threshold:
 
-- 覆盖率
-- 可信度
-- 一致性
-- 完整性
+- Coverage
+- Credibility
+- Consistency
+- Completeness
 
-CHECK 阶段仍由独立 evaluator 按 `references/quality-gates.md` 评分。
+The CHECK stage is still scored by an independent evaluator according to `references/quality-gates.md`.
 
-### T1 补充检查（章节深度）
+### T1 Supplemental Checks (Chapter Depth)
 
-除上述门禁外，市场/行业调研模式还必须做章节深度检查：
+In addition to the above gates, market/industry research mode must also run chapter-depth checks:
 
-1. 是否所有强制章节都有内容
-2. 是否所有章节都有“数据 + 分析 + 结论”
-3. 是否专项方向模块完整
-4. 是否关键判断具备交叉验证
-5. 是否最终报告中移除了所有内部噪声
-6. 是否每章都有足够的可核对数据块，而不是只有总括
-7. 是否区分了直接证据、组织信号与分析推断
-8. 是否数据来源已按章节组织，而不是纯 bibliography
+1. Whether all mandatory chapters contain content
+2. Whether every chapter includes "data + analysis + conclusion"
+3. Whether the special direction module is complete
+4. Whether key judgments are cross-verified
+5. Whether all internal noise has been removed from the final report
+6. Whether every chapter has enough verifiable data blocks instead of only summary statements
+7. Whether direct evidence, organizational signals, and analytical inference are clearly distinguished
+8. Whether data sources are organized by chapter rather than as a pure bibliography
 
-这些补充检查可记录在 `autoloop-progress.md` 与 `autoloop-findings.md`，用于决定下一轮重点。
-
----
-
-## 轮间决策规则
-
-每轮结束后，根据门禁和章节深度决定下一步：
-
-### 场景 A：全部达标
-
-- 覆盖率、可信度、一致性、完整性满足 T1 阈值
-- 强制章节齐全
-- 每章具备数据 + 分析 + 结论
-- 专项模块（如有）齐全
-
-→ 终止迭代，进入结果整合
-
-### 场景 B：覆盖率不足
-
-- 对缺失章节或缺失维度分配新的 researcher
-- 检查是否需要新增研究块
-
-### 场景 C：可信度不足
-
-- 对关键判断补一手资料或独立来源
-- 优先搜索官方文档、年报、监管、学术、原始数据
-
-### 场景 D：一致性不足
-
-- 深入调查矛盾信息
-- 将矛盾归因于时间差异 / 口径差异 / 场景差异 / 真争议
-
-### 场景 E：完整性不足
-
-- 对缺来源陈述逐一补源
-- 无法补源的判断降级为待验证或删除
-
-### 场景 F：章节深度不足
-
-触发条件包括：
-
-- 某章节只有数据没有分析
-- 某章节有分析但缺硬数据
-- 某章节没有明确结论
-- 专项模块深度不足
-- 关键判断未交叉验证
-- 缺公司 / 区域 / 产品 / 时间维度的交叉证据
-- 来源虽然很多，但没有和章节形成稳定对应
-- 子 agent 返回的章节证据包缺关键字段
-- 章节只有总括，没有足够可核对事实块
-
-→ 下一轮聚焦补“章节深度”，而不是只补数量
+These supplemental checks can be recorded in `autoloop-progress.md` and `autoloop-findings.md` to determine the focus of the next round.
 
 ---
 
-## 第 2-N 轮执行
+## Inter-Round Decision Rules
+
+After each round, decide the next step based on the gates and chapter depth:
+
+### Scenario A: Everything Meets Standard
+
+- Coverage, credibility, consistency, and completeness meet the T1 threshold
+- All mandatory chapters are present
+- Every chapter includes data + analysis + conclusion
+- Special modules (if any) are complete
+
+→ Stop iterating and move to result integration
+
+### Scenario B: Coverage Is Insufficient
+
+- Assign new researchers to missing chapters or missing dimensions
+- Check whether new research blocks need to be added
+
+### Scenario C: Credibility Is Insufficient
+
+- Add primary materials or independent sources for key judgments
+- Prioritize official documents, annual reports, regulation, academic sources, and raw data
+
+### Scenario D: Consistency Is Insufficient
+
+- Investigate conflicting information in depth
+- Attribute conflicts to time differences / methodology differences / scenario differences / real disputes
+
+### Scenario E: Completeness Is Insufficient
+
+- Add sources one by one to unsupported statements
+- Downgrade unsourced judgments to "to be verified" or remove them
+
+### Scenario F: Chapter Depth Is Insufficient
+
+Trigger conditions include:
+
+- A chapter has data but no analysis
+- A chapter has analysis but lacks hard data
+- A chapter has no explicit conclusion
+- The special module lacks depth
+- Key judgments are not cross-verified
+- Cross-evidence is missing across company / region / product / time dimensions
+- There are many sources, but they do not map stably to chapters
+- The chapter evidence pack returned by a subagent is missing key fields
+- The chapter only contains summary statements and lacks enough verifiable fact blocks
+
+→ The next round should focus on supplementing "chapter depth", not just increasing quantity
+
+---
+
+## Round 2-N Execution
 
 ```text
-OBSERVE：
-  读取 findings.md 的反思章节
-  读取当前章节深度检查结果
-  识别最低分门禁与最薄弱章节
+OBSERVE:
+  Read the reflection section in findings.md
+  Read the current chapter-depth check results
+  Identify the lowest-scoring gate and the weakest chapters
 
-ORIENT：
-  确定本轮优先补强的章节 / 专项模块（最多 3 个）
-  制定具体策略：补数据、补结构拆分、补公司/区域实例、补交叉验证、补结论、补来源组织
+ORIENT:
+  Determine the chapters / special modules to strengthen this round (up to 3)
+  Define specific tactics: add data, add structural breakdown, add company/regional examples, add cross-verification, add conclusions, improve source organization
 
-DECIDE：
-  分配 subagent
-  独立章节并行；强关联章节串行
-  为每个 subagent 明确章节证据包返回格式
+DECIDE:
+  Assign subagents
+  Run independent chapters in parallel; run strongly dependent chapters serially
+  Specify the required chapter evidence pack format for each subagent
 
-ACT：
-  执行检索，整合回 findings.md
-  更新章节深度状态
-  识别返回格式缺失与冲突项
+ACT:
+  Run searches and integrate the results back into findings.md
+  Update chapter-depth status
+  Identify missing return fields and conflict items
 
-VERIFY：
-  重新计算 T1 门禁分数
-  重新检查章节是否具备数据 + 分析 + 结论
-  重新检查章节证据包是否足以支撑读者版写作
+VERIFY:
+  Recalculate T1 gate scores
+  Recheck whether chapters contain data + analysis + conclusion
+  Recheck whether chapter evidence packs are sufficient to support reader-facing writing
 
-EVOLVE：
-  判断是否终止
-  如连续 2 轮同一章节改进极小，则切换搜索策略
+EVOLVE:
+  Decide whether to terminate
+  If the same chapter improves only minimally for 2 consecutive rounds, switch search strategy
 
-REFLECT：
-  写入 findings.md 的 4 层反思结构表
+REFLECT:
+  Write the 4-layer reflection structure table into findings.md
 ```
 
 ---
 
-## 交叉验证机制
+## Cross-Verification Mechanism
 
-在每轮结束时，运行 cross-verifier subagent：
+At the end of each round, run the cross-verifier subagent:
 
 ```text
-任务：检查 findings.md 中关键判断是否存在矛盾或单一来源依赖
+Task: check whether key judgments in findings.md contain contradictions or rely on a single source
 
-输出：
-## 矛盾报告
+Output:
+## Conflict Report
 
-| 编号 | 研究块 | 说法 A（来源） | 说法 B（来源） | 分析 | 处理建议 |
+| ID | Research Block | Claim A (Source) | Claim B (Source) | Analysis | Handling Suggestion |
 |------|--------|-----------------|-----------------|------|---------|
 ```
 
-其作用是：
+Its purpose is to:
 
-- 发现事实矛盾
-- 发现口径冲突
-- 发现结论支撑不足
-- 发现哪些判断只能降级为风险或争议点
-
----
-
-## 信息来源优先级
-
-信息来源可信度分级见 `references/quality-gates.md` 可信度章节。通用优先顺序：
-
-1. 官方文档、监管公告、财报、原始数据库
-2. 同行评审研究、权威行业机构
-3. 主流专业媒体
-4. 有作者与背书的专家内容
-5. 一般博客与社区内容（需交叉验证）
+- Detect factual contradictions
+- Detect framing conflicts
+- Detect insufficient support for conclusions
+- Identify which judgments can only be downgraded to risks or points of dispute
 
 ---
 
-## 结果整合
+## Source Priority
 
-达到终止条件后，整合最终报告（文件名见 `references/loop-data-schema.md`；体例见 `assets/report-template.md`）。
+See the credibility section of `references/quality-gates.md` for source credibility tiers. General priority order:
 
-### T1 终稿要求
+1. Official documents, regulatory announcements, financial statements, raw databases
+2. Peer-reviewed research, authoritative industry institutions
+3. Mainstream professional media
+4. Expert content with named authors and endorsement
+5. General blogs and community content (requires cross-verification)
 
-- 市场 / 行业主题按 **「T1：高标准市场/行业调研报告」** 输出
-- 每个强制章节必须有：数据 + 分析 + 结论
-- 若存在附加方向，则增加专项模块
-- 报告中不得出现任何内部运行、门禁、方法论显性标题或系统痕迹
-- 正文论点必须来自本轮检索沉淀的 findings，而不是历史旧稿直接改写
-- 终稿中的事实层应尽量体现章节证据包中的：结构拆分、公司实例、区域差异、时间变化、证据边界
-- 终稿中的结论应建立在证据之后，不能用一两句总括替代事实层
+---
 
-### findings.md 最终结构
+## Result Integration
+
+After the stop condition is met, integrate the final report (see `references/loop-data-schema.md` for filename rules and `assets/report-template.md` for the format).
+
+### T1 Final Draft Requirements
+
+- Market / industry topics must be output as **"T1: High-Standard Market/Industry Research Report"**
+- Every mandatory chapter must contain: data + analysis + conclusion
+- If an additional direction exists, add a special module
+- The report must not include any internal runtime details, gate information, explicit methodology headings, or system traces
+- Body arguments must come from the findings accumulated through this round of research, not from directly rewriting historical drafts
+- The factual layer in the final draft should reflect as much as possible from the chapter evidence pack: structural breakdown, company examples, regional differences, changes over time, and evidence boundaries
+- Conclusions in the final draft must be built on top of evidence and cannot replace the factual layer with one or two summary sentences
+
+### Final Structure of findings.md
 
 ```markdown
 # AutoLoop Research Findings
 
-## 执行摘要
-- 主题：{调研主题}
-- 调研轮次：{N} 轮
-- 最终得分：覆盖率 {X}% / 可信度 {X}% / 一致性 {X}% / 完整性 {X}%
-- 关键结论（3-5 条）
+## Executive Summary
+- Topic: {research topic}
+- Research rounds: {N}
+- Final scores: coverage {X}% / credibility {X}% / consistency {X}% / completeness {X}%
+- Key conclusions (3-5 items)
 
-## 研究块详情
+## Research Block Details
 
-### {研究块 1}
-{整合后的内容，按 数据 / 分析线索 / 结论候选 / 来源 / 缺口 组织}
+### {research block 1}
+{integrated content, organized by data / analysis clues / candidate conclusions / sources / gaps}
 
-### {研究块 2}
+### {research block 2}
 ...
 
-## 争议与不确定性
+## Controversies and Uncertainties
 
-| 议题 | 说法 A | 说法 B | 当前处理 |
+| Topic | Claim A | Claim B | Current Handling |
 |------|--------|--------|----------|
 
-## 信息缺口
-- {缺口 1}
+## Information Gaps
+- {gap 1}
 
-## 推荐阅读
-- {关键资源}
+## Recommended Reading
+- {key resource}
 ```
 
 ---
 
-## 进度追踪格式
+## Progress Tracking Format
 
-每轮在 `autoloop-progress.md` 中追加完整 8 阶段记录。T1 简化摘要示例：
+Append a full 8-stage record to `autoloop-progress.md` for each round. Simplified T1 summary example:
 
 ```markdown
-## 第 {N} 轮 — {开始时间}
+## Round {N} — {start time}
 
-**本轮目标**：补强 {章节 / 专项模块}
+**Goal for this round**: strengthen {chapter / special module}
 
-**执行记录**：
-- {subagent 1}：{任务} → {结果}
-- {subagent 2}：{任务} → {结果}
+**Execution log**:
+- {subagent 1}: {task} → {result}
+- {subagent 2}: {task} → {result}
 
-**本轮得分**：
-- 覆盖率：{上轮} → {本轮}
-- 可信度：{上轮} → {本轮}
-- 一致性：{上轮} → {本轮}
-- 完整性：{上轮} → {本轮}
+**Scores for this round**:
+- Coverage: {previous round} → {current round}
+- Credibility: {previous round} → {current round}
+- Consistency: {previous round} → {current round}
+- Completeness: {previous round} → {current round}
 
-**章节深度检查**：
-- {章节 1}：数据 / 分析 / 结论 = {状态}
-- {章节 2}：数据 / 分析 / 结论 = {状态}
+**Chapter depth check**:
+- {chapter 1}: data / analysis / conclusion = {status}
+- {chapter 2}: data / analysis / conclusion = {status}
 
-**决策**：{继续 / 终止}
-**下一轮重点**：{具体计划}
+**Decision**: {continue / stop}
+**Next-round focus**: {specific plan}
 ```
 
 ---
 
-## 每轮 REFLECT 执行规范
+## REFLECT Execution Rules for Each Round
 
-每轮（包括第一轮）结束后，在 EVOLVE / 终止判断之后执行。REFLECT 必须写入文件，不能只在思考中完成。写入 `autoloop-findings.md` 的 4 层反思结构表（问题登记 / 策略复盘 / 模式识别 / 经验教训），格式见 `assets/findings-template.md`。
+After each round (including Round 1), execute this after EVOLVE / termination judgment. REFLECT must be written to a file and cannot be completed only in thought. Write the 4-layer reflection structure table into `autoloop-findings.md` (issue registration / strategy review / pattern recognition / lessons learned); see `assets/findings-template.md` for the format.
 
-- **问题登记**：记录本轮发现的信息空白、来源冲突、数据质量问题
-- **策略复盘**：搜索策略/验证方法/整合方式的效果评估（保持 | 避免 | 待验证）（策略评价枚举见 references/loop-data-schema.md 统一状态枚举）
-- **模式识别**：哪些来源一直提供高质量信息、哪些维度反复出现空白
-- **经验教训**：搜索关键词/数据源/分析方法的有效性总结
-- **协议复盘**：哪些章节证据包字段最有效、哪些字段经常缺失、哪些章节最容易写薄
-- **经验写回**: 将本轮策略效果写入 `references/experience-registry.md`（策略ID、适用场景、效果评分、执行上下文，遵循效果记录表格式）
+- **Issue registration**: record information gaps, source conflicts, and data-quality issues found in this round
+- **Strategy review**: evaluate the effectiveness of search strategies / validation methods / integration approaches (keep | avoid | to be verified) (for strategy evaluation enums, see the unified status enums in `references/loop-data-schema.md`)
+- **Pattern recognition**: which sources consistently provide high-quality information, and which dimensions repeatedly show gaps
+- **Lessons learned**: summarize the effectiveness of search keywords / data sources / analysis methods
+- **Protocol review**: which chapter evidence-pack fields are most effective, which fields are frequently missing, and which chapters are easiest to make too thin
+- **Experience write-back**: write the strategy effects from this round into `references/experience-registry.md` (strategy ID, applicable scenario, effect score, execution context, following the effect-record table format)

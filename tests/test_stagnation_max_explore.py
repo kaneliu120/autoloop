@@ -1,4 +1,4 @@
-"""manifest.stagnation_max_explore：EVOLVE 中停滞时 strategy 切换计数与 pause。"""
+"""`manifest.stagnation_max_explore`: strategy-switch counting and pause behavior during EVOLVE stagnation."""
 
 import importlib.util
 import json
@@ -125,7 +125,7 @@ class TestStagnationMaxExplore(unittest.TestCase):
             {"strategy": {"strategy_id": "S"}},
             {"strategy": {"strategy_id": "S"}},
         ]
-        # 低于 manifest T5 上限，避免「未切换却仍 pause」与用例意图混淆
+        # Keep below the T5 manifest limit so the test stays focused on "no switch means no pause".
         st.setdefault("metadata", {})["stagnation_explore_switches"] = 1
         _save_json(path, st)
         st = _load_json(path)
@@ -162,10 +162,10 @@ class TestStagnationMaxExplore(unittest.TestCase):
         _save_json(path, st)
         st = _load_json(path)
         d, r = mod._stagnation_max_explore_apply(
-            td, st, [("d", 0, "stagnating")], "stop", ["所有 hard gate 已通过"]
+            td, st, [("d", 0, "stagnating")], "stop", ["All hard gates passed"]
         )
         self.assertEqual(d, "stop")
-        self.assertIn("所有 hard gate 已通过", r)
+        self.assertIn("All hard gates passed", r)
 
 
 if __name__ == "__main__":

@@ -1,405 +1,436 @@
 ---
 name: autoloop-deliver
 description: >
-  AutoLoop T4: 全流程交付模板。从需求到生产的完整 5 阶段交付流程（Phase 1-5），
-  严格映射 CLAUDE.md 强制开发流程。
-  每个阶段有明确质量门禁，不通过不进入下一阶段。
-  质量门禁阈值见 references/quality-gates-engineering.md T4 行。
-  触发：/autoloop:deliver 或任何需要端到端功能交付的任务。
+  AutoLoop T4: End-to-end delivery template. A complete 5-phase delivery flow from requirements to production (Phase 1-5),
+  strictly mapped to the mandatory development process in CLAUDE.md.
+  Every phase has explicit quality gates; if a phase fails, do not proceed to the next one.
+  See references/quality-gates-engineering.md row T4 for the quality gate threshold.
+  Trigger: /autoloop:deliver or any task that requires end-to-end feature delivery.
 ---
 
-# AutoLoop T4: Deliver — 全流程交付
+# AutoLoop T4: Deliver — End-to-End Delivery
 
-## 执行前提
+## Prerequisites for Execution
 
-读取 `autoloop-plan.md` 获取所有执行参数。T4 参数见 `references/loop-protocol.md` 统一参数词汇表。
+Read `autoloop-plan.md` to get all execution parameters. See the unified parameter glossary in `references/loop-protocol.md` for T4 parameters.
 
-**严格遵守 CLAUDE.md 强制开发流程，不可跳步。**
+**Strictly follow the mandatory development process in CLAUDE.md. Do not skip steps.**
 
-**Round 2+ OBSERVE 起点**：如本次交付是对上次未完成任务的继续，先读取 `autoloop-findings.md` 反思章节（第 2 层：策略复盘），获取遗留问题、有效/无效策略、已识别模式，再进入阶段 1 开发。详见 `references/loop-protocol.md` OBSERVE Step 0 章节。
+**Round 2+ OBSERVE starting point**: if this delivery continues an unfinished task from the previous run, first read the reflection chapter in `autoloop-findings.md` (Layer 2: strategy review) to obtain remaining issues, effective/ineffective strategies, and identified patterns before entering Phase 1 development. See the OBSERVE Step 0 section in `references/loop-protocol.md` for details.
 
-- **经验库读取**: 读取 `references/experience-registry.md` 中与当前任务类型和目标维度匹配的条目，识别状态为「推荐」或「候选默认」的策略，传递到 DECIDE 阶段参考
-
----
-
-## 阶段概览
-
-```text
-阶段 1   → 开发（backend-dev + frontend-dev + db-migrator）
-阶段 2   → 审查（code-reviewer）
-阶段 3   → 测试验证（verifier）
-阶段 4   → 部署（git push + {deploy_command}）
-阶段 5   → 线上验收（verifier + 人工确认）
-```
-
-**人工确认门禁（Blocking Gate）**：阶段 5 必须人工确认（状态机进入暂停等待确认），系统不自动跳过。详见 `references/loop-protocol.md` 状态机章节。
+- **Experience registry read**: read entries in `references/experience-registry.md` that match the current task type and target dimensions, identify strategies with status "recommended" or "candidate default", and pass them into the DECIDE stage as reference
 
 ---
 
-## 阶段 1: 开发
-
-### 目标
-
-接收已确认的方案文档（来自产品设计阶段或 autoloop-plan.md），开始代码实现。
-
-### 执行顺序
-
-**1a. 数据库迁移（如有）** — 最先执行，其他开发依赖数据库结构
-
-db-migrator subagent（调度方式见 `references/agent-dispatch.md` db-migrator 章节）：
+## Phase Overview
 
 ```text
-你是 db-migrator subagent。
-
-任务：创建数据库迁移脚本。
-
-变更内容：
-{从方案文档提取的数据库变更描述}
-
-代码库路径：{绝对路径}
-migration_check_cmd：{从 autoloop-plan.md 读取，变量名见 references/loop-protocol.md}
-syntax_check_cmd：{从 autoloop-plan.md 读取}
-
-要求：
-- 必须有回滚（downgrade/down/revert）实现
-- 使用幂等操作（IF NOT EXISTS / IF EXISTS）防止重复执行报错
-- 迁移工具和配置文件路径以 plan 中定义为准
-
-根据技术栈适配：
-具体迁移工具用法参见 references/enterprise-standard.md 技术栈特定检测章节及 references/agent-dispatch.md 附录。
-
-输出：
-- 迁移文件路径
-- 迁移内容摘要（新增/修改的表/列/索引）
-- 回滚方案
-- 验证结果（{syntax_check_cmd}）
+Phase 1   → Development (backend-dev + frontend-dev + db-migrator)
+Phase 2   → Review (code-reviewer)
+Phase 3   → Test Verification (verifier)
+Phase 4   → Deployment (git push + {deploy_command})
+Phase 5   → Production Acceptance (verifier + manual confirmation)
 ```
 
-**1b. 后端开发** — 数据库迁移后执行
-
-backend-dev subagent（调度方式见 `references/agent-dispatch.md` backend-dev 章节）：
-
-```text
-你是 backend-dev subagent，负责后端代码实现。
-
-方案文档：{路径}
-代码库路径：{绝对路径}
-syntax_check_cmd：{从 autoloop-plan.md 读取}
-syntax_check_file_arg：{从 autoloop-plan.md 读取（true/false）}
-main_entry_file：{从 autoloop-plan.md 读取}
-new_router_name：{从 autoloop-plan.md 读取}
-
-通用要求：
-- 所有外部调用有异常处理，不允许静默失败（空 catch/except）
-- 新文件在模块导出文件中声明
-- 新路由在主入口文件（{main_entry_file}）中注册
-- 每修改一个文件立即运行语法验证命令
-
-技术栈适配：
-根据 plan 中确认的技术栈，使用对应的 {syntax_check_cmd} 和 {migration_check_cmd} 执行验证。具体技术栈适配见 references/enterprise-standard.md 技术栈特定检测章节。
-
-对每个文件的修改：
-1. 读取现有文件（不盲改）
-2. 实施修改
-3. 运行 {syntax_check_cmd}（syntax_check_file_arg=true 时附加文件路径，false 时不附加）
-4. 报告修改内容
-
-输出：
-- 修改/新建的文件列表（绝对路径）
-- 每个文件的关键变更摘要
-- 语法验证结果（全部通过）
-- 主入口文件注册确认：grep -n '{new_router_name}' {main_entry_file}
-```
-
-**1c. 前端开发（如有）** — 可与后端并行
-
-frontend-dev subagent（调度方式见 `references/agent-dispatch.md` frontend-dev 章节）：
-
-```text
-你是 frontend-dev subagent，负责前端代码实现。
-
-方案文档：{路径}
-前端目录：{从 autoloop-plan.md 读取 frontend_dir}
-syntax_check_cmd：{从 autoloop-plan.md 读取}
-
-通用要求：
-- 类型必须正确，无 any 滥用（TypeScript 项目）
-- API 调用通过项目规定的代理/封装层
-- 每修改一个文件立即运行 {syntax_check_cmd} 验证
-- 新组件在 barrel export 文件中导出（如项目有此规范）
-
-技术栈适配：
-根据 plan 中确认的技术栈，使用对应的 {syntax_check_cmd} 执行验证。具体技术栈适配见 references/enterprise-standard.md 技术栈特定检测章节。
-
-输出：
-- 修改/新建的文件列表（绝对路径）
-- {syntax_check_cmd} 验证结果（通过）
-```
-
-### 质量门禁（阶段 1）
-
-Phase 1 门禁见 `references/quality-gates.md` 工程类任务门禁章节：
-
-- [ ] 语法验证通过（对每个修改文件运行 `{syntax_check_cmd}`，按 `syntax_check_file_arg` 决定是否附加文件名）
-- [ ] 新路由已注册：`grep -n '{new_router_name}' {main_entry_file}`（无新路由则 N/A）
-- [ ] 新文件已在模块导出文件中声明
-- [ ] 数据库迁移脚本有 downgrade 实现
-- [ ] 无静默失败（空 catch/except）/ 无类型逃逸（any / type:ignore）滥用
+**Manual confirmation gate (Blocking Gate)**: Phase 5 requires manual confirmation (the state machine enters a paused waiting state); the system must not skip it automatically. See the state-machine section in `references/loop-protocol.md`.
 
 ---
 
-## 阶段 2: 审查
+## Phase 1: Development
 
-code-reviewer subagent（调度方式见 `references/agent-dispatch.md` code-reviewer 章节）对所有修改文件审查，审查清单和评分规则见 `references/quality-gates.md` 安全性/可靠性/可维护性门禁章节及 `references/enterprise-standard.md`：
+### Goal
+
+Take the confirmed solution document (from the product design phase or `autoloop-plan.md`) and begin implementation.
+
+### API Contract Alignment (Required When Frontend and Backend Run in Parallel)
+
+When Phase 1 dispatches both frontend-dev and backend-dev agents at the same time, complete this step before dispatch:
+
+1. Extract all added/modified API endpoints from the solution document
+2. Generate a contract document (OpenAPI spec or endpoint list) containing: path, method, request body, response body, and authentication requirements
+3. Save the contract document to `{work_dir}/api-contract.md`
+4. Include the contract document path in the dispatch context for both frontend-dev and backend-dev
+
+Risk of skipping this step: frontend and backend agents may infer the API design independently, which can produce inconsistent endpoint naming or parameter formats.
+
+### Execution Order
+
+**1a. Database migration (if any)** — execute first, because other development depends on the database structure
+
+db-migrator subagent (see the db-migrator section in `references/agent-dispatch.md` for dispatch rules):
 
 ```text
-你是 code-reviewer subagent，对以下文件进行安全+质量审查。
+You are the db-migrator subagent.
 
-审查文件列表：
-{阶段 1 产出的所有修改/新建文件的绝对路径}
+Task: create the database migration script.
 
-审查清单（完整扣分规则见 references/enterprise-standard.md）：
+Change details:
+{database change description extracted from the solution document}
 
-安全性：
-  - SQL 注入（原始字符串拼接到查询）
-  - 命令注入（未校验的参数传入 shell 命令）
-  - 路径穿越（用户输入影响文件路径）
-  - 敏感数据暴露（密钥/密码在日志或响应中）
-  - 输入验证（所有外部输入有类型/Schema 检查）
+Codebase path: {absolute path}
+migration_check_cmd: {read from autoloop-plan.md; variable name see references/loop-protocol.md}
+syntax_check_cmd: {read from autoloop-plan.md}
 
-可靠性：
-  - 所有外部调用（网络/文件/数据库/缓存）有异常处理
-  - 无静默失败（空 catch/except）
-  - 关键写操作有事务保护
-  - 外部依赖有降级回退（缓存失败不应崩溃主流程）
+Requirements:
+- Must include rollback implementation (`downgrade` / `down` / `revert`)
+- Use idempotent operations (`IF NOT EXISTS` / `IF EXISTS`) to prevent duplicate-run failures
+- Use the migration tool and config-file paths defined in the plan
 
-接口一致性：
-  - 函数签名遵循项目规范（技术栈由 plan 决定）
-  - 返回类型有标注
-  - 命名语义清晰
+Adapt to the tech stack:
+See the tech-stack-specific checks section in `references/enterprise-standard.md` and the appendix in `references/agent-dispatch.md` for specific migration-tool usage.
 
-代码质量：
-  - 无重复代码（DRY 原则）
-  - 无硬编码的配置值
-  - 复杂逻辑有注释
+Output:
+- Migration file path
+- Migration summary (added/modified tables/columns/indexes)
+- Rollback plan
+- Verification result (`{syntax_check_cmd}`)
+```
 
-输出格式：
-## 审查报告
+**1b. Backend development** — execute after database migration
 
-### 通过项
-- {文件}: {通过的方面}
+backend-dev subagent (see the backend-dev section in `references/agent-dispatch.md` for dispatch rules):
 
-### 问题清单
+```text
+You are the backend-dev subagent, responsible for backend implementation.
 
-| ID | 文件 | 行号 | 类型 | 严重级别 | 描述 | 修复建议 |
+Solution document: {path}
+Codebase path: {absolute path}
+syntax_check_cmd: {read from autoloop-plan.md}
+syntax_check_file_arg: {read from autoloop-plan.md (true/false)}
+main_entry_file: {read from autoloop-plan.md}
+new_router_name: {read from autoloop-plan.md}
+
+General requirements:
+- All external calls must have exception handling; silent failure (empty catch/except) is not allowed
+- New files must be declared in the module export file
+- New routes must be registered in the main entry file (`{main_entry_file}`)
+- Run the syntax verification command immediately after each file modification
+
+Tech stack adaptation:
+Use the corresponding `{syntax_check_cmd}` and `{migration_check_cmd}` based on the tech stack confirmed in the plan. See the tech-stack-specific checks section in `references/enterprise-standard.md` for details.
+
+For each file modification:
+1. Read the existing file (do not edit blindly)
+2. Apply the change
+3. Run `{syntax_check_cmd}` (append the file path when `syntax_check_file_arg=true`, otherwise do not)
+4. Report the changes made
+
+Output:
+- List of modified/new files (absolute paths)
+- Key change summary for each file
+- Syntax verification results (all passing)
+- Main entry-file registration confirmation: `grep -n '{new_router_name}' {main_entry_file}`
+```
+
+**1c. Frontend development (if any)** — may run in parallel with backend work
+
+frontend-dev subagent (see the frontend-dev section in `references/agent-dispatch.md` for dispatch rules):
+
+```text
+You are the frontend-dev subagent, responsible for frontend implementation.
+
+Solution document: {path}
+Frontend directory: {read frontend_dir from autoloop-plan.md}
+syntax_check_cmd: {read from autoloop-plan.md}
+
+General requirements:
+- Types must be correct, with no abuse of `any` (for TypeScript projects)
+- API calls must go through the project's prescribed proxy/wrapper layer
+- Run `{syntax_check_cmd}` immediately after each file modification
+- Export new components in barrel export files if the project uses that convention
+
+Tech stack adaptation:
+Use the corresponding `{syntax_check_cmd}` based on the tech stack confirmed in the plan. See the tech-stack-specific checks section in `references/enterprise-standard.md` for details.
+
+Output:
+- List of modified/new files (absolute paths)
+- `{syntax_check_cmd}` verification result (passing)
+```
+
+### Quality Gates (Phase 1)
+
+See the engineering-task gate section in `references/quality-gates.md` for Phase 1 gates:
+
+- [ ] Syntax verification passes (run `{syntax_check_cmd}` for each modified file, with file arguments controlled by `syntax_check_file_arg`)
+- [ ] New route registered: `grep -n '{new_router_name}' {main_entry_file}` (N/A if there is no new route)
+- [ ] New files declared in module export files
+- [ ] Database migration script includes a `downgrade` implementation
+- [ ] No silent failure (empty catch/except) / no abuse of type escape hatches (`any` / `type:ignore`)
+
+---
+
+## Phase 2: Review
+
+The code-reviewer subagent (see the code-reviewer section in `references/agent-dispatch.md` for dispatch rules) reviews all modified files. See the security / reliability / maintainability gate sections in `references/quality-gates.md` and `references/enterprise-standard.md` for the review checklist and scoring rules:
+
+```text
+You are the code-reviewer subagent, reviewing the following files for security + quality.
+
+Files under review:
+{absolute paths of all modified/new files produced in Phase 1}
+
+Review checklist (see `references/enterprise-standard.md` for the full deduction rules):
+
+Security:
+  - SQL injection (raw strings concatenated into queries)
+  - Command injection (unchecked parameters passed into shell commands)
+  - Path traversal (user input influencing file paths)
+  - Sensitive data exposure (keys/passwords in logs or responses)
+  - Input validation (all external input validated with types/schema)
+
+Reliability:
+  - All external calls (network/file/database/cache) have exception handling
+  - No silent failure (empty catch/except)
+  - Critical write operations are protected by transactions
+  - External dependencies have degradation fallback (cache failure should not crash the main flow)
+
+Interface consistency:
+  - Function signatures follow project conventions (tech stack determined by the plan)
+  - Return types are annotated
+  - Naming is semantically clear
+
+Code quality:
+  - No duplicate code (DRY principle)
+  - No hardcoded configuration values
+  - Complex logic is commented
+
+Output format:
+## Review Report
+
+### Passed Items
+- {file}: {areas that passed}
+
+### Issue List
+
+| ID | File | Line | Type | Severity | Description | Fix Suggestion |
 |----|------|------|------|---------|------|---------|
-| 001 | {路径} | {行} | 安全 | P1 | {描述} | {建议} |
+| 001 | {path} | {line} | Security | P1 | {description} | {suggestion} |
 
-### 结论
-- P1 问题（必须修复）：{N} 个
-- P2 问题（应该修复）：{N} 个
-- P3 问题（建议修复）：{N} 个
-- 结论：{通过 / 需要修复后重审}
+### Conclusion
+- P1 issues (must fix): {N}
+- P2 issues (should fix): {N}
+- P3 issues (recommended): {N}
+- Conclusion: {pass / fix and re-review required}
 ```
 
-### 质量门禁（阶段 2）
+### Quality Gates (Phase 2)
 
-Phase 2 门禁见 `references/quality-gates.md` T4 行：
+See row T4 in `references/quality-gates.md` for Phase 2 gates:
 
-- [ ] P1 问题 = 0（安全漏洞、数据丢失风险）
-- [ ] P2 问题 = 0（功能缺陷、错误处理缺失）
-- [ ] P3 问题已记录（不强制修复，记入最终报告）
+- [ ] P1 issues = 0 (security vulnerabilities, data-loss risk)
+- [ ] P2 issues = 0 (functional defects, missing error handling)
+- [ ] P3 issues recorded (not mandatory to fix; include them in the final report)
 
-P1/P2 问题必须修复后重审（返回阶段 1 针对性修复）。重试上限见 `references/loop-protocol.md` 统一重试规则（T4 Phase 2 审查-修复循环最多 3 轮）。
+P1/P2 issues must be fixed and then re-reviewed (return to Phase 1 for targeted fixes). See the unified retry rules in `references/loop-protocol.md` for the retry limit (maximum 3 review-fix loops for T4 Phase 2).
 
 ---
 
-## 阶段 3: 测试验证
+## Phase 3: Test Verification
 
-verifier subagent（调度方式见 `references/agent-dispatch.md` verifier 章节）：
+verifier subagent (see the verifier section in `references/agent-dispatch.md` for dispatch rules):
 
 ```text
-你是 verifier subagent，负责运行所有测试和验证。
+You are the verifier subagent, responsible for running all tests and verification.
 
-代码库路径：{绝对路径}
-syntax_check_cmd：{从 autoloop-plan.md 读取}
-syntax_check_file_arg：{从 autoloop-plan.md 读取（true/false）}
-main_entry_file：{从 autoloop-plan.md 读取}
-new_router_name：{从 autoloop-plan.md 读取}
-migration_check_cmd：{从 autoloop-plan.md 读取}
+Codebase path: {absolute path}
+syntax_check_cmd: {read from autoloop-plan.md}
+syntax_check_file_arg: {read from autoloop-plan.md (true/false)}
+main_entry_file: {read from autoloop-plan.md}
+new_router_name: {read from autoloop-plan.md}
+migration_check_cmd: {read from autoloop-plan.md}
 
-验证步骤：
+Verification steps:
 
-1. 语法检查（所有修改文件）
-   根据 syntax_check_file_arg 选择执行方式：
-   - syntax_check_file_arg=true：{syntax_check_cmd} {每个修改文件}
-   - syntax_check_file_arg=false：{syntax_check_cmd}（项目级，不附加文件参数）
+1. Syntax check (all modified files)
+   Choose execution mode based on `syntax_check_file_arg`:
+   - `syntax_check_file_arg=true`: `{syntax_check_cmd} {each modified file}`
+   - `syntax_check_file_arg=false`: `{syntax_check_cmd}` (project-level, no file parameter)
 
-2. 路由注册检查（仅当 new_router_name ≠ N/A 时执行）
+2. Route registration check (execute only when `new_router_name ≠ N/A`)
    grep -n '{new_router_name}' {main_entry_file}
-   期望：找到该 router 的具体注册语句
+   Expectation: find the exact registration statement for that router
 
-3. 数据库迁移验证（如有，使用 {migration_check_cmd}）
-   migration_check_cmd 来自 autoloop-plan.md；不适用则跳过此步骤
+3. Database migration verification (if any, using `{migration_check_cmd}`)
+   `migration_check_cmd` comes from `autoloop-plan.md`; skip if not applicable
 
-4. API 冒烟测试（如果服务正在运行）
-   按项目技术栈规范发起测试请求，验证 HTTP 2xx 且响应格式正确
+4. API smoke test (if the service is running)
+   Send test requests according to the project tech-stack conventions and verify HTTP 2xx with correct response format
 
-输出：
-每步验证结果（通过/失败+错误信息）
-总体结论：通过 / 失败（{失败步骤}）
+Output:
+Verification result for each step (pass/fail + error message)
+Overall conclusion: pass / fail ({failed step})
 ```
 
-### 质量门禁（阶段 3）
+### Database Migration Check
 
-Phase 3 门禁见 `references/quality-gates.md` T4 行：
+After the verifier completes automated tests, check whether any database models were added/modified:
 
-- [ ] 语法验证通过（按 `syntax_check_file_arg` 决定是否附加文件参数）
-- [ ] 路由注册：`grep -n '{new_router_name}' {main_entry_file}` 找到注册语句（无新路由则 N/A）
-- [ ] 数据库迁移状态正确：`{migration_check_cmd}`（无迁移则 N/A）
+- **TypeORM/Prisma projects**: confirm a migration file was generated (`typeorm migration:generate` / `prisma migrate dev`) and does not rely on `synchronize: true`
+- **Alembic projects**: confirm `alembic revision --autogenerate` was run and the generated migration file exists
+- **Verification**: the migration file is executable and has a corresponding downgrade/revert implementation; do not rely on manual `ALTER TABLE`
+
+### i18n Sync Check
+
+If the project is multilingual (contains `en.json` or a similar primary-language file):
+
+- Check whether the primary-language file includes the keys added in this change
+- Confirm that other language files have synced these new keys (at minimum including an English fallback)
+- Recommendation: use AI translation to write the new keys into other language files so no gaps remain
+
+If the project is not multilingual, mark as N/A.
+
+### Quality Gates (Phase 3)
+
+See row T4 in `references/quality-gates.md` for Phase 3 gates:
+
+- [ ] Syntax verification passes (append file arguments according to `syntax_check_file_arg`)
+- [ ] Route registration: `grep -n '{new_router_name}' {main_entry_file}` finds the registration statement (N/A if no new route)
+- [ ] Database migration status is correct: `{migration_check_cmd}` (N/A if no migration)
+- [ ] Database migration file exists and includes a `downgrade` implementation (if there is a new Entity/column, a migration file is required; do not rely only on `synchronize:true`)
+- [ ] i18n sync: other language files include the newly added keys from the primary language (N/A if no multilingual support)
 
 ---
 
-## 阶段 4: 部署
+## Phase 4: Deployment
 
 ```text
-部署执行：
+Deployment execution:
 
-1. 提交代码
-   git add {所有修改文件（明确列出，不使用 git add -A）}
-   git status（确认只有预期的文件）
-   git commit -m "{功能描述}
+1. Commit code
+   git add {all modified files (explicitly listed; do not use git add -A)}
+   git status (confirm only the expected files are included)
+   git commit -m "{feature description}
 
    Co-Authored-By: AutoLoop <noreply@autoloop>"
    git push origin main
 
-2. 线上部署
-   {deploy_command}（来自 autoloop-plan.md，变量名见 references/loop-protocol.md）
+2. Production deployment
+   {deploy_command} (from autoloop-plan.md; variable name see references/loop-protocol.md)
 
-3. 服务健康检查
-   检查 {service_list} 中每个服务全部 active（来自 autoloop-plan.md）
-   如 service_list = N/A，则跳过此步骤
+3. Service health check
+   Check that every service in {service_list} is active (from autoloop-plan.md)
+   If `service_list = N/A`, skip this step
 
 4. Health check
    curl {health_check_url}
-   期望：HTTP 200
-   如 health_check_url 为空，则标记 N/A
+   Expectation: HTTP 200
+   If `health_check_url` is empty, mark as N/A
 ```
 
-### 质量门禁（阶段 4）
+### Quality Gates (Phase 4)
 
-Phase 4 门禁见 `references/quality-gates.md` T4 行：
+See row T4 in `references/quality-gates.md` for Phase 4 gates:
 
-- [ ] git push 成功
-- [ ] `{deploy_command}` 执行无报错
-- [ ] `{service_list}` 中所有服务全部 active（service_list = N/A 则跳过）
-- [ ] Health check（`{health_check_url}`）返回 200（health_check_url 为空则标记 N/A）
-- [ ] service_list 和 health_check_url 至少有一项通过（两者均 N/A 则 plan 不合法）
+- [ ] `git push` succeeds
+- [ ] `{deploy_command}` runs without errors
+- [ ] All services in `{service_list}` are active (`service_list = N/A` means skip)
+- [ ] Health check (`{health_check_url}`) returns 200 (`health_check_url` empty means mark N/A)
+- [ ] At least one of `service_list` and `health_check_url` passes (if both are N/A, the plan is invalid)
 
 ---
 
-## 阶段 5: 线上验收 — 人工确认门禁
+## Phase 5: Production Acceptance — Manual Confirmation Gate
 
-verifier subagent（调用方式见 `references/agent-dispatch.md` verifier 章节）：
+verifier subagent (see the verifier section in `references/agent-dispatch.md` for invocation rules):
 
 ```text
-你是 verifier subagent，负责线上功能验证。
+You are the verifier subagent, responsible for production feature verification.
 
-线上环境：{acceptance_url}（来自 autoloop-plan.md，变量名见 references/loop-protocol.md）
+Production environment: {acceptance_url} (from autoloop-plan.md; variable name see references/loop-protocol.md)
 
-验证清单（逐项执行）：
-1. 新功能正常工作：{具体步骤}
-2. 现有功能无回归：{检查关键功能}
-3. 浏览器 Console 零错误
-4. API 响应时间正常（< 500ms）
+Verification checklist (execute item by item):
+1. New feature works correctly: {specific steps}
+2. Existing features show no regression: {check key features}
+3. Browser Console has zero errors
+4. API response time is normal (`< 500ms`)
 
-可选工具：Chrome DevTools MCP（如已配置）
+Optional tool: Chrome DevTools MCP (if configured)
 
-输出：
-每个验证项的结果（通过/失败+截图或日志）
+Output:
+Result for each verification item (pass/fail + screenshot or log)
 ```
 
-### 暂停：等待人工确认（阶段 5）
+### Pause: Wait for Manual Confirmation (Phase 5)
 
 ```text
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-阶段 5 人工确认点 — 需要线上确认
+Phase 5 manual confirmation point — production confirmation required
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-自动验证结果：{通过/有问题}
+Automated verification result: {pass/issues found}
 
-请在浏览器（桌面+手机）访问线上环境确认：
-1. {验收标准 1}
-2. {验收标准 2}
-3. {验收标准 3}
+Please access the production environment in a browser (desktop + mobile) and confirm:
+1. {acceptance criterion 1}
+2. {acceptance criterion 2}
+3. {acceptance criterion 3}
 
-确认无误后输入 "用户确认（线上验收）" 完成任务。
-如有问题，描述问题后回滚或继续修复。
+After confirming everything is correct, enter "User confirmed (production acceptance)" to complete the task.
+If there are issues, describe them and then either roll back or continue fixing.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-T4 完成条件：Phase 4 门禁通过 AND 用户输入 "用户确认（线上验收）"。完整门禁定义见 `references/quality-gates.md` T4 行。
+T4 completion condition: Phase 4 gates pass AND the user enters "User confirmed (production acceptance)". See row T4 in `references/quality-gates.md` for the full gate definition.
 
 ---
 
-## 每轮 REFLECT 执行规范
+## REFLECT Execution Rules for Each Round
 
-在每个阶段完成之后执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `references/loop-protocol.md` REFLECT 章节）。
+Execute this after each phase completes. REFLECT must be written to a file and cannot be completed only in thought (see the REFLECT section in `references/loop-protocol.md`).
 
-写入 `autoloop-findings.md` 的 4 层反思结构表（格式见 `assets/findings-template.md`）：
+Write the 4-layer reflection structure table into `autoloop-findings.md` (see `assets/findings-template.md` for the format):
 
-- **问题登记（第 1 层）**：记录本轮发现的代码问题、修复是否引入新问题、审查遗漏
-- **策略复盘（第 2 层）**：修复策略/审查方法/验证命令的效果评估（保持 | 避免 | 待验证）（策略评价枚举见 `references/loop-protocol.md` 统一状态枚举）
-- **模式识别（第 3 层）**：反复出现的代码问题类型（说明有架构级根因）、修复导致新问题的因果链
-- **经验教训（第 4 层）**：哪类修复最有效、哪些验证步骤能发现最多问题
-- **经验写回**: 将本轮策略效果写入 `references/experience-registry.md`（策略ID、适用场景、效果评分、执行上下文，遵循效果记录表格式）
+- **Issue registration (Layer 1)**: record code issues found in this round, whether fixes introduced new issues, and review omissions
+- **Strategy review (Layer 2)**: evaluate the effectiveness of repair strategies / review methods / verification commands (keep | avoid | to be verified) (for strategy evaluation enums, see the unified status enums in `references/loop-protocol.md`)
+- **Pattern recognition (Layer 3)**: recurring types of code issues (indicating architecture-level root causes), and causal chains where a fix led to a new issue
+- **Lessons learned (Layer 4)**: which types of fixes are most effective and which validation steps uncover the most issues
+- **Experience write-back**: write the strategy effects from this round into `references/experience-registry.md` (strategy ID, applicable scenario, effect score, execution context, following the effect-record table format)
 
-**调度规范见 `references/agent-dispatch.md`。**
+**See `references/agent-dispatch.md` for dispatch rules.**
 
 ---
 
-## 交付完成报告
+## Delivery Completion Report
 
-文件名遵循 `references/loop-protocol.md` 统一输出文件命名章节（T4: `autoloop-delivery-{feature}-{date}.md`）。
+Follow the unified output filename rules in `references/loop-protocol.md` (T4: `autoloop-delivery-{feature}-{date}.md`).
 
-人工确认后，输出最终交付报告：
+After manual confirmation, output the final delivery report:
 
 ```markdown
-# 交付完成报告
+# Delivery Completion Report
 
-## 功能
-{功能名称}
+## Feature
+{feature name}
 
-## 交付内容
+## Delivery Content
 
-| 阶段 | 状态 | 耗时 |
+| Phase | Status | Duration |
 |------|------|------|
-| 1 开发 | 完成 | {时间} |
-| 2 审查 | 通过（P1/P2 = 0）| {时间} |
-| 3 测试 | 通过 | {时间} |
-| 4 部署 | 成功 | {时间} |
-| 5 验收 | 已确认 | {时间} |
+| 1 Development | Complete | {time} |
+| 2 Review | Passed (`P1/P2 = 0`) | {time} |
+| 3 Testing | Passed | {time} |
+| 4 Deployment | Success | {time} |
+| 5 Acceptance | Confirmed | {time} |
 
-## 变更清单
+## Change List
 
-### 新增文件
-{文件列表}
+### New Files
+{file list}
 
-### 修改文件
-{文件列表}
+### Modified Files
+{file list}
 
-### 数据库迁移
-{迁移脚本名称（如无则"无"）}
+### Database Migration
+{migration script name (or "none" if not applicable)}
 
-### 新增路由/接口
-{列表（如无则"无"）}
+### Added Routes/Interfaces
+{list (or "none" if not applicable)}
 
-## 发现的问题
+## Issues Found
 
-本次交付过程中发现但未修复的问题（P3 级）：
-{列表（如无则"无"）}
+Issues found during this delivery but not fixed (P3 level):
+{list (or "none" if not applicable)}
 
-## 后续建议
+## Follow-Up Recommendations
 
-{如有遗留事项或优化建议}
+{any remaining items or optimization suggestions}
 ```

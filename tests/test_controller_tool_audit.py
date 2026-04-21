@@ -1,4 +1,4 @@
-"""P3-15：run_tool 写入 metadata.audit（tool_start / tool_finish / tool_timeout）。"""
+"""P3-15: `run_tool` writes `metadata.audit` (tool_start / tool_finish / tool_timeout)."""
 
 import importlib.util
 import json

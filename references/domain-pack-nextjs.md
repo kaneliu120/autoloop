@@ -1,139 +1,139 @@
 # Next.js/TypeScript Domain Pack
 
-## 适用范围
+## Scope
 
-- 技术栈：Next.js 14+ (App Router) / TypeScript / React 18+ / Tailwind CSS
-- 适用模板：T7 Quality / T8 Optimize
+- Stack: Next.js 14+ (App Router) / TypeScript / React 18+ / Tailwind CSS
+- Applicable templates: T7 Quality / T8 Optimize
 
 ---
 
-## 检测命令覆盖
+## Detection Coverage
 
-### 安全性检测
+### Security Checks
 
 ```bash
-# XSS（dangerouslySetInnerHTML + 未转义用户输入）
-grep -rn "dangerouslySetInnerHTML\|innerHTML" {路径} --include="*.tsx" --include="*.ts"
+# XSS (dangerouslySetInnerHTML + unescaped user input)
+grep -rn "dangerouslySetInnerHTML\|innerHTML" {path} --include="*.tsx" --include="*.ts"
 
-# SQL 注入（原始查询）
-grep -rn "query(\`\|query(\".*\${\|\.raw(" {路径} --include="*.ts"
+# SQL injection (raw queries)
+grep -rn "query(\`\|query(\".*\${\|\.raw(" {path} --include="*.ts"
 
-# 命令注入
-grep -rn "exec(\|spawn(\|execSync(" {路径} --include="*.ts"
+# Command injection
+grep -rn "exec(\|spawn(\|execSync(" {path} --include="*.ts"
 
-# 敏感数据泄露（客户端暴露）
-grep -rn "NEXT_PUBLIC_.*SECRET\|NEXT_PUBLIC_.*KEY\|NEXT_PUBLIC_.*PASSWORD" {路径} --include="*.ts" --include="*.tsx"
-grep -rn "console\.log.*token\|console\.log.*password\|console\.log.*secret" {路径} --include="*.ts" --include="*.tsx"
+# Sensitive data exposure (client-side exposure)
+grep -rn "NEXT_PUBLIC_.*SECRET\|NEXT_PUBLIC_.*KEY\|NEXT_PUBLIC_.*PASSWORD" {path} --include="*.ts" --include="*.tsx"
+grep -rn "console\.log.*token\|console\.log.*password\|console\.log.*secret" {path} --include="*.ts" --include="*.tsx"
 
-# CORS / API Route 安全
-grep -rn "Access-Control-Allow-Origin.*\\*" {路径} --include="*.ts"
+# CORS / API route security
+grep -rn "Access-Control-Allow-Origin.*\\*" {path} --include="*.ts"
 
-# Server Action 输入验证
-grep -rn "'use server'" {路径} --include="*.ts" --include="*.tsx" -A 5 | grep -v "zod\|schema\|validate\|parse"
+# Server Action input validation
+grep -rn "'use server'" {path} --include="*.ts" --include="*.tsx" -A 5 | grep -v "zod\|schema\|validate\|parse"
 ```
 
-### 可靠性检测
+### Reliability Checks
 
 ```bash
-# 静默失败
-grep -rn "catch.*{}\|\.catch(() =>\|catch.*console\.log" {路径} --include="*.ts" --include="*.tsx"
+# Silent failures
+grep -rn "catch.*{}\|\.catch(() =>\|catch.*console\.log" {path} --include="*.ts" --include="*.tsx"
 
-# fetch 无错误处理
-grep -rn "await fetch(" {路径} --include="*.ts" --include="*.tsx" | grep -v "try\|catch\|\.ok\|\.status"
+# fetch without error handling
+grep -rn "await fetch(" {path} --include="*.ts" --include="*.tsx" | grep -v "try\|catch\|\.ok\|\.status"
 
-# 超时检测
-grep -rn "fetch(\|axios\." {路径} --include="*.ts" | grep -v "timeout\|signal\|AbortController\|next\.revalidate"
+# Timeout checks
+grep -rn "fetch(\|axios\." {path} --include="*.ts" | grep -v "timeout\|signal\|AbortController\|next\.revalidate"
 
-# Error Boundary 缺失
-find {路径}/app -name "error.tsx" | wc -l
-find {路径}/app -maxdepth 2 -type d | wc -l
+# Missing error boundary
+find {path}/app -name "error.tsx" | wc -l
+find {path}/app -maxdepth 2 -type d | wc -l
 ```
 
-### 可维护性检测
+### Maintainability Checks
 
 ```bash
-# any 类型滥用
-grep -rn ": any\b\|<any>\|as any\|any\[\]" {路径} --include="*.ts" --include="*.tsx"
+# any type abuse
+grep -rn ": any\b\|<any>\|as any\|any\[\]" {path} --include="*.ts" --include="*.tsx"
 
 # @ts-ignore / @ts-expect-error
-grep -rn "@ts-ignore\|@ts-expect-error" {路径} --include="*.ts" --include="*.tsx"
+grep -rn "@ts-ignore\|@ts-expect-error" {path} --include="*.ts" --include="*.tsx"
 
-# 硬编码 URL
-grep -rn "http://\|https://" {路径} --include="*.ts" --include="*.tsx" | grep -v ".md\|test\|//"
+# Hard-coded URLs
+grep -rn "http://\|https://" {path} --include="*.ts" --include="*.tsx" | grep -v ".md\|test\|//"
 
-# 导出检查
-grep -rn "export default\|export {" {路径}/app --include="*.tsx" | head -20
+# Export checks
+grep -rn "export default\|export {" {path}/app --include="*.tsx" | head -20
 
-# 类型检查
+# Type checking
 npx tsc --noEmit 2>&1 | tail -5
 ```
 
-### 架构检测（T8）
+### Architecture Checks (T8)
 
 ```bash
-# Server/Client Component 边界违反
-grep -rn "'use client'" {路径} --include="*.tsx" | xargs -I{} grep -l "async\|await\|cookies\|headers" {}
+# Server/Client component boundary violations
+grep -rn "'use client'" {path} --include="*.tsx" | xargs -I{} grep -l "async\|await\|cookies\|headers" {}
 
-# 路由层直接 DB 访问（API Route）
-grep -rn "prisma\.\|db\.\|query(" {路径}/app/api --include="*.ts"
+# Direct DB access from route layer (API routes)
+grep -rn "prisma\.\|db\.\|query(" {path}/app/api --include="*.ts"
 
-# 循环依赖
-npx madge --circular {路径}/app 2>/dev/null || echo "madge not installed"
+# Circular dependencies
+npx madge --circular {path}/app 2>/dev/null || echo "madge not installed"
 
-# Layout 嵌套过深
-find {路径}/app -name "layout.tsx" | awk -F/ '{print NF, $0}' | sort -rn | head -5
+# Excessive layout nesting
+find {path}/app -name "layout.tsx" | awk -F/ '{print NF, $0}' | sort -rn | head -5
 ```
 
-### 性能检测（T8）
+### Performance Checks (T8)
 
 ```bash
-# 同步调用检测
-grep -rn "readFileSync\|execSync\|writeFileSync" {路径} --include="*.ts" --include="*.tsx"
+# Synchronous call detection
+grep -rn "readFileSync\|execSync\|writeFileSync" {path} --include="*.ts" --include="*.tsx"
 
-# N+1 查询
-grep -rn "for.*await.*find\|map.*await.*find\|forEach.*await" {路径} --include="*.ts"
+# N+1 queries
+grep -rn "for.*await.*find\|map.*await.*find\|forEach.*await" {path} --include="*.ts"
 
-# 无分页
-grep -rn "findMany\|find(\)" {路径} --include="*.ts" | grep -v "take\|limit\|skip\|cursor"
+# No pagination
+grep -rn "findMany\|find(\)" {path} --include="*.ts" | grep -v "take\|limit\|skip\|cursor"
 
-# 大 bundle（client component 导入重型库）
-grep -rn "'use client'" {路径} --include="*.tsx" -l | xargs grep -l "import.*lodash\|import.*moment\|import.*d3"
+# Large bundle (client components importing heavy libraries)
+grep -rn "'use client'" {path} --include="*.tsx" -l | xargs grep -l "import.*lodash\|import.*moment\|import.*d3"
 
-# Image 优化
-grep -rn "<img " {路径} --include="*.tsx" | grep -v "next/image\|Image"
+# Image optimization
+grep -rn "<img " {path} --include="*.tsx" | grep -v "next/image\|Image"
 ```
 
-### 稳定性检测（T8）
+### Stability Checks (T8)
 
 ```bash
-# 健康检查
-grep -rn "/api/health\|healthCheck" {路径} --include="*.ts"
+# Health check
+grep -rn "/api/health\|healthCheck" {path} --include="*.ts"
 
-# 环境变量验证
-grep -rn "process\.env\." {路径} --include="*.ts" | grep -v "NEXT_PUBLIC\|NODE_ENV" | head -10
+# Environment variable validation
+grep -rn "process\.env\." {path} --include="*.ts" | grep -v "NEXT_PUBLIC\|NODE_ENV" | head -10
 
-# Error Boundary 覆盖率
-echo "Error boundaries:" && find {路径}/app -name "error.tsx" | wc -l
-echo "Route groups:" && find {路径}/app -maxdepth 2 -type d | wc -l
+# Error boundary coverage
+echo "Error boundaries:" && find {path}/app -name "error.tsx" | wc -l
+echo "Route groups:" && find {path}/app -maxdepth 2 -type d | wc -l
 ```
 
 ---
 
-## 权重调整
+## Weight Adjustments
 
-| 检测项 | 通用扣分 | 本 pack 扣分 | 调整原因 |
+| Check | Generic penalty | Pack penalty | Reason |
 |--------|---------|-------------|---------|
-| XSS (dangerouslySetInnerHTML) | -3 | -4 | React 前端直接面向用户，XSS 影响面更大 |
-| any 类型 | -1/处 | -1.5/处 | TypeScript 项目类型安全是核心价值 |
-| 客户端密钥暴露 (NEXT_PUBLIC_) | — | -4（P1） | 客户端代码可被任何人查看 |
+| XSS (dangerouslySetInnerHTML) | -3 | -4 | React frontends face users directly, so XSS has a larger blast radius |
+| any type | -1 / occurrence | -1.5 / occurrence | Type safety is a core value in TypeScript projects |
+| Client-side secret exposure (NEXT_PUBLIC_) | — | -4 (P1) | Client code is visible to anyone |
 
-## 新增检测项
+## Additional Checks
 
-| 检测项 | 扣分 | 严重级别 | 说明 |
+| Check | Penalty | Severity | Description |
 |--------|------|---------|------|
-| NEXT_PUBLIC_ 暴露敏感信息 | -4 | P1 | 客户端环境变量对所有用户可见 |
-| Server Action 无输入验证 | -2/处 | P1 | 等同于 API 无验证 |
-| 使用 `<img>` 而非 `next/image` | -0.5/处 | P3 | 错过自动优化 |
-| Client Component 导入重型库 | -1/处 | P2 | Bundle size 膨胀 |
-| Error Boundary 覆盖率 < 50% | -1 | P2 | 用户看到白屏 |
-| Layout 嵌套 > 5 层 | -0.5 | P3 | 维护复杂度高 |
+| NEXT_PUBLIC_ exposes sensitive information | -4 | P1 | Client environment variables are visible to all users |
+| Server Action without input validation | -2 / occurrence | P1 | Equivalent to an API without validation |
+| Using `<img>` instead of `next/image` | -0.5 / occurrence | P3 | Misses automatic optimization |
+| Client Component imports heavy libraries | -1 / occurrence | P2 | Bloats the bundle size |
+| Error boundary coverage < 50% | -1 | P2 | Users see a blank page |
+| Layout nesting > 5 levels | -0.5 | P3 | Increases maintenance complexity |

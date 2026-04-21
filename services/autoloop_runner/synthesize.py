@@ -1,4 +1,4 @@
-"""P1-3：SYNTHESIZE 最小写回 — findings.rounds + add-finding。"""
+"""P1-3: minimal SYNTHESIZE writeback — findings.rounds + add-finding."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ log = logging.getLogger("autoloop_runner")
 
 
 def build_round_summary(state: dict[str, Any]) -> str:
-    """从末轮 scores + gates 生成一行摘要（确定性，无 LLM）。"""
+    """Generate a one-line summary from the latest scores + gates (deterministic, no LLM)."""
     plan = state.get("plan", {})
     gates = plan.get("gates", [])
     iters = state.get("iterations") or []
@@ -24,7 +24,7 @@ def build_round_summary(state: dict[str, Any]) -> str:
         thr = g.get("threshold")
         st = g.get("status", "")
         if d:
-            parts.append("{}:当前={} 目标={} {}".format(d, cur, thr, st))
+            parts.append("{}:current={} target={} {}".format(d, cur, thr, st))
     return "SYNTHESIZE(runner-minimal) scores={} gates={}".format(
         json.dumps(scores, ensure_ascii=False),
         "; ".join(parts[:12]) or "—",
@@ -32,7 +32,7 @@ def build_round_summary(state: dict[str, Any]) -> str:
 
 
 def synthesize_minimal(work_dir: str, python_exe: str | None = None) -> bool:
-    """向末轮追加一条 add-finding（dimension=runner_synthesize）。"""
+    """Append one add-finding entry to the latest round (dimension=runner_synthesize)."""
     sp = stateutil.state_path(work_dir)
     state = stateutil.load_json(sp)
     content = build_round_summary(state)
@@ -40,7 +40,7 @@ def synthesize_minimal(work_dir: str, python_exe: str | None = None) -> bool:
         "dimension": "runner_synthesize",
         "content": content[:8000],
         "source": "autoloop-runner",
-        "confidence": "中",
+        "confidence": "medium",
         "type": "finding",
     }
     rc = stateutil.run_add_finding(
@@ -57,14 +57,14 @@ def synthesize_llm(
     chat_json_fn,
     python_exe: str | None = None,
 ) -> bool:
-    """可选：模型产出 dimension+content，再 add-finding。"""
+    """Optional: have the model emit dimension+content, then add-finding."""
     state = stateutil.load_json(stateutil.state_path(work_dir))
     summary = build_round_summary(state)
     system = (
-        "你是 AutoLoop SYNTHESIZE 助手。只输出 JSON，键: dimension（短字符串）, "
-        "content（本轮综合发现，中文一段）。不要 markdown。"
+        "You are the AutoLoop SYNTHESIZE assistant. Output JSON only, with keys: dimension (short string), "
+        "content (a short summary for this round). Do not use markdown."
     )
-    user = "基于摘要写一条可写入 findings 的综合:\n{}".format(summary[:6000])
+    user = "Write a summary that can be stored in findings based on the following digest:\n{}".format(summary[:6000])
     try:
         obj = chat_json_fn(system=system, user=user)
     except Exception:
@@ -78,7 +78,7 @@ def synthesize_llm(
         "dimension": dim[:120],
         "content": content[:8000],
         "source": "autoloop-runner-llm",
-        "confidence": str(obj.get("confidence", "中")),
+        "confidence": str(obj.get("confidence", "medium")),
         "type": "finding",
     }
     rc = stateutil.run_add_finding(

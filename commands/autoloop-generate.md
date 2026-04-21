@@ -1,309 +1,309 @@
 ---
 name: autoloop-generate
 description: >
-  AutoLoop T6: 批量内容生成模板。模板驱动 + 并行生成 + 逐项质量检查 + 自动重试。
-  每个生成单元独立评分，低分自动重生成，重试上限见 references/loop-protocol.md 统一重试规则（默认2次）。
-  质量门禁阈值见 references/quality-gates.md T6 行。
-  触发：/autoloop:generate 或任何需要批量生成同类内容的任务。
+  AutoLoop T6: Batch content generation template. Template-driven + parallel generation + per-item quality checks + automatic retries.
+  Each generation unit is scored independently, and low-scoring units are regenerated automatically. For the retry cap, see the unified retry rules in references/loop-protocol.md (default: 2 retries).
+  Quality gate thresholds are in references/quality-gates.md T6.
+  Triggered by /autoloop:generate or any task that requires batch generation of similar content.
 ---
 
-# AutoLoop T6: Generate — 批量内容生成
+# AutoLoop T6: Generate — Batch Content Generation
 
-## 执行前提
+## Execution Prerequisites
 
-读取 `autoloop-plan.md` 获取：
-- 内容类型（报告/邮件/代码/数据/文案等）
-- 变量列表（每个生成单元的变化项）
-- 数量
-- 质量标准（通过标准见 `references/quality-gates.md` T6 行）
-- 示例（至少 1 个用户认可的样本）
-- 输出位置（output_path，变量名见 `references/loop-protocol.md` 统一参数词汇表）
-- 文件命名规则（naming_pattern，变量名见 `references/loop-protocol.md` 统一参数词汇表）
+Read `autoloop-plan.md` to obtain:
+- Content type (report / email / code / data / copy, etc.)
+- Variable list (the per-unit changing fields)
+- Quantity
+- Quality standards (pass criteria are in `references/quality-gates.md` T6)
+- Examples (at least 1 user-approved sample)
+- Output location (`output_path`; variable name is defined in the unified parameter glossary in `references/loop-protocol.md`)
+- File naming rules (`naming_pattern`; variable name is defined in the unified parameter glossary in `references/loop-protocol.md`)
 
-**Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再扫描当前状态。详见 `references/loop-protocol.md` OBSERVE Step 0 章节。
+**Round 2+ OBSERVE starting point**: First read the reflection section in `autoloop-findings.md` to get open issues, effective/ineffective strategies, identified patterns, and lessons learned, then scan the current state. See `references/loop-protocol.md` OBSERVE Step 0 for details.
 
-- **经验库读取**: 读取 `references/experience-registry.md` 中与当前任务类型和目标维度匹配的条目，识别状态为「推荐」或「候选默认」的策略，传递到 DECIDE 阶段参考
-
----
-
-## 第一步：模板标准化
-
-从用户提供的示例中提取模板结构。
-
-运行 template-extractor subagent（调度方式见 `references/agent-dispatch.md` template-extractor 章节）：
-
-```
-你是 template-extractor subagent。
-
-任务：分析用户提供的示例，提取可复用的模板结构。
-
-示例内容：
-{用户提供的示例}
-
-要求：
-1. 识别固定部分（所有单元相同）和变量部分（每单元不同）
-2. 用 {{variable_name}} 标记变量位置
-3. 提取质量标准（什么让这个示例是"好的"）
-4. 识别常见错误（什么会让输出变差）
-
-输出：
-## 模板结构
-
-{提取的模板，变量用 {{name}} 标记}
-
-## 变量定义
-
-| 变量名 | 说明 | 取值规则 | 示例 |
-|--------|------|---------|------|
-| {{variable_1}} | {说明} | {规则} | {示例} |
-
-## 质量标准（可量化）
-
-1. {标准 1}：{如何判断 1-10 分}
-2. {标准 2}：{如何判断 1-10 分}
-3. {标准 3}：{如何判断 1-10 分}
-
-## 常见错误
-
-- {错误 1}：{如何避免}
-- {错误 2}：{如何避免}
-```
-
-在开始批量生成前，将模板展示给用户并自动进入第二步：
-
-```
-我提取了以下模板，如需调整请现在说明；否则将自动进入变量数据准备阶段：
-
-{模板预览}
-
-变量：{变量列表}
-质量标准：{标准列表}
-```
+- **Experience registry read**: Read entries in `references/experience-registry.md` that match the current task type and target dimensions, identify strategies marked as "recommended" or "candidate default", and carry them into DECIDE as references
 
 ---
 
-## 第二步：变量数据准备
+## Step 1: Template Standardization
 
-根据变量定义，准备每个生成单元的变量值。
+Extract the template structure from the user-provided examples.
 
-如果变量来自文件/表格，读取并解析。
-如果变量需要推断，使用规则生成。
-如果变量需要用户提供，列出清单请用户确认。
+Run the `template-extractor` subagent (dispatch rules are in the `template-extractor` section of `references/agent-dispatch.md`):
 
-生成状态跟踪行（写入 `autoloop-results.tsv`，每个生成单元一行，记录状态和分数；TSV schema 见 `references/loop-protocol.md` 统一 TSV Schema 章节）：
+```
+You are the template-extractor subagent.
+
+Task: Analyze the user-provided examples and extract a reusable template structure.
+
+Example content:
+{user-provided examples}
+
+Requirements:
+1. Identify the fixed parts (shared by all units) and the variable parts (different per unit)
+2. Mark variable positions with {{variable_name}}
+3. Extract the quality standards (what makes this example "good")
+4. Identify common mistakes (what causes the output quality to drop)
+
+Output:
+## Template Structure
+
+{extracted template, with variables marked as {{name}}}
+
+## Variable Definitions
+
+| Variable Name | Description | Value Rules | Example |
+|---------------|-------------|-------------|---------|
+| {{variable_1}} | {description} | {rule} | {example} |
+
+## Quality Standards (Quantifiable)
+
+1. {standard 1}: {how to judge 1-10}
+2. {standard 2}: {how to judge 1-10}
+3. {standard 3}: {how to judge 1-10}
+
+## Common Mistakes
+
+- {mistake 1}: {how to avoid it}
+- {mistake 2}: {how to avoid it}
+```
+
+Before batch generation begins, show the template to the user and then automatically proceed to Step 2:
+
+```
+I extracted the following template. If you want any adjustments, say so now; otherwise I will automatically proceed to the variable data preparation stage:
+
+{template preview}
+
+Variables: {variable list}
+Quality standards: {standards list}
+```
+
+---
+
+## Step 2: Variable Data Preparation
+
+Prepare the variable values for each generation unit according to the variable definitions.
+
+If variables come from files or spreadsheets, read and parse them.
+If variables need to be inferred, generate them from rules.
+If variables need to be provided by the user, list the required inputs and ask for confirmation.
+
+Generate status-tracking rows (write them to `autoloop-results.tsv`, one row per generation unit, recording status and score; for the TSV schema, see the unified TSV Schema section in `references/loop-protocol.md`):
 
 ```text
-（TSV 格式见 references/loop-data-schema.md 统一 TSV Schema，15列）
-001  generate  待检查  score  —  —  baseline  待生成  无  —  001  {version}  待生成
-002  generate  待检查  score  —  —  baseline  待生成  无  —  002  {version}  待生成
+(For TSV format, see the unified TSV Schema in references/loop-data-schema.md, 15 columns)
+001  generate  pending_check  score  —  —  baseline  pending_generation  none  —  001  {version}  pending_generation
+002  generate  pending_check  score  —  —  baseline  pending_generation  none  —  002  {version}  pending_generation
 ```
 
-变量数据写入 `autoloop-findings.md`，不进 TSV。TSV 的 details 列仅记录状态摘要（如"重试1次后通过"），不记录变量键值对。
+Write variable data into `autoloop-findings.md`, not into TSV. The `details` column in TSV should record only status summaries (for example, "passed after 1 retry"), not variable key-value pairs.
 
 ---
 
-## 第三步：并行批量生成
+## Step 3: Parallel Batch Generation
 
-- **工单生成**: 按 `references/agent-dispatch.md` 对应角色模板生成委派工单，填充任务目标、输入数据、输出格式、质量标准、范围限制、当前轮次、上下文摘要
+- **Work order generation**: Use the corresponding role template in `references/agent-dispatch.md` to generate dispatch work orders, filling in task goal, input data, output format, quality standards, scope limits, current round, and context summary
 
-将所有生成单元分配给 generator subagents，并行执行（调度规范见 `references/agent-dispatch.md`）。
+Assign all generation units to `generator` subagents and execute them in parallel (dispatch rules are in `references/agent-dispatch.md`).
 
-每批并行数量：最多 5 个（防止输出质量因并行过多下降）。
+Maximum parallelism per batch: 5 units (to avoid quality drops from excessive parallel generation).
 
-每个 generator subagent 的指令：
+Instructions for each `generator` subagent:
 
 ```
-你是 generator subagent，负责生成以下内容单元。
+You are the generator subagent, responsible for generating the following content unit.
 
-模板：
-{模板内容}
+Template:
+{template content}
 
-本单元变量：
-- {{variable_1}}: {值}
-- {{variable_2}}: {值}
+Variables for this unit:
+- {{variable_1}}: {value}
+- {{variable_2}}: {value}
 
-质量标准：
-1. {标准 1}（满分 10 分）
-2. {标准 2}（满分 10 分）
-3. {标准 3}（满分 10 分）
+Quality standards:
+1. {standard 1} (10 points max)
+2. {standard 2} (10 points max)
+3. {standard 3} (10 points max)
 
-常见错误（必须避免）：
-- {错误 1}
-- {错误 2}
+Common mistakes to avoid:
+- {mistake 1}
+- {mistake 2}
 
-要求：
-1. 严格按模板结构生成
-2. 变量值自然融入内容（不要机械地"填空"）
-3. 保持语调/风格一致
-4. 生成后自行检查是否满足所有质量标准
+Requirements:
+1. Follow the template structure strictly
+2. Integrate the variable values naturally into the content (do not mechanically "fill in blanks")
+3. Keep tone and style consistent
+4. Self-check after generation to confirm that all quality standards are met
 
-输出格式：
+Output format:
 ---UNIT-START-{unit_id}---
-{生成内容}
+{generated content}
 ---UNIT-END-{unit_id}---
 
 ---QUALITY-{unit_id}---
-标准1得分: {N}/10 — {理由}
-标准2得分: {N}/10 — {理由}
-标准3得分: {N}/10 — {理由}
-综合得分: {N}/10
-存在问题: {如有}
+Standard 1 score: {N}/10 — {reason}
+Standard 2 score: {N}/10 — {reason}
+Standard 3 score: {N}/10 — {reason}
+Overall score: {N}/10
+Issues found: {if any}
 ---QUALITY-END-{unit_id}---
 ```
 
 ---
 
-## 第四步：逐项质量评分
+## Step 4: Per-Item Quality Scoring
 
-每个单元生成完成后，运行独立的 quality-checker subagent（调度方式见 `references/agent-dispatch.md` quality-checker 章节）。
+After each unit is generated, run an independent `quality-checker` subagent (dispatch rules are in the `quality-checker` section of `references/agent-dispatch.md`).
 
-评分时必须同时输出分数、判据（命中哪个锚点区间）、证据（来源URL或文件行号）。缺少任一项的评分无效，该维度记为待检查。
-
-```
-你是 quality-checker subagent，对以下生成内容进行独立质量评分。
-
-内容：
-{生成的内容}
-
-质量标准：
-1. {标准 1}：{评分说明}
-2. {标准 2}：{评分说明}
-3. {标准 3}：{评分说明}
-
-评分规则：
-- 8-10：优秀，直接通过
-- 7：及格，标注改进点
-- 5-6：需要改进，标注主要问题
-- 1-4：需要重新生成，说明原因
-
-注意：你的评分独立于生成者的自评。如果分歧 > 2 分，以你的评分为准。
-
-输出：
-得分: {N}/10（{通过/需改进/重生成}）
-主要问题（如有）：
-- {问题 1}
-- {问题 2}
-改进建议：{具体建议}
-```
-
----
-
-## 重试机制
-
-重试上限见 `references/loop-protocol.md` 统一重试规则（默认 2 次）。对于评分低于 `references/quality-gates.md` T6 单元通过阈值的单元，触发重试：
-
-**第 1 次重试**：
-- 将 quality-checker 的问题反馈给 generator
-- 保留原模板，针对具体问题修改
+When scoring, the score, criterion (which anchor range is hit), and evidence (source URL or file line number) must be output at the same time. Ratings missing any one of these are invalid, and that dimension is marked as pending inspection.
 
 ```
-上次生成有以下问题：
-{quality-checker 的反馈}
+You are the quality-checker subagent, responsible for independently scoring the following generated content.
 
-请保留整体结构，重点改进：
-{具体改进点}
-```
+Content:
+{generated content}
 
-**第 2 次重试（最后一次）**：
-- 换一个不同的生成策略
-- 完全重新生成，不参考之前的版本
-- 如果仍低于 `references/quality-gates.md` T6 单元通过阈值，标注为"需人工审查"，继续其他单元
+Quality standards:
+1. {standard 1}: {scoring guidance}
+2. {standard 2}: {scoring guidance}
+3. {standard 3}: {scoring guidance}
 
----
+Scoring rules:
+- 8-10: excellent, pass directly
+- 7: acceptable, note improvement points
+- 5-6: needs improvement, identify the main problems
+- 1-4: must be regenerated, explain why
 
-## 批次进度追踪
+Note: Your score is independent of the generator's self-score. If the difference is > 2 points, your score takes precedence.
 
-实时更新 `autoloop-results.tsv`（TSV schema 见 `references/loop-protocol.md` 统一 TSV Schema 章节）：
-
-```
-（TSV 格式见 references/loop-data-schema.md 统一 TSV Schema，15列）
-1  generate  通过    score  8.5  —  S01-template-gen  按模板生成  无  —  001  {version}  重试0次
-1  generate  通过    score  7.2  —  S01-template-gen  按模板生成  无  —  002  {version}  重试1次: 语调调整
-1  generate  待审查  score  6.0  —  S02-rewrite       完全重写    无  —  003  {version}  重试2次仍未达标
-1  generate  待检查  score  —    —  baseline          待生成      无  —  004  {version}  生成中
-```
-
-每完成 10% 输出进度：
-
-```
-进度：{完成数}/{总数} ({百分比}%)
-  通过：{N} 个（{平均分}/10）
-  待重试：{N} 个
-  需人工：{N} 个
-
-预计完成时间：{估算}
+Output:
+Score: {N}/10 ({pass / needs improvement / regenerate})
+Main issues (if any):
+- {issue 1}
+- {issue 2}
+Improvement suggestion: {specific suggestion}
 ```
 
 ---
 
-## 最终汇总
+## Retry Mechanism
 
-所有单元完成后，生成汇总报告（文件名见 `references/loop-protocol.md` 统一输出文件命名章节）：
+For the retry cap, see the unified retry rules in `references/loop-protocol.md` (default: 2 retries). Any unit scoring below the T6 per-unit pass threshold in `references/quality-gates.md` triggers a retry:
+
+**Retry 1**:
+- Send the `quality-checker` feedback back to the generator
+- Keep the original template and revise only the specific problems
+
+```
+The previous generation had the following issues:
+{quality-checker feedback}
+
+Keep the overall structure, but focus on improving:
+{specific improvement points}
+```
+
+**Retry 2 (final retry)**:
+- Switch to a different generation strategy
+- Regenerate from scratch without referring to the previous version
+- If the score is still below the T6 per-unit pass threshold in `references/quality-gates.md`, mark it as "needs manual review" and continue with the other units
+
+---
+
+## Batch Progress Tracking
+
+Continuously update `autoloop-results.tsv` (for the TSV schema, see the unified TSV Schema section in `references/loop-protocol.md`):
+
+```text
+(For TSV format, see the unified TSV Schema in references/loop-data-schema.md, 15 columns)
+1  generate  pass            score  8.5  —  S01-template-gen  generated from template  none  —  001  {version}  0 retries
+1  generate  pass            score  7.2  —  S01-template-gen  generated from template  none  —  002  {version}  1 retry: tone adjusted
+1  generate  pending_review  score  6.0  —  S02-rewrite       full rewrite              none  —  003  {version}  still below target after 2 retries
+1  generate  pending_check   score  —    —  baseline          pending_generation        none  —  004  {version}  generating
+```
+
+Output progress every 10% completion:
+
+```
+Progress: {completed}/{total} ({percentage}%)
+  Passed: {N} units ({average score}/10)
+  Pending retry: {N} units
+  Needs manual review: {N} units
+
+Estimated completion time: {estimate}
+```
+
+---
+
+## Final Summary
+
+After all units are complete, generate a summary report (file naming is defined in the unified output filename section of `references/loop-protocol.md`):
 
 ```markdown
-## 批量生成完成报告
+## Batch Generation Completion Report
 
-### 总体结果
+### Overall Results
 
-| 状态 | 数量 | 占比 |
-|------|------|------|
-| 一次通过（≥7分）| {N} | {%} |
-| 重试后通过 | {N} | {%} |
-| 需人工审查 | {N} | {%} |
-| **总计** | {总N} | 100% |
+| Status | Count | Share |
+|--------|-------|-------|
+| Passed on first attempt (≥7) | {N} | {%} |
+| Passed after retries | {N} | {%} |
+| Needs manual review | {N} | {%} |
+| **Total** | {total N} | 100% |
 
-通过率：{X}%（目标阈值见 references/quality-gates.md T6 通过率章节）
-平均得分：{X}/10（目标阈值见 references/quality-gates.md T6 平均分章节）
+Pass rate: {X}% (target threshold is in the pass-rate section of references/quality-gates.md T6)
+Average score: {X}/10 (target threshold is in the average-score section of references/quality-gates.md T6)
 
-### 质量分布
+### Quality Distribution
 
-| 分数段 | 数量 |
-|--------|------|
+| Score Range | Count |
+|-------------|-------|
 | 9-10 | {N} |
 | 8-9  | {N} |
 | 7-8  | {N} |
 | <7   | {N} |
 
-### 常见问题（Top 3）
+### Common Issues (Top 3)
 
-1. {最常见问题}：影响 {N} 个单元
-2. {第二}：影响 {N} 个单元
-3. {第三}：影响 {N} 个单元
+1. {most common issue}: affected {N} units
+2. {second}: affected {N} units
+3. {third}: affected {N} units
 
-### 需人工审查的单元
+### Units Requiring Manual Review
 
-| 单元ID | 问题 | 建议 |
-|--------|------|------|
-| {ID}   | {问题} | {建议} |
+| Unit ID | Issue | Suggestion |
+|---------|-------|------------|
+| {ID}    | {issue} | {suggestion} |
 
-### 输出文件
+### Output Files
 
-所有通过的内容已写入：{output_path}（来自 autoloop-plan.md，变量名见 references/loop-protocol.md）
+All passed content has been written to: {output_path} (from autoloop-plan.md; variable name is defined in `references/loop-protocol.md`)
 ```
 
 ---
 
-## 每轮 REFLECT 执行规范
+## REFLECT Execution Rules for Each Round
 
-每批生成完成（或每完成 25% 进度）后执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `references/loop-protocol.md` REFLECT 章节）：
+Run after each generated batch finishes (or every 25% of progress). REFLECT must be written to a file and cannot just be done in thinking (see the `references/loop-protocol.md` REFLECT chapter for specifications):
 
-写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `assets/findings-template.md`：
+Write the four-layer reflection table into `autoloop-findings.md` (issue registration / strategy review / pattern recognition / lessons learned). The format is shown in `assets/findings-template.md`:
 
-- **问题登记**：记录本批发现的模板缺陷、变量数据问题、质量评分异常
-- **策略复盘**：生成策略/模板参数/质量标准的效果评估（保持 | 避免 | 待验证）（策略评价枚举见 references/loop-data-schema.md 统一状态枚举）
-- **模式识别**：哪类变量值容易导致低分、哪些质量标准是瓶颈
-- **经验教训**：模板优化/生成提示词/质量评估方法的有效性总结
-- **经验写回**: 将本轮策略效果写入 `references/experience-registry.md`（策略ID、适用场景、效果评分、执行上下文，遵循效果记录表格式）
+- **Issue Registration**: Record template defects, variable data problems, and anomalous quality scores discovered in this batch
+- **Strategy Review**: Effect evaluation of generation strategy / template parameters / quality standards (keep | avoid | to be verified) (for the strategy evaluation enum, see the unified status enum in `references/loop-data-schema.md`)
+- **Pattern Recognition**: Which kinds of variable values tend to produce low scores, and which quality standards are the main bottlenecks
+- **Lessons Learned**: Summary of what worked for template optimization, generation prompts, and quality evaluation methods
+- **Experience write-back**: Write the current round's strategy effects into `references/experience-registry.md` (strategy ID, applicable scenario, effect score, execution context; follow the effect-record table format)
 
 ---
 
-## 输出文件格式
+## Output File Formats
 
-根据内容类型选择输出格式：
+Choose the output format based on content type:
 
-- **文案/报告**：Markdown 文件，每个单元用 `---` 分隔
-- **代码**：独立文件，每个单元一个文件
-- **结构化数据**：TSV 或 JSON
-- **邮件**：每封邮件独立 Markdown，包含 Subject / Body / Variables
+- **Copy / reports**: Markdown files, with each unit separated by `---`
+- **Code**: Separate files, one file per unit
+- **Structured data**: TSV or JSON
+- **Email**: One Markdown file per email, including Subject / Body / Variables
 
-所有输出文件写入 `{output_path}`（来自 `autoloop-plan.md` 的 `output_path` 字段，变量名见 `references/loop-protocol.md` 统一参数词汇表）。不使用 `./output/` 相对路径。
+Write all output files to `{output_path}` (the `output_path` field from `autoloop-plan.md`; variable name is defined in the unified parameter glossary in `references/loop-protocol.md`). Do not use relative paths like `./output/`.

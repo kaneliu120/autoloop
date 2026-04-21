@@ -1,251 +1,253 @@
-# Delivery Phases — 交付阶段规范
+# Delivery Phases — Delivery Phase Specification
 
-## 概述
+## Overview
 
-本文档定义 AutoLoop T4（Deliver）的 5 阶段交付（Phase 1-5），严格映射 CLAUDE.md 的强制开发流程。每个阶段有明确的输入、输出、质量门禁和暂停条件。
+This document defines the five delivery phases of AutoLoop T4 (Deliver), strictly aligned with the mandatory development flow in `CLAUDE.md`. Each phase has explicit inputs, outputs, quality gates, and pause conditions.
 
 ---
 
-## 阶段映射关系
+## Phase Mapping
 
-| AutoLoop 阶段 | CLAUDE.md 阶段 | 说明 |
+| AutoLoop Phase | CLAUDE.md Phase | Notes |
 |-------------|--------------|------|
-| Phase 1: 开发 | 阶段 1: 开发 | backend-dev + frontend-dev + db-migrator 并行 |
-| Phase 2: 审查 | 阶段 2: 审查 | code-reviewer 串行审查 |
-| Phase 3: 测试 | 阶段 3: 测试验证 | verifier 执行 |
-| Phase 4: 部署 | 阶段 4: 部署上线 | git push + {deploy_command} |
-| Phase 5: 验收 | 阶段 5: 线上验收 | verifier + 人工确认 |
+| Phase 1: Development | Phase 1: Development | `backend-dev` + `frontend-dev` + `db-migrator` in parallel |
+| Phase 2: Review | Phase 2: Review | Serial review by `code-reviewer` |
+| Phase 3: Testing | Phase 3: Test and Verification | Executed by `verifier` |
+| Phase 4: Deployment | Phase 4: Deploy to Production | `git push` + `{deploy_command}` |
+| Phase 5: Acceptance | Phase 5: Production Acceptance | `verifier` + human confirmation |
 
 ---
 
-## Phase 1: 开发
+## Phase 1: Development
 
-### 输入
+### Inputs
 
-- 已确认的方案文档（来自产品设计阶段或 autoloop-plan.md）
-- 代码库路径
+- an approved solution document (from product design or `autoloop-plan.md`)
+- repository path
 
-### 执行顺序（依赖性决定顺序）
+### Execution Order (dependency-driven)
 
-**1a. 数据库迁移（最先，其他开发依赖）**：
-- db-migrator subagent
-- 创建迁移脚本（upgrade + downgrade 都实现）
-- 验证脚本语法（`{syntax_check_cmd}`）
+**1a. Database migration (first; required by all downstream development)**:
+- `db-migrator` subagent
+- create the migration script (both upgrade and downgrade implemented)
+- validate the script syntax (`{syntax_check_cmd}`)
 
-**1b. 后端开发（数据库迁移完成后）**：
-- backend-dev subagent
-- 按方案逐一实现后端功能
-- 每个文件修改后立即运行 `{syntax_check_cmd}` 验证（按 `syntax_check_file_arg` 决定是否附加文件参数）
-- 新路由在 `{main_entry_file}` 注册（按项目技术栈规范）
-- 新文件在模块导出文件中声明（按项目技术栈规范）
+**1b. Backend development (after the database migration completes)**:
+- `backend-dev` subagent
+- implement backend features one by one according to the solution
+- run `{syntax_check_cmd}` immediately after each file change (append the file argument only when `syntax_check_file_arg` is true)
+- register new routes in `{main_entry_file}` according to project conventions
+- export new files from the module export file according to project conventions
 
-**1c. 前端开发（可与 1b 并行，如果不依赖后端接口变化）**：
-- frontend-dev subagent
-- 类型标注正确，无 `any` 滥用
-- API 调用通过代理层（不直接暴露后端地址）
-- 每个文件修改后立即运行前端语法验证（`{syntax_check_cmd}`）
+**1c. Frontend development (can run in parallel with 1b if it does not depend on backend API changes)**:
+- `frontend-dev` subagent
+- correct type annotations, no abuse of `any`
+- all API calls go through the project proxy/wrapper layer and do not expose backend addresses directly
+- run frontend syntax validation (`{syntax_check_cmd}`) after each file change
 
-### 输出
-- 所有修改/新建的文件（绝对路径列表）
-- 每个文件的语法验证结果（`{syntax_check_cmd}`）
-- `{main_entry_file}` 路由注册状态
+### Outputs
+- all modified/new files (absolute path list)
+- syntax validation result for each file (`{syntax_check_cmd}`)
+- route registration status in `{main_entry_file}`
 
-### 质量门禁
-- [ ] 所有修改文件语法验证通过（`{syntax_check_cmd}`，零错误）
-- [ ] 新路由已在主入口文件注册（`grep -n "{new_router_name}" {main_entry_file}`）
-- [ ] 新文件已在模块导出文件声明
-- [ ] 迁移脚本有 downgrade 实现
-- [ ] 无静默失败（空 catch/except）/ 无类型逃逸（`any` / `# type: ignore`）滥用
+### Quality Gates
+- [ ] Syntax validation passes for all modified files (`{syntax_check_cmd}`, zero errors)
+- [ ] New routes are registered in the main entry file (`grep -n "{new_router_name}" {main_entry_file}`)
+- [ ] New files are declared in the module export file
+- [ ] The migration script includes a downgrade implementation
+- [ ] No silent failures (empty `catch`/`except`) and no abuse of type escapes (`any` / `# type: ignore`)
 
-### 暂停条件
-任何文件语法验证失败 → 修复后重验证，不进入 Phase 2
+### Pause Condition
+Any file fails syntax validation -> fix it and re-validate before entering Phase 2
 
 ---
 
-## Phase 2: 审查
+## Phase 2: Review
 
-### 输入
-- Phase 1 产出的所有文件列表
+### Inputs
+- the full file list produced by Phase 1
 
-### 执行
-code-reviewer subagent 对所有修改文件进行全量审查：
+### Execution
+The `code-reviewer` subagent performs a full review of all modified files.
 
-**审查维度**：
-1. 安全性（SQL注入/命令注入/XSS/路径穿越/敏感数据）
-2. 可靠性（try/except 覆盖/静默失败/降级回退）
-3. 接口一致性（async def/返回类型/命名规范）
-4. 完整性（路由注册/模块导出/迁移完整性）
+**Review dimensions**:
+1. Security (SQL injection / command injection / XSS / path traversal / sensitive data)
+2. Reliability (`try`/`except` coverage / silent failure / fallback behavior)
+3. Interface consistency (`async def` / return types / naming conventions)
+4. Completeness (route registration / module exports / migration completeness)
 
-**审查输出格式**：
+**Review output format**:
 
 ```markdown
-## Phase 2 审查报告
+## Phase 2 Review Report
 
-### 审查文件列表
-- {文件 1}（新建/修改）
-- {文件 2}
+### Files Reviewed
+- {file 1} (new/modified)
+- {file 2}
 
-### 问题清单
-| ID | 文件 | 行号 | 类型 | P级别 | 描述 | 修复建议 |
+### Issue List
+| ID | File | Line | Type | P-level | Description | Suggested Fix |
 
-### 审查结论
-P1: {N}，P2: {N}，P3: {N}
-结论：{通过 / 需修复（必须修复 P1 和 P2）}
+### Review Conclusion
+P1: {N}, P2: {N}, P3: {N}
+Conclusion: {Pass / Requires fixes (all P1 and P2 issues must be fixed)}
 ```
 
-### 质量门禁
-- [ ] P1 问题 = 0（安全漏洞/数据丢失风险）
-- [ ] P2 问题 = 0（功能缺陷/错误处理缺失）
-- [ ] P3 问题已记录（不影响交付，但记入最终报告）
+### Quality Gates
+- [ ] P1 issues = 0 (security vulnerabilities / data-loss risk)
+- [ ] P2 issues = 0 (functional defects / missing error handling)
+- [ ] P3 issues are recorded (do not block delivery, but must appear in the final report)
 
-### 暂停条件
-有 P1 或 P2 问题 → 返回 Phase 1 针对性修复（最多 3 轮修复-审查循环；T4 因含人工确认环节，允许此例外，见 loop-protocol.md 统一重试上限规则）
+### Pause Condition
+Any P1 or P2 issue found -> return to Phase 1 for targeted fixes (up to 3 fix-review loops for this phase; T4 is allowed this exception because it includes a human acceptance gate. See the unified retry-limit rule in `loop-protocol.md`)
 
 ---
 
-## Phase 3: 测试验证
+## Phase 3: Testing and Verification
 
-### 输入
-- Phase 1 产出的所有文件列表
-- `{main_entry_file}` 路径（来自 autoloop-plan.md）
+### Inputs
+- the full file list produced by Phase 1
+- `{main_entry_file}` path (from `autoloop-plan.md`)
 
-### 执行（verifier subagent）
+### Execution (`verifier` subagent)
 
-**必须执行的验证**：
+**Required validations**:
 
 ```bash
-# 1. 语法检查（所有修改文件）
-{syntax_check_cmd} {每个文件}        # syntax_check_file_arg=true 时附加文件参数
-# 或：{syntax_check_cmd}             # syntax_check_file_arg=false 时在项目根目录运行
+# 1. Syntax check (all modified files)
+{syntax_check_cmd} {each_file}        # append file arguments when syntax_check_file_arg=true
+# or: {syntax_check_cmd}              # run at project root when syntax_check_file_arg=false
 
-# 2. 路由注册验证（{new_router_name} = 本次新增的路由/模块名，在 plan 中收集）
+# 2. Route registration validation ({new_router_name} = the route/module name added in this change, collected in the plan)
 grep -n "{new_router_name}" {main_entry_file}
 
-# 3. 迁移状态检查（如有数据库迁移）
+# 3. Migration status check (if database migration exists)
 {migration_check_cmd}
-# 示例：python -m alembic check（Python）；npx drizzle-kit check（Node.js）
+# Example: python -m alembic check (Python); npx drizzle-kit check (Node.js)
 ```
 
-**按条件执行**：
+**Conditional validation**:
 
 ```bash
-# 如果后端服务正在运行，执行 API 冒烟测试
-curl -X GET {API端点} \
-  -H "{auth_header}: {测试Key}" \
+# If the backend service is already running, execute API smoke tests
+curl -X GET {API_endpoint} \
+  -H "{auth_header}: {test_key}" \
   -H "Content-Type: application/json"
 
-# 期望：HTTP 200，响应格式与设计一致
+# Expected: HTTP 200, response format matches the design
 ```
 
-### 输出
-每步验证结果（命令 + 输出 + 状态）
+### Outputs
+Validation result for each step (command + output + status)
 
-### 质量门禁
-- [ ] 语法验证：全部文件通过，零错误（`{syntax_check_cmd}`）
-- [ ] 路由注册：grep 找到 `{new_router_name}` 注册语句（无新路由则 N/A）
-- [ ] 迁移状态检查：无冲突（无迁移则 N/A）
-- [ ] API 冒烟测试（如可执行）：HTTP 2xx
+### Quality Gates
+- [ ] Syntax validation passes for all files, zero errors (`{syntax_check_cmd}`)
+- [ ] Route registration: grep finds the `{new_router_name}` registration statement (N/A if there is no new route)
+- [ ] Migration status check shows no conflict (N/A if there is no migration)
+- [ ] API smoke test, when runnable, returns HTTP 2xx
 
-### 暂停条件
-任何验证失败 → 修复后重验证，不进入 Phase 4
+### Pause Condition
+Any validation failure -> fix it and re-validate before entering Phase 4
 
 ---
 
-## Phase 4: 部署
+## Phase 4: Deployment
 
-### 输入
-- Phase 3 通过的验证结果
+### Inputs
+- the Phase 3 verification results that passed
 
-### 执行
+### Execution
 
 ```bash
-# 1. 提交代码（明确列出文件，不用 git add -A）
-git add {文件} && git status && git commit -m "feat({模块}): {描述}"
-# 2. 推送
+# 1. Commit code (list files explicitly, do not use git add -A)
+git add {files} && git status && git commit -m "feat({module}): {description}"
+# 2. Push
 git push origin main
-# 3. 线上部署��deploy_command 在 plan 中定义）
+# 3. Deploy to production (deploy_command is defined in the plan)
 {deploy_command}
-# 4. 服务健康检查（service_list 全部 active）
+# 4. Service health check (all services in service_list must be active)
 ```
 
-### 输出
+### Outputs
 - git commit hash
-- 部署命令执行结果
-- 服务状态（{service_list} 中全部 active）
-- Health check 响应（{health_check_url}）
+- deployment command result
+- service status (all services in `{service_list}` active)
+- health check response (`{health_check_url}`)
 
-### 质量门禁
-- [ ] git push 成功
-- [ ] {deploy_command} 执行无报错
-- [ ] {service_list} 中所有服务全部 active（systemctl status）
-- [ ] Health check 返回 HTTP 200（{health_check_url}）
+### Quality Gates
+- [ ] `git push` succeeds
+- [ ] `{deploy_command}` runs without error
+- [ ] all services in `{service_list}` are active (`systemctl status`)
+- [ ] health check returns HTTP 200 (`{health_check_url}`)
 
-> 服务检查和健康检查的 N/A 豁免规则见 quality-gates.md §豁免规则。仅当两者均不存在时允许豁免。
+> For N/A exemptions on service checks and health checks, see `quality-gates.md` exemption rules. Exemption is only allowed when one side is unavailable and the other remains valid.
 
-### 暂停条件
-服务未全部 active → 检查日志，修复后重部署
-
----
-
-## Phase 5: 线上验收（人工确认点）
-
-### 输入
-- 验收标准（来自 autoloop-plan.md）
-- 线上环境 URL
-
-### 执行
-
-**自动验证（verifier subagent）**：
-
-调用方式：`Agent(subagent_type="code-reviewer", prompt="你是线上验收测试员。使用浏览器工具验证以下功能...")`
-可选工具：Chrome DevTools MCP（如果已配置）
-
-- 访问相关页面，验证新功能是否可见
-- 执行功能操作，验证结果正确
-- 检查浏览器 Console 无错误
-- 检查相关 API 响应时间（< 500ms 为正常）
-
-**人工确认（必须）**：
-
-```
-Phase 5 暂停：请在浏览器（桌面+手机）访问 {URL}，按验收清单逐项确认。
-Console 无红色错误 + 现有功能无回归后，输入 "用户确认（线上验收）"。
-如有问题描述问题内容。
-```
-
-### 质量门禁
-- [ ] 自动验证通过（或已解释例外）
-- [ ] 人工在浏览器（桌面）确认新功能正常
-- [ ] 人工在浏览器（手机）确认布局正常
-- [ ] Console 零红色错误
-- [ ] 现有功能无回归（核心路径手动测试）
-
-### 暂停条件
-人工未确认 → 任务不算完成
+### Pause Condition
+If services are not all active -> inspect logs, fix the issue, and redeploy
 
 ---
 
-## 阶段间的回退规则
+## Phase 5: Production Acceptance (Human Confirmation Gate)
 
-| 发现问题的阶段 | 回退到 | 回退范围 |
+### Inputs
+- acceptance criteria (from `autoloop-plan.md`)
+- production environment URL
+
+### Execution
+
+**Automated validation (`verifier` subagent)**:
+
+Invocation:
+`Agent(subagent_type="code-reviewer", prompt="You are the production acceptance tester. Use browser tools to validate the following functionality...")`
+
+Optional tool: Chrome DevTools MCP (if configured)
+
+- open the relevant pages and verify the new feature is visible
+- execute the feature flow and verify the outcome is correct
+- confirm the browser console has no errors
+- verify the related API response time is normal (`< 500ms`)
+
+**Human confirmation (required)**:
+
+```text
+Phase 5 paused: please open {URL} in a browser (desktop + mobile) and verify each acceptance item.
+After confirming there are no red console errors and no regressions in existing functionality, enter "User confirmed (production acceptance)".
+If you find any issue, describe it.
+```
+
+### Quality Gates
+- [ ] Automated validation passes (or an exception is explicitly explained)
+- [ ] Human confirms the new feature works correctly in a desktop browser
+- [ ] Human confirms the layout works correctly in a mobile browser
+- [ ] Zero red errors in the console
+- [ ] No regression in existing functionality (manual test on core paths)
+
+### Pause Condition
+Without human confirmation, the task is not complete
+
+---
+
+## Inter-Phase Rollback Rules
+
+| Phase where issue is found | Roll back to | Rollback scope |
 |-------------|--------|---------|
-| Phase 2 发现 P1/P2 | Phase 1 | 仅修复对应文件 |
-| Phase 3 验证失败 | Phase 1 或 Phase 2 | 修复 + 重审 |
-| Phase 4 部署失败 | Phase 3（修复后重测试）| 修复 + 重测 + 重部署 |
-| Phase 5 线上有问题 | Phase 4（回滚）or Phase 1（修复）| 用户决定回滚还是热修复 |
+| Phase 2 finds P1/P2 | Phase 1 | Fix only the relevant files |
+| Phase 3 verification fails | Phase 1 or Phase 2 | Fix + re-review |
+| Phase 4 deployment fails | Phase 3 (retest after fix) | Fix + retest + redeploy |
+| Phase 5 finds issues in production | Phase 4 (rollback) or Phase 1 (fix) | User decides rollback vs hotfix |
 
-**最大回退次数**：每个阶段最多回退 2 次（遵守 loop-protocol.md 统一重试上限规则）；Phase 2 修复-审查循环例外，最多 3 轮。超过上限则向用户报告并等待人工决策。
+**Maximum rollback count**: at most 2 rollbacks per phase (follows the unified retry-limit rule in `loop-protocol.md`); the Phase 2 fix-review loop is the only exception and may run up to 3 rounds. Beyond that, report to the user and wait for a manual decision.
 
 ---
 
-## T4 交付阶段 ↔ OODA 八阶段（控制器映射）
+## T4 Delivery Phases ↔ OODA Eight Stages (Controller Mapping)
 
-| delivery-phases | 典型落在 OODA 中的阶段 | 说明 |
+| delivery-phases | Typical OODA stage(s) | Notes |
 |-----------------|------------------------|------|
-| Phase 1 开发 | `ACT` 为主 | 编码与局部验证 |
-| Phase 2 审查 | `ACT` / `VERIFY` | 审查与修复循环 |
-| Phase 3 测试 | `VERIFY` | 测试与评分写回 |
-| Phase 4 部署 | `ACT` | 发布脚本 |
-| Phase 5 验收 | `VERIFY` + 用户门闸 | 线上验收 |
+| Phase 1 Development | mainly `ACT` | coding and local validation |
+| Phase 2 Review | `ACT` / `VERIFY` | review-fix loop |
+| Phase 3 Testing | `VERIFY` | testing and score write-back |
+| Phase 4 Deployment | `ACT` | release scripts |
+| Phase 5 Acceptance | `VERIFY` + user gate | production acceptance |
 
-**轮次预算**：`gate-manifest.json` 中 T4 默认 **5** 轮完整 OODA（与上表五段交付对齐）；可用 `plan.budget.max_rounds` 覆盖。
+**Round budget**: T4 defaults to **5** full OODA rounds in `gate-manifest.json` to align with the five delivery phases above. `plan.budget.max_rounds` can override it.

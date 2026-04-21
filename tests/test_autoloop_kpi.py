@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""autoloop_kpi：T5 KPI 行与 controller/score 共用逻辑。"""
+"""autoloop_kpi: T5 KPI rows share logic with controller/score."""
 
 import importlib.util
 import os
@@ -38,7 +38,7 @@ class TestKpiRowSatisfied(unittest.TestCase):
     def test_exempt_status(self):
         self.assertTrue(
             self.m.kpi_row_satisfied(
-                {"current": None, "target": None, "status": "豁免"}
+                {"current": None, "target": None, "status": "Exempt"}
             )
         )
 
@@ -69,13 +69,13 @@ class TestPlanGateIsExempt(unittest.TestCase):
         self.m = _load()
 
     def test_cn_exempt(self):
-        self.assertTrue(self.m.plan_gate_is_exempt({"status": "豁免"}))
+        self.assertTrue(self.m.plan_gate_is_exempt({"status": "Exempt"}))
 
     def test_en_exempt(self):
         self.assertTrue(self.m.plan_gate_is_exempt({"status": "Exempt"}))
 
     def test_not_exempt(self):
-        self.assertFalse(self.m.plan_gate_is_exempt({"status": "未达标"}))
+        self.assertFalse(self.m.plan_gate_is_exempt({"status": "Not met"}))
 
 
 if __name__ == "__main__":

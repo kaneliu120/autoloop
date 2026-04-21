@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P2-05: audit 子命令 — 持续学习闭环自动审计。"""
+"""P2-05: audit subcommand for closed-loop continuous-learning checks."""
 
 import importlib.util
 import os
@@ -12,9 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
 
 REGISTRY_TEMPLATE = """\
-# Experience Registry — 全局经验库
+# Experience Registry - global experience registry
 
-## 全局策略效果库
+## Global Strategy Effect Registry
 
 | strategy_id | template | dimension | description | avg_delta | side_effects | use_count | success_rate | status |
 |------------|----------|-----------|-------------|-----------|-------------|-----------|-------------|--------|
@@ -39,7 +39,7 @@ def _make_registry(tmpdir, rows_str):
 
 
 class TestAuditPromoteToCandidateDefault(unittest.TestCase):
-    """规则 1: use_count>=4, success_rate>80%, status=推荐 → 候选默认"""
+    """Rule 1: use_count>=4, success_rate>80%, status=Recommended -> Candidate Default."""
 
     def setUp(self):
         self.td = tempfile.mkdtemp(prefix="al_audit_")
@@ -49,30 +49,30 @@ class TestAuditPromoteToCandidateDefault(unittest.TestCase):
         shutil.rmtree(self.td, ignore_errors=True)
 
     def test_promote_recommended_to_candidate_default(self):
-        row = "| S01-test | T1 | cov | [保持] @2026-03-20 desc | 1.5 | — | 5 | 90% | 推荐 |"
+        row = "| S01-test | T1 | cov | [Keep] @2026-03-20 desc | 1.5 | — | 5 | 90% | Recommended |"
         reg = _make_registry(self.td, row)
         result = self.mod.cmd_audit(reg, dry_run=True)
         self.assertEqual(len(result), 1)
-        self.assertIn("候选默认", result[0]["action"])
+        self.assertIn("Candidate Default", result[0]["action"])
 
     def test_no_promote_if_use_count_below_4(self):
-        row = "| S02-test | T1 | cov | [保持] @2026-03-20 desc | 1 | — | 3 | 90% | 推荐 |"
+        row = "| S02-test | T1 | cov | [Keep] @2026-03-20 desc | 1 | — | 3 | 90% | Recommended |"
         reg = _make_registry(self.td, row)
         result = self.mod.cmd_audit(reg, dry_run=True)
         # use_count=3 < 4, should not suggest promotion
-        promote = [r for r in result if "候选默认" in r["action"]]
+        promote = [r for r in result if "Candidate Default" in r["action"]]
         self.assertEqual(len(promote), 0)
 
     def test_no_promote_if_success_rate_not_above_80(self):
-        row = "| S03-test | T1 | cov | [保持] @2026-03-20 desc | 1 | — | 5 | 80% | 推荐 |"
+        row = "| S03-test | T1 | cov | [Keep] @2026-03-20 desc | 1 | — | 5 | 80% | Recommended |"
         reg = _make_registry(self.td, row)
         result = self.mod.cmd_audit(reg, dry_run=True)
-        promote = [r for r in result if "候选默认" in r["action"]]
+        promote = [r for r in result if "Candidate Default" in r["action"]]
         self.assertEqual(len(promote), 0, "80% is not >80%, should not promote")
 
 
 class TestAuditDeprecate(unittest.TestCase):
-    """规则 2: use_count>=3, success_rate<30%, status!=已废弃 → 已废弃"""
+    """Rule 2: use_count>=3, success_rate<30%, status!=Deprecated -> Deprecated."""
 
     def setUp(self):
         self.td = tempfile.mkdtemp(prefix="al_audit_")
@@ -82,22 +82,22 @@ class TestAuditDeprecate(unittest.TestCase):
         shutil.rmtree(self.td, ignore_errors=True)
 
     def test_deprecate_low_success_rate(self):
-        row = "| S04-test | T2 | acc | [避免] @2026-03-20 desc | -0.5 | — | 4 | 20% | 观察 |"
+        row = "| S04-test | T2 | acc | [Avoid] @2026-03-20 desc | -0.5 | — | 4 | 20% | Observation |"
         reg = _make_registry(self.td, row)
         result = self.mod.cmd_audit(reg, dry_run=True)
         self.assertEqual(len(result), 1)
-        self.assertIn("已废弃", result[0]["action"])
+        self.assertIn("Deprecated", result[0]["action"])
 
     def test_skip_already_deprecated(self):
-        row = "| S05-test | T2 | acc | [避免] @2026-03-20 desc | -1 | — | 5 | 10% | 已废弃 |"
+        row = "| S05-test | T2 | acc | [Avoid] @2026-03-20 desc | -1 | — | 5 | 10% | Deprecated |"
         reg = _make_registry(self.td, row)
         result = self.mod.cmd_audit(reg, dry_run=True)
-        deprecate = [r for r in result if "已废弃" in r["action"]]
+        deprecate = [r for r in result if "Deprecated" in r["action"]]
         self.assertEqual(len(deprecate), 0, "Already deprecated, should not suggest again")
 
 
 class TestAuditDecayToObservation(unittest.TestCase):
-    """规则 3: status=推荐, 最后验证 >90天前 → 降为观察"""
+    """Rule 3: status=Recommended and last validation >90 days ago -> Observation."""
 
     def setUp(self):
         self.td = tempfile.mkdtemp(prefix="al_audit_")
@@ -108,22 +108,22 @@ class TestAuditDecayToObservation(unittest.TestCase):
 
     def test_decay_old_recommended(self):
         # 91 days ago from today
-        row = "| S06-test | T3 | qual | [保持] @2025-12-01 old strategy | 0.5 | — | 2 | 60% | 推荐 |"
+        row = "| S06-test | T3 | qual | [Keep] @2025-12-01 old strategy | 0.5 | — | 2 | 60% | Recommended |"
         reg = _make_registry(self.td, row)
         result = self.mod.cmd_audit(reg, dry_run=True)
-        decay = [r for r in result if "观察" in r["action"]]
+        decay = [r for r in result if "Observation" in r["action"]]
         self.assertEqual(len(decay), 1)
 
     def test_no_decay_recent(self):
-        row = "| S07-test | T3 | qual | [保持] @2026-03-25 recent | 0.5 | — | 2 | 60% | 推荐 |"
+        row = "| S07-test | T3 | qual | [Keep] @2026-03-25 recent | 0.5 | — | 2 | 60% | Recommended |"
         reg = _make_registry(self.td, row)
         result = self.mod.cmd_audit(reg, dry_run=True)
-        decay = [r for r in result if "观察" in r["action"]]
+        decay = [r for r in result if "Observation" in r["action"]]
         self.assertEqual(len(decay), 0, "Recent strategy should not decay")
 
 
 class TestAuditNoSuggestions(unittest.TestCase):
-    """无需调整的场景"""
+    """Cases that should not trigger changes."""
 
     def setUp(self):
         self.td = tempfile.mkdtemp(prefix="al_audit_")
@@ -139,8 +139,8 @@ class TestAuditNoSuggestions(unittest.TestCase):
 
     def test_healthy_strategies(self):
         rows = (
-            "| S08-test | T1 | cov | [保持] @2026-03-20 ok | 0.5 | — | 2 | 60% | 观察 |\n"
-            "| S09-test | T2 | acc | [保持] @2026-03-20 fine | 1.0 | — | 3 | 70% | 推荐 |"
+            "| S08-test | T1 | cov | [Keep] @2026-03-20 ok | 0.5 | — | 2 | 60% | Observation |\n"
+            "| S09-test | T2 | acc | [Keep] @2026-03-20 fine | 1.0 | — | 3 | 70% | Recommended |"
         )
         reg = _make_registry(self.td, rows)
         result = self.mod.cmd_audit(reg, dry_run=True)
@@ -148,7 +148,7 @@ class TestAuditNoSuggestions(unittest.TestCase):
 
 
 class TestAuditExecuteMode(unittest.TestCase):
-    """非 dry-run 模式：执行变更并写审计日志"""
+    """Non-dry-run mode applies changes and writes an audit log."""
 
     def setUp(self):
         self.td = tempfile.mkdtemp(prefix="al_audit_")
@@ -158,7 +158,7 @@ class TestAuditExecuteMode(unittest.TestCase):
         shutil.rmtree(self.td, ignore_errors=True)
 
     def test_execute_writes_changes_and_audit(self):
-        row = "| S10-test | T1 | cov | [保持] @2026-03-20 desc | 1.5 | — | 5 | 90% | 推荐 |"
+        row = "| S10-test | T1 | cov | [Keep] @2026-03-20 desc | 1.5 | — | 5 | 90% | Recommended |"
         reg = _make_registry(self.td, row)
         result = self.mod.cmd_audit(reg, dry_run=False)
         self.assertEqual(len(result), 1)
@@ -169,7 +169,7 @@ class TestAuditExecuteMode(unittest.TestCase):
         rows = self.mod._parse_strategy_table(content)
         s10 = [r for r in rows if r.get("strategy_id") == "S10-test"]
         self.assertEqual(len(s10), 1)
-        self.assertEqual(s10[0]["status"], "候选默认")
+        self.assertEqual(s10[0]["status"], "Candidate Default")
 
         # Verify audit log was written
         audit_path = self.mod._audit_path(reg)
@@ -181,7 +181,7 @@ class TestAuditExecuteMode(unittest.TestCase):
 
 
 class TestAuditRulePriority(unittest.TestCase):
-    """规则优先级：晋升/淘汰优先于衰减"""
+    """Rule priority: promotion/deprecation wins over decay."""
 
     def setUp(self):
         self.td = tempfile.mkdtemp(prefix="al_audit_")
@@ -191,13 +191,13 @@ class TestAuditRulePriority(unittest.TestCase):
         shutil.rmtree(self.td, ignore_errors=True)
 
     def test_promote_beats_decay(self):
-        """推荐+高成功率+高使用次数：即使超90天也应晋升而非降级"""
-        row = "| S11-test | T1 | cov | [保持] @2025-12-01 old but good | 2.0 | — | 6 | 95% | 推荐 |"
+        """Recommended + high success + high usage should promote even if older than 90 days."""
+        row = "| S11-test | T1 | cov | [Keep] @2025-12-01 old but good | 2.0 | — | 6 | 95% | Recommended |"
         reg = _make_registry(self.td, row)
         result = self.mod.cmd_audit(reg, dry_run=True)
         self.assertEqual(len(result), 1)
         # Should promote, not decay (promotion rule checked first via continue)
-        self.assertIn("候选默认", result[0]["action"])
+        self.assertIn("Candidate Default", result[0]["action"])
 
 
 if __name__ == "__main__":

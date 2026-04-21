@@ -1,27 +1,27 @@
 #!/usr/bin/env python3
-"""AutoLoop Middleware — 横切关注点模块（函数式实现）
+"""AutoLoop Middleware — cross-cutting concern module (functional implementation)
 
-将 controller.py 中的横切逻辑抽象为独立、可插拔的 Middleware 函数。
-每个 Middleware 可独立启用/禁用，不影响核心 OODA 管道。
+Extracts cross-cutting logic from controller.py into independent, pluggable Middleware functions.
+Each middleware can be enabled or disabled independently without affecting the core OODA pipeline.
 
-与 scripts/middleware/ 目录的关系：
-- 本文件（autoloop-middleware.py）: 函数式实现，可独立运行和 CLI 调试，
-  用于未来 controller 集成 run_middleware_chain() 调用
-- scripts/middleware/: 类基接口定义（OOP），用于未来架构重构时
-  替换 controller 中的内联逻辑为独立模块
-- 两者是同一设计的不同实现风格，待 controller 重构（P3-08 Phase 2）时统一
+Relationship to scripts/middleware/:
+- This file (autoloop-middleware.py): functional implementation, runnable on its own and useful for CLI debugging,
+  for future controller integration via run_middleware_chain()
+- scripts/middleware/: class-based interface definitions (OOP), used when the architecture is refactored
+  to replace inline controller logic with standalone modules
+- Both are different implementation styles for the same design and will be unified when the controller is refactored (P3-08 Phase 2)
 
-当前包含：
-1. LoggingMiddleware — 统一的阶段输入/输出日志
-2. CostTrackingMiddleware — subagent 调用成本累加
-3. EvaluatorAuditMiddleware — 评分事件记录（P1-05 扩展）
-4. FailureClassificationMiddleware — ACT 失败自动分类（P2-12 扩展）
-5. SecurityMiddleware — 跨平台安全检查（P3-04/05 集成）
+Current modules:
+1. LoggingMiddleware — unified phase input/output logging
+2. CostTrackingMiddleware — accumulated subagent call cost
+3. EvaluatorAuditMiddleware — scoring event tracking (P1-05 extension)
+4. FailureClassificationMiddleware — automatic ACT failure classification (P2-12 extension)
+5. SecurityMiddleware — cross-platform security checks (P3-04/05 integration)
 
-Middleware 接口约定：
-  每个 Middleware 是一个函数，签名为:
+Middleware interface contract:
+  Each middleware is a function with the signature:
     def middleware_name(phase: str, state: dict, work_dir: str, **kwargs) -> dict:
-      # 返回 {"proceed": True/False, "modifications": {...}}
+      # returns {"proceed": True/False, "modifications": {...}}
 """
 import os
 import sys
@@ -30,7 +30,7 @@ import time
 
 
 def logging_middleware(phase, state, work_dir, **kwargs):
-    """统一阶段日志 — 记录每个阶段的开始/结束时间和关键输入"""
+    """Unified phase logging — record each phase's start/end time and key inputs."""
     template = state.get("plan", {}).get("template", "?")
     round_num = len(state.get("plan", {}).get("iterations", []))
     timestamp = time.strftime("%Y-%m-%dT%H:%M:%S")
@@ -42,7 +42,7 @@ def logging_middleware(phase, state, work_dir, **kwargs):
         "round": round_num,
     }
 
-    # 追加到 middleware 日志
+    # Append to the middleware log
     log_dir = os.path.join(work_dir, ".autoloop")
     os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, "middleware.jsonl")
@@ -53,7 +53,7 @@ def logging_middleware(phase, state, work_dir, **kwargs):
 
 
 def cost_tracking_middleware(phase, state, work_dir, **kwargs):
-    """成本追踪 — 在 ACT 阶段后累加 subagent 调用计数"""
+    """Cost tracking — accumulate subagent call counts after ACT."""
     if phase != "ACT":
         return {"proceed": True, "modifications": {}}
 
@@ -71,7 +71,7 @@ def cost_tracking_middleware(phase, state, work_dir, **kwargs):
 
 
 def evaluator_audit_middleware(phase, state, work_dir, **kwargs):
-    """评估审计 — 在 VERIFY 阶段后记录评分事件"""
+    """Evaluation audit — record scoring events after VERIFY."""
     if phase != "VERIFY":
         return {"proceed": True, "modifications": {}}
 
@@ -82,7 +82,7 @@ def evaluator_audit_middleware(phase, state, work_dir, **kwargs):
     latest = iterations[-1]
     scores = latest.get("scores", {})
 
-    # 检测评分方差（同维度跨轮差异）
+    # Detect scoring variance (cross-round differences within the same dimension)
     if len(iterations) >= 2:
         prev_scores = iterations[-2].get("scores", {})
         for dim, score_data in scores.items():
@@ -93,7 +93,7 @@ def evaluator_audit_middleware(phase, state, work_dir, **kwargs):
                     prev_val = prev.get("score", 0)
                     confidence = score_data.get("confidence", "heuristic")
                     margin = score_data.get("margin", 1.5)
-                    # 如果方差超过 margin 的 2 倍，记录为异常
+                    # If variance exceeds 2x the margin, record it as an anomaly
                     if margin and abs(curr_val - prev_val) > margin * 2:
                         _log_evaluator_event(
                             work_dir,
@@ -111,11 +111,11 @@ def evaluator_audit_middleware(phase, state, work_dir, **kwargs):
 
 
 def failure_classification_middleware(phase, state, work_dir, **kwargs):
-    """失败分类 — 在 ACT 阶段后检查是否有未分类的失败
+    """Failure classification — check for unclassified failures after ACT.
 
-    注：完整的 classify_failure 逻辑在 autoloop-controller.py 中。
-    此 Middleware 仅做检测和标记，不直接调用 controller 内部函数。
-    未来可将 classify_failure 提取为共享模块后直接调用。
+    Note: the full classify_failure logic lives in autoloop-controller.py.
+    This middleware only detects and marks issues; it does not call controller internals directly.
+    classify_failure may later be extracted into a shared module and called directly.
     """
     if phase != "ACT":
         return {"proceed": True, "modifications": {}}
@@ -130,7 +130,7 @@ def failure_classification_middleware(phase, state, work_dir, **kwargs):
             "failure_detail", ""
         )
         if error_msg:
-            # 标记需要分类，由 controller 在下一步处理
+            # Mark it for classification so the controller can handle it next
             return {
                 "proceed": True,
                 "modifications": {
@@ -143,12 +143,12 @@ def failure_classification_middleware(phase, state, work_dir, **kwargs):
 
 
 def security_middleware(phase, state, work_dir, **kwargs):
-    """安全检查 — 非 Claude Code 环境中的写操作拦截"""
+    """Security check — intercept writes outside Claude Code."""
     platform = os.environ.get("AUTOLOOP_PLATFORM", "claude-code")
     if platform == "claude-code":
-        return {"proceed": True, "modifications": {}}  # Claude Code 由宿主处理
+        return {"proceed": True, "modifications": {}}  # Claude Code is handled by the host
 
-    # 非 Claude Code 环境：检查 ACT 阶段的工具调用
+    # Non-Claude Code environment: inspect ACT-stage tool calls
     if phase == "ACT":
         return {"proceed": True, "modifications": {"security_check_required": True}}
 
@@ -166,14 +166,14 @@ MIDDLEWARE_REGISTRY = {
 
 
 def run_middleware_chain(phase, state, work_dir, enabled=None):
-    """执行 Middleware 链
+    """Execute the middleware chain.
 
     Args:
-        phase: OODA 阶段名称 (OBSERVE, ORIENT, DECIDE, ACT, VERIFY, SYNTHESIZE, EVOLVE, REFLECT)
-        state: autoloop-state.json 的内容
-        work_dir: 工作目录路径
-        enabled: 要启用的 middleware 名称列表，默认全部启用。
-                 也可通过 AUTOLOOP_MIDDLEWARE 环境变量设置（逗号分隔）。
+        phase: OODA phase name (OBSERVE, ORIENT, DECIDE, ACT, VERIFY, SYNTHESIZE, EVOLVE, REFLECT)
+        state: contents of autoloop-state.json
+        work_dir: work directory path
+        enabled: list of middleware names to enable; all are enabled by default.
+                 May also be set via the AUTOLOOP_MIDDLEWARE env var (comma-separated).
 
     Returns:
         {"proceed": True/False, "modifications": {...}, "blocked_by": str|None}
@@ -202,7 +202,7 @@ def run_middleware_chain(phase, state, work_dir, enabled=None):
 
 
 def _log_evaluator_event(work_dir, event_type, details):
-    """记录评估事件"""
+    """Record an evaluation event."""
     log_dir = os.path.join(work_dir, ".autoloop")
     os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, "evaluator-events.jsonl")

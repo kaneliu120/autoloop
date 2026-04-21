@@ -1,6 +1,6 @@
 {
-  "_comment": "AutoLoop Multi-Model Routing Configuration (P3-09)",
-  "_status": "预留配置，当前 pipeline 不支持多会话。P2-19 的 prompt 级任务感知已可用。",
+  "_comment": "AutoLoop multi-model routing configuration (P3-09)",
+  "_status": "Reserved configuration; the current pipeline does not support multiple sessions. P2-19 prompt-level task awareness is already available.",
 
   "default_model": "anthropic:claude-sonnet-4-6",
 
@@ -8,55 +8,55 @@
     "T1": {
       "preferred": "anthropic:claude-sonnet-4-6",
       "act_override": "xai:grok-3",
-      "reason": "T1 调研需要联网搜索，Grok 有 web_search 原生支持"
+      "reason": "T1 research requires web search, and Grok has native web_search support"
     },
     "T2": {
       "preferred": "anthropic:claude-sonnet-4-6",
-      "reason": "T2 对比分析需要强推理能力"
+      "reason": "T2 comparison analysis requires strong reasoning ability"
     },
     "T3": {
       "preferred": "anthropic:claude-opus-4-6",
-      "reason": "T3 设计需要最强推理 + 长上下文"
+      "reason": "T3 design requires the strongest reasoning plus long context"
     },
     "T4": {
       "preferred": "anthropic:claude-sonnet-4-6",
-      "reason": "T4 开发需要快速代码生成"
+      "reason": "T4 development requires fast code generation"
     },
     "T5": {
       "preferred": "anthropic:claude-sonnet-4-6",
       "act_override": "xai:grok-3",
-      "reason": "T5 KPI 迭代可能需要联网获取最新数据"
+      "reason": "T5 KPI iteration may need web access to fetch the latest data"
     },
     "T6": {
       "preferred": "anthropic:claude-haiku-4-5",
-      "reason": "T6 批量生成优先速度和成本"
+      "reason": "T6 batch generation prioritizes speed and cost"
     },
     "T7": {
       "preferred": "anthropic:claude-sonnet-4-6",
-      "reason": "T7 质量审查需要代码理解能力"
+      "reason": "T7 quality review requires code comprehension"
     },
     "T8": {
       "preferred": "anthropic:claude-sonnet-4-6",
-      "reason": "T8 优化需要架构理解能力"
+      "reason": "T8 optimization requires architecture comprehension"
     }
   },
 
   "phase_models": {
-    "OBSERVE": {"preferred": "default", "reason": "分析类，用默认模型"},
-    "ORIENT": {"preferred": "default", "reason": "分析类，用默认模型"},
-    "DECIDE": {"preferred": "default", "reason": "决策类，用默认模型"},
-    "ACT": {"preferred": "template_specific", "reason": "执行类，按模板的 act_override 选择"},
-    "VERIFY": {"preferred": "script", "reason": "确定性脚本，不需要模型"},
-    "SYNTHESIZE": {"preferred": "default", "reason": "整合类，用默认模型"},
-    "EVOLVE": {"preferred": "default", "reason": "决策类，用默认模型"},
-    "REFLECT": {"preferred": "default", "reason": "反思类，用默认模型"}
+    "OBSERVE": {"preferred": "default", "reason": "analysis stage, use the default model"},
+    "ORIENT": {"preferred": "default", "reason": "analysis stage, use the default model"},
+    "DECIDE": {"preferred": "default", "reason": "decision stage, use the default model"},
+    "ACT": {"preferred": "template_specific", "reason": "execution stage, choose according to the template's act_override"},
+    "VERIFY": {"preferred": "script", "reason": "deterministic scripts, no model needed"},
+    "SYNTHESIZE": {"preferred": "default", "reason": "integration stage, use the default model"},
+    "EVOLVE": {"preferred": "default", "reason": "decision stage, use the default model"},
+    "REFLECT": {"preferred": "default", "reason": "reflection stage, use the default model"}
   },
 
   "multi_session_pipeline": {
-    "_status": "未实现，预留接口",
+    "_status": "Not implemented, reserved interface",
     "enabled": false,
     "session_launcher": "claude-code",
     "session_args_template": "--model {model} --headless",
-    "comment": "当 enabled=true 时，pipeline 为每个模板启动独立会话，使用 template_models 中的 preferred 模型"
+    "comment": "When enabled=true, the pipeline launches an independent session for each template using the preferred model in template_models"
   }
 }

@@ -9,7 +9,8 @@ description = "AutoLoop autonomous iteration engine (OODA + quality gates)"
 readme = "README.md"
 requires-python = ">=3.10"
 
-# 运行时脚本仍为 stdlib-only；安装后可使用 console_scripts（见 services/autoloop_entrypoints）。
+# Runtime scripts remain stdlib-only; installation exposes console_scripts
+# (see services/autoloop_entrypoints).
 [project.scripts]
 autoloop-state = "autoloop_entrypoints:main_state"
 autoloop-validate = "autoloop_entrypoints:main_validate"

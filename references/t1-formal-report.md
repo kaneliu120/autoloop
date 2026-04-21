@@ -1,213 +1,213 @@
-# T1 高标准调研报告（设计说明）
+# T1 High-Standard Research Report (Design Notes)
 
-> **SSOT 正文模板**：`assets/report-template.md` → 章节 **「T1：高标准市场/行业调研报告」**。  
-> **适用原则**：T1 仍是广义 research 入口，但当主题属于**市场/行业调研**时，默认进入**最高标准模式**；若题目带有附加方向（如“行业 + AI 岗位替代性”），则在行业主报告之上叠加专项分析模块。
-
----
-
-## 0. T1 任务本质
-
-**T1 的定义**：
-
-1. **先研究，后成稿**：终稿必须建立在本任务中完成的多源网络/公开源检索之上，而不是先写报告再回填来源。
-2. **行业/市场主题默认高标准**：市场或行业调研必须按固定核心章节输出，达到高标准行业研究的交付效果。
-3. **主 agent 编排、子 agent 取证**：T1 的默认实现方式应是主 agent 识别主题、拆章节、分工委派 researcher / verifier 类子 agent，再把章节证据包整合为终稿。
-4. **多轮是收敛手段，不是定义本身**：若首轮已满足深度、来源与交叉验证要求，可单轮结项；若深度不足，则继续多轮补证。
-
-**不构成合格 T1 的常见失败**：
-
-- 只把历史笔记或内部旧稿改写成报告样子，却没有做本轮独立检索。
-- 报告只堆资料，不形成结构化分析与章节结论。
-- 终稿混入内部运行噪声、质量门禁或系统痕迹。
-- 主 agent 没有拆章节与派发子 agent，而是直接单体写稿，导致证据密度和覆盖深度不稳定。
-- 子 agent 只返回摘要，不返回可被主 agent 复核、去重和补轮的章节证据包。
-
-### 0.1 多 agent 协议中的角色分工
-
-T1 在“适合 LLM 安装使用”的目标下，应优先被理解为一个**多 agent 研究协议**：
-
-- **主 agent / orchestrator**
-  - 识别是否进入 T1
-  - 识别主体对象与附加方向
-  - 生成核心章节与专项模块
-  - 为每章派发 researcher / verifier 子任务
-  - 汇总章节证据包、处理冲突、判断是否补轮
-  - 统一完成最终成稿
-- **researcher 类子 agent**
-  - 只负责特定章节或专项子题的外部检索与取证
-  - 返回结构化章节证据包，而不是直接写终稿段落
-- **verifier / cross-check 类子 agent**
-  - 专门检查口径冲突、来源独立性、结论能否强推、是否需要降级为风险或争议点
-
-**职责边界**：
-
-- writer / synthesizer 职责默认仍由主 agent 统一承担，避免多个子 agent 直接拼写终稿导致口吻漂移、结构失真或重复。
-- 因此，T1 的关键不是“模板长什么样”，而是“主 agent 如何拆、子 agent 如何回、主 agent 如何补轮与合稿”。
+> **SSOT body template**: `assets/report-template.md` -> section **"T1: High-Standard Market / Industry Research Report"**.
+> **Applicability rule**: T1 remains the general research entry point, but when the topic is a **market / industry research** topic, it defaults to **high-standard mode**. If the prompt includes an additional direction (for example, "industry + AI job substitution"), add a special analysis module on top of the main industry report.
 
 ---
 
-## 1. 报告的读者边界
+## 0. What T1 Fundamentally Is
 
-T1 的最终交付是**给人读的正式报告**。报告必须只保留读者需要的信息，不得泄漏任何内部运行细节。
+**Definition of T1**:
 
-### 1.1 报告中禁止出现
+1. **Research first, writing second**: the final report must be built on multi-source web / public-source research completed within this task, not on writing first and retrofitting citations later.
+2. **Industry/market topics default to the highest standard**: market or industry research must use the fixed core chapter structure and deliver the quality of a high-standard industry study.
+3. **Main agent orchestrates, subagents gather evidence**: the default T1 implementation is that the main agent identifies the topic, splits it into chapters, delegates researcher / verifier subagents, and integrates chapter evidence packs into the final report.
+4. **Multiple rounds are a convergence tool, not part of the definition**: if the first round already satisfies depth, sourcing, and cross-validation requirements, T1 may end in one round; if depth is insufficient, continue with additional evidence rounds.
 
-- 内部运行信息：如“证据策略”、轮次、subagent、并行搜索、SSOT、JSON、render、progress、state 等。
-- 质量与流程信息：如质量得分、coverage / credibility、门禁、迭代轨迹、终止条件。
-- 方法论显式标题：如“问题界定”“议题树 / MECE”“假设驱动”“研究方法”。
-- 内部校验说明：如置信度规则、证据优先级、交叉验证机制、缺口登记机制。
-- 文件与系统痕迹：如脚本名、仓库路径、工作目录、`AutoLoop` 字样。
-- 模板提示、编辑注或“成稿后删除”之类提示语。
+**Common failure modes that do not qualify as a valid T1**:
 
-### 1.2 报告开头允许保留
+- rewriting old notes or internal drafts into report form without doing independent research in the current run
+- piling up material without producing structured analysis and chapter conclusions
+- mixing internal execution noise, quality gates, or system traces into the final report
+- the main agent does not split chapters or delegate subagents, and instead writes the report alone, causing unstable evidence density and depth
+- subagents return only summaries rather than chapter evidence packs that the main agent can review, deduplicate, and extend in later rounds
 
-- 标题
-- 主题
-- 目标
-- 分析日期
-- 信息边界
+### 0.1 Role Division in the Multi-Agent Protocol
 
-以上信息属于**读者可理解的业务元信息**；除此之外，不应在报告开头加入任何过程说明。
+Under the goal of making T1 practical for LLM use, it should primarily be understood as a **multi-agent research protocol**:
+
+- **main agent / orchestrator**
+  - decides whether the task is T1
+  - identifies the primary subject and additional direction
+  - generates core chapters and special modules
+  - dispatches researcher / verifier subagents for each chapter
+  - merges chapter evidence packs, resolves conflicts, and decides whether another round is needed
+  - produces the final report in a single unified voice
+- **researcher-type subagents**
+  - only perform external research and evidence gathering for a specific chapter or special subtopic
+  - return structured chapter evidence packs instead of final prose
+- **verifier / cross-check subagents**
+  - specifically check definition conflicts, source independence, whether conclusions are strong enough to state directly, and whether a claim should be downgraded into a risk or controversy
+
+**Responsibility boundaries**:
+
+- writing / synthesis remains centralized in the main agent by default, to avoid multiple subagents drafting final prose directly and causing tone drift, structural distortion, or duplication
+- therefore the key question for T1 is not just "what the template looks like", but "how the main agent decomposes the task, how subagents return evidence, and how the main agent decides on follow-up rounds and assembles the final report"
 
 ---
 
-## 2. 方法论如何隐形融入报告
+## 1. Reader Boundary of the Final Report
 
-以下对应关系用于指导写作，**不是**要求在终稿中把这些词当标题写出来。
+The T1 deliverable is a **formal report written for humans**. It must preserve only information useful to readers and must not leak internal execution details.
 
-| 方法论要点 | 在高标准报告中的落点 |
+### 1.1 The report must not include
+
+- internal execution information such as "evidence strategy", round numbers, subagents, parallel search, SSOT, JSON, render, progress, state, and similar terms
+- quality/process information such as quality scores, coverage / credibility, gates, iteration history, and termination conditions
+- explicit methodology section titles such as "problem framing", "issue tree / MECE", "hypothesis-driven", or "research method"
+- internal validation explanations such as confidence rules, evidence priority, cross-validation mechanisms, or gap-registration mechanisms
+- file / system traces such as script names, repository paths, working directories, or the word `AutoLoop`
+- template hints, editorial notes, or markers such as "remove after final draft"
+
+### 1.2 What may appear at the beginning of the report
+
+- title
+- topic
+- objective
+- analysis date
+- information boundary
+
+These belong to reader-facing business metadata. Beyond that, the opening should not contain any process explanation.
+
+---
+
+## 2. How Methodology Should Be Embedded Invisibly
+
+The following mapping guides writing. It does **not** mean these phrases should appear as headings in the final report.
+
+| Methodology Idea | How it appears in a high-standard report |
 |------------|----------------------|
-| 事实基础（fact-based） | 每个章节都要有数据表、可核对事实和来源 |
-| 结构化（structured / MECE） | 用固定核心章节覆盖市场、需求、价值链、竞争、监管、技术、经济性、风险、结论 |
-| 假设驱动（hypothesis-driven） | 在综合判断中写出哪些初始判断被支持、被修正或证据不足 |
-| 金字塔表达（结论先行） | 综合判断章节必须先列核心结论；普通章节仍以数据、分析、结论组织，但判断必须可被前文证据收束出来 |
-| 交叉验证 | 关键判断尽量采用多源支撑；若无法交叉验证，仍可写入，但要作为风险或争议点处理 |
+| fact-based | every chapter includes data tables, verifiable facts, and sources |
+| structured / MECE | use fixed core chapters to cover market, demand, value chain, competition, regulation, technology, economics, risk, and conclusions |
+| hypothesis-driven | in the synthesis section, state which initial hypotheses were supported, revised, or left under-evidenced |
+| pyramid writing | the synthesis section must lead with core conclusions; regular chapters still use data, analysis, and conclusion, but the judgment must be traceable to the evidence above it |
+| cross-validation | key judgments should ideally be supported by multiple sources; when cross-validation is not possible, they may still appear, but only as risks or controversy points |
 
-可与个人整理的“麦肯锡式快速了解行业”笔记对照使用；本仓库不 vend 该笔记原文。
-
----
-
-## 3. 市场/行业主题的强制核心章节
-
-当 T1 主题属于市场/行业调研时，报告默认至少包含：
-
-1. 标题 + 主题 + 目标
-2. 市场规模与增长
-3. 需求侧 / 客户结构
-4. 价值链与利润池
-5. 竞争格局与主要玩家
-6. 监管与政策环境
-7. 技术与关键变化因素
-8. 商业模式 / 收入成本结构 / 经营杠杆
-9. 主要风险、争议点与不确定性
-10. 综合判断与启示
-11. 数据来源
-
-**信息边界**不单列为正文大章，而放在标题区的前置元信息中。
-
-### 3.1 每章最低内容标准
-
-每个核心章节都必须包含以下三类内容：
-
-- **数据**：至少 1 个数据表、关键指标组，或一组可核对事实。
-- **分析**：解释结构、变化原因、比较关系或驱动机制。
-- **结论**：本章节的明确判断，不能只罗列素材。
-
-### 3.2 金样报告的共同特征
-
-若把当前优质样板反推为 T1 的目标形态，则合格终稿通常具备以下共同特征：
-
-- **证据先行**：先给读者可核对的数据、结构拆分、公司实例、区域差异、时间变化和口径说明，再给解释，再落结论。
-- **分析承接而非替代证据**：分析负责解释“为什么会这样”“差异来自哪里”“哪些机制最重要”，而不是用一两句总括代替证据。
-- **结论点睛**：结论是章节压缩和判断收束，不是章节主体。
-- **来源可追溯**：文末来源应尽量按章节归组，或至少能让读者方便回溯，不宜只堆成一长串 bibliography。
-- **篇幅服从信息密度**：不以短为优先。只要信息密度持续有效，厚报告是允许的，不应因文件行数而主动压缩有效内容。
-
-### 3.3 什么叫“薄稿”
-
-对 T1 来说，下列情况应被视为“章节深度不足”：
-
-- 只有总括式判断，没有足够可核对数据块。
-- 有 1 个平均值，但没有结构性拆分，如区域差异、产品差异、公司差异、时间变化。
-- 结论写得很满，但读者无法顺着前文事实自行复核到接近同一结论。
-- 来源虽然很多，但没有和章节形成稳定对应关系。
-- 专项模块只写岗位名或方向名，没有拆到工作包、机制、保留边界或证据强弱。
+This may be used alongside personal "McKinsey-style rapid industry understanding" notes; the original notes are not vendored in this repository.
 
 ---
 
-## 4. 方向 / 主题叠加机制
+## 3. Mandatory Core Chapters for Market / Industry Topics
 
-若题目是“主体对象 + 方向 / 主题”的组合，采用：
+When the T1 topic is market / industry research, the report must include at least:
 
-**行业主报告 + 专项模块**
+1. title + topic + objective
+2. market size and growth
+3. demand side / customer structure
+4. value chain and profit pools
+5. competitive landscape and major players
+6. regulatory and policy environment
+7. technology and key drivers of change
+8. business model / revenue-cost structure / operating leverage
+9. key risks, controversy points, and uncertainties
+10. synthesis and implications
+11. data sources
 
-### 4.1 组合规则
+**Information boundary** should not appear as a standalone body chapter. It belongs in the front matter near the title.
 
-- **主体对象**决定核心框架：如“博彩行业”“跨境 SaaS”“东南亚直播电商”。
-- **附加方向**决定专项模块：如 AI、监管、投资逻辑、出海、供应链、岗位替代性等。
+### 3.1 Minimum content standard for each chapter
 
-### 4.2 示例：行业 + AI 岗位替代性
+Each core chapter must contain all three of the following:
 
-若主题为“博彩行业 + AI 岗位替代性”，则必须：
+- **data**: at least one table, key metric set, or group of verifiable facts
+- **analysis**: explanation of structure, causes of change, comparative relationships, or driving mechanisms
+- **conclusion**: an explicit chapter-level judgment rather than a list of materials
 
-1. 先完整覆盖行业主报告核心章节；
-2. 再增加 AI 岗位替代性专项分析，至少包含：
-   - AI 技术渗透与应用现状
-   - 岗位 / 职能映射
-   - 可替代与不可替代机制
-   - 头部公司案例
-   - 组织与人才趋势
-   - 专项结论
+### 3.2 Shared characteristics of strong reference reports
 
-专项模块同样必须满足：**数据 + 分析 + 结论**。
+If we reverse-engineer the target form from high-quality samples, qualified final reports usually share these traits:
 
-### 4.3 专项模块的工作包要求
+- **evidence first**: give readers verifiable data, structural breakdowns, company examples, regional differences, time-series changes, and scope notes before giving explanations and conclusions
+- **analysis extends evidence instead of replacing it**: analysis explains why patterns exist, where differences come from, and which mechanisms matter most. It should not replace evidence with a few high-level sentences
+- **conclusions sharpen rather than carry the chapter**: conclusions compress and finalize the chapter's argument; they are not the chapter body
+- **sources are traceable**: sources should ideally be grouped by chapter at the end, or at minimum organized so that readers can trace them back easily rather than facing a single long bibliography dump
+- **length follows information density**: brevity is not the goal by itself. As long as information density remains high, a long report is acceptable and should not be compressed just to reduce line count
 
-若专项方向涉及 AI、自动化、组织、岗位替代性等主题，专项模块应优先拆到**工作包**而不是只停留在岗位或方向名称：
+### 3.3 What counts as a "thin draft"
 
-- 哪些任务先被自动化
-- 哪些任务保留人工
-- 哪些任务带有监管责任、例外裁量或高价值关系属性
-- 哪些判断有强直接证据，哪些仅属审慎推断
+For T1, the following should be treated as **insufficient chapter depth**:
+
+- only top-level judgments, without enough verifiable data blocks
+- one average value with no structural breakdown such as regional, product, company, or time differences
+- heavily stated conclusions that readers cannot independently reconstruct from the evidence above
+- many sources listed, but no stable mapping between sources and chapters
+- special modules that only list job titles or topic names, without breaking them down into work packages, mechanisms, retained boundaries, or evidence strength
 
 ---
 
-## 5. 与 AutoLoop 产物的分工
+## 4. Additional Direction / Theme Overlay Mechanism
 
-| 产物 | 职责 |
+If the prompt combines a primary subject with an additional direction/theme, the structure is:
+
+**main industry report + special module**
+
+### 4.1 Combination Rule
+
+- the **primary subject** determines the core frame, such as "gambling industry", "cross-border SaaS", or "Southeast Asian live-commerce"
+- the **additional direction** determines the special module, such as AI, regulation, investment logic, international expansion, supply chain, job substitution, and so on
+
+### 4.2 Example: Industry + AI Job Substitution
+
+If the topic is "gambling industry + AI job substitution", the report must:
+
+1. fully cover the main industry report chapters first
+2. then add a special AI job substitution module containing at least:
+   - AI technology penetration and current applications
+   - role / function mapping
+   - replacement mechanisms and retention mechanisms
+   - leading company case studies
+   - organizational and talent trends
+   - special-module conclusions
+
+The special module must also satisfy the same rule: **data + analysis + conclusion**.
+
+### 4.3 Work-Package Requirement for Special Modules
+
+If the additional direction involves AI, automation, organization, or job substitution, the special module should be decomposed into **work packages** rather than stopping at job-title or theme names:
+
+- which tasks get automated first
+- which tasks remain human
+- which tasks carry regulatory responsibility, exception handling, or high-value relationship attributes
+- which judgments have strong direct evidence and which are only cautious inference
+
+---
+
+## 5. Division of Responsibility Across AutoLoop Artifacts
+
+| Artifact | Responsibility |
 |------|------|
-| `autoloop-plan.md` | 主题、边界、主体对象、附加方向、核心章节、专项模块、排除范围 |
-| `autoloop-findings.md` | 原始研究整合：按章节 / 专项模块沉淀事实、来源、争议点、缺口 |
-| `autoloop-report-{topic}-{date}.md` | 给人读的正式终稿，只保留业务读者需要的章节内容 |
-| `autoloop-results.tsv` / 状态 JSON | 评分、迭代与控制信息，不复制进终稿 |
-| `autoloop-progress.md` | 轮次、策略与改写记录，不复制进终稿 |
+| `autoloop-plan.md` | topic, boundary, primary subject, additional direction, core chapters, special modules, exclusions |
+| `autoloop-findings.md` | raw research integration: facts, sources, controversies, and gaps organized by chapter / special module |
+| `autoloop-report-{topic}-{date}.md` | the formal report for human readers; contains only reader-facing chapter content |
+| `autoloop-results.tsv` / state JSON | scoring, iteration, and control data; not copied into the final report |
+| `autoloop-progress.md` | round logs, strategy changes, and rewrite history; not copied into the final report |
 
-### 5.1 章节证据包的定位
+### 5.1 Position of the Chapter Evidence Pack
 
-为了让 T1 适合主 agent 分工委派子 agent，建议把每章中间产物理解为**章节证据包**，其职责介于 findings 与终稿之间：
+To make T1 suitable for main-agent delegation, each chapter's intermediate output should be treated as a **chapter evidence pack**. Its role sits between findings and the final report:
 
-- 来源于 researcher / verifier 子 agent
-- 服务于主 agent 的整合、去重、冲突处理与补轮判断
-- 不直接暴露给读者，但应足够结构化，使主 agent 不必从零拼接原始搜索结果
+- produced by researcher / verifier subagents
+- used by the main agent for integration, deduplication, conflict handling, and decisions about further rounds
+- not exposed directly to readers, but structured enough that the main agent does not need to reconstruct raw search results from scratch
 
-章节证据包是 T1 的中间层标准；终稿只是最终表现层。
+The chapter evidence pack is the standard intermediate layer in T1; the final report is only the presentation layer.
 
 ---
 
-## 6. 维护原则
+## 6. Maintenance Rules
 
-调整 T1 的行业研究标准时，按以下顺序同步：
+When adjusting the T1 industry research standard, update the following in order:
 
 1. `assets/report-template.md`
 2. `commands/autoloop-research.md`
 3. `references/t1-formal-report.md`
 4. `commands/autoloop.md`
 5. `SKILL.md`
-6. 如有需要，再补 `references/quality-gates.md`
+6. `references/quality-gates.md` if needed
 
-### 6.1 二期实现边界
+### 6.1 Phase-Two Implementation Boundary
 
-当前优先级是**协议、模板、执行流与门槛**，而不是立刻把读者终稿纳入 `state/render` 自动渲染。
+The current priority is **protocol, template, execution flow, and gates**, not immediately bringing the reader-facing final report into automatic `state/render` generation.
 
-- 一期目标：让主 agent 通过标准化分工委派 + 章节证据包 + 补轮规则，稳定产出高质量 T1 终稿。
-- 二期目标：只有当上述协议稳定后，再考虑把章节证据包结构化进 state，并增加读者终稿渲染。
+- phase-one goal: let the main agent reliably produce a high-quality T1 final report through standardized delegation, chapter evidence packs, and follow-up-round rules
+- phase-two goal: only after the protocol is stable, consider structuring chapter evidence packs into state and adding reader-report rendering

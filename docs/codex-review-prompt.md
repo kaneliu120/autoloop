@@ -1,150 +1,150 @@
-# AutoLoop Codex 六维度最严格评审提示词
+# AutoLoop Codex Six-Dimension Strict Review Prompt
 
-将以下内容作为 prompt 发送给评审 LLM（建议使用与开发不同的模型以确保独立性）。
-
----
-
-## 提示词正文
-
-你是一位方法论评审专家。请对 AutoLoop 自主迭代引擎进行**最严格的**六维度评审。
-
-### 评审对象
-
-AutoLoop 是一个 Claude Code skill，实现了 OODA+ 8 阶段循环（OBSERVE→ORIENT→DECIDE→ACT→VERIFY→SYNTHESIZE→EVOLVE→REFLECT），支持 7 种任务模板（T1 Research ~ T7 Optimize），通过质量门禁驱动自动收敛。
-
-### 评审标准
-
-**你必须阅读以下所有文件**（按优先级排列）：
-
-核心脚本（逐行审查；**行数以仓库当前文件为准**，勿依赖旧估算）：
-1. `scripts/autoloop-controller.py` — 主循环控制器（约 1100+ 行，含 `run_loop`、`phase_evolve`、`check_gates_passed`、`run_tool`、八阶段与 checkpoint）
-2. `scripts/autoloop-experience.py` — 经验库读写工具（以文件为准）
-3. `scripts/autoloop-score.py` — 评分引擎（以文件为准，含 `_eval_gate`、`plan_gates_for_ssot_init`、`score_from_ssot`）
-
-**必审函数/区域（controller）**：`run_loop`、`run_init`、`phase_verify`、`phase_evolve`、`phase_orient`、`check_gates_passed`、`_lookup_manifest_comparator`、`_plan_gate_matches_score_result`、`detect_stagnation`、`detect_oscillation`。  
-**必审函数/区域（score）**：`_manifest_to_scorer_gates`、`plan_gates_for_ssot_init`、`_eval_gate`、`score_from_ssot`。
-
-协议与配置（逐段审查）：
-4. `references/gate-manifest.json` — 门禁 SSOT
-5. `references/experience-registry.md` — 经验库 spec + 生命周期规则
-6. `references/loop-protocol.md` — 循环协议
-7. `references/quality-gates.md` — 门禁评分规则
-8. `references/parameters.md` — 参数定义
-9. `references/evolution-rules.md` — 进化规则
-
-入口与模板：
-10. `SKILL.md` — 主协议定义（~300 行）
-11. `assets/findings-template.md` — findings 模板
-12. `mcp-server/server.py` — MCP 工具层
-
-### 六维度评分框架
-
-对每个维度打 1-10 分。**必须提供具体的文件路径+行号作为证据**。
-
-#### 维度 1: 度量效度与一致性（权重 20%）
-
-评估标准：
-- 所有阈值是否从 gate-manifest.json（SSOT）加载？是否存在硬编码阈值？
-- score.py 和 controller.py 是否使用相同的 comparator 逻辑？追踪 `comparator` 字段从 manifest → scorer → controller 的完整链路
-- 四个评分概念（quality_score / confidence / severity / gate_status）是否严格分离？是否存在混用？
-- 振荡/停滞检测的阈值是否与 manifest 一致？
-- quality-gates.md 的文字描述是否与 gate-manifest.json 的数值完全一致？逐条核对
-
-**扣分陷阱**：检查是否存在 score.py 和 controller.py 对同一门禁给出不同 pass/fail 结果的情况（split verdict）。用具体的输入值模拟测试。
-
-#### 维度 2: 数据到策略的闭环性（权重 20%）
-
-评估标准：
-- OBSERVE 是否自动读取经验库？追踪 `phase_observe` → `run_tool("autoloop-experience.py", ...)` 调用链
-- REFLECT 是否将策略效果写回经验库？追踪 `phase_reflect` 的输出内容
-- `cmd_write` 写入的数据能否被 `cmd_query` 正确读回？模拟一个完整的写入→查询循环
-- 自动晋升链（观察→推荐→候选默认）是否正确？用 `prev_same` 模拟 3 次写入，验证状态转换
-- 自动废弃（连续 2 次负向→已废弃）是否正确？模拟负向写入序列
-- 时间衰减是否持久化？检查 `cmd_query` 的降级写回逻辑
-
-**扣分陷阱**：DECIDE/ACT/REFLECT 中哪些步骤是确定性执行的，哪些依赖 LLM 遵循 prompt？依赖 LLM 的环节是闭环弱点。
-
-#### 维度 3: 收敛性能（权重 20%）
-
-评估标准：
-- 振荡检测是否同时要求窄幅波动 AND 方向交替？验证 `direction_changes >= 1` 逻辑
-- 停滞检测是否使用模板特定阈值？追踪 `_get_stagnation_threshold(template_key)` 到 manifest
-- 停滞检测是否跳过已达标维度？检查 `gate_thresholds` 字典构建和比较逻辑
-- 回归（持续下降）是否与停滞（平台期）区分？检查 `'regressing'` vs `'stagnating'` 信号
-- T4/T5 是否正确排除在停滞检测之外？
-- EVOLVE 的终止决策是否正确？模拟各种组合：全通过、回归、多维停滞、单维停滞
-
-**扣分陷阱**：用边界值测试 `detect_stagnation`——例如 `[8.0, 8.0, 8.0]`（零改进）、`[8.0, 7.9, 7.8]`（纯回归）、`[8.0, 8.1, 8.0]`（振荡）。
-
-#### 维度 4: 门禁判别力（权重 10%）
-
-评估标准：
-- hard/soft 分类是否在 manifest、score.py、controller.py 三层一致？
-- comparator (`>=`, `<=`, `==`) 是否在 score.py `_eval_gate` 和 controller.py `check_gates_passed` 中一致执行？
-- T5 的 `syntax_errors == 0` 是否真正使用 `==` 而非 `<=`？
-- T6 的分层门禁（security P2 hard vs reliability P2 soft ≤ 3）是否正确区分？
-- T3 的 `kpi_target` 用户自定义门禁是否正确处理 `threshold: null`？
-
-**扣分陷阱**：检查 `phase_orient` 的 gap 计算方向是否与 comparator 一致。`<=` 门禁的 gap 百分比计算是否有意义。
-
-#### 维度 5: 任务模型适配度（权重 10%）
-
-评估标准：
-- 7 个模板是否各自有差异化的门禁定义？对比 manifest 中每个模板的 gates 列表
-- `_infer_template` 能否从 strategy_id 正确提取模板？测试 `S15-T3-xxx`、`C01-composed`、`T6-scan`
-- 模板路由表（SKILL.md）的触发词是否有歧义？
-- `DEFAULT_ROUNDS` 是否从 manifest 加载？T3/T6/T7 的无限轮次是否有安全上限？
-- T5 的线性阶段模型在 controller 中是否有特化处理？还是当作普通轮次循环？
-
-**扣分陷阱**：检查 T5 `default_rounds=1` 与 controller 主循环的交互——T5 是否在第 1 轮后就因预算耗尽而终止？
-
-#### 维度 6: 自进化与复利能力（权重 20%）
-
-评估标准：
-- 生命周期状态机（观察→推荐→候选默认→已废弃→恢复）是否完整？画出实际代码的状态转换图
-- `existing_status` 是否正确读取已有记录的最新状态？还是使用新行默认值？
-- `success_rate` 是否在每次写入时自动计算？
-- `[保持]` / `[避免]` 标签是否写入 description 并可被回读？
-- 时间衰减（30/60/90d 系数）是否在 `cmd_query` 中实现？>90d 降级是否持久化写回文件？
-- 标记为 "v2 预留" 的功能**不应扣分**——这些是明确的范围边界
-
-**扣分陷阱**：模拟一个策略的完整生命周期——3 次正向写入（应晋升到推荐）→ 2 次负向写入（应降为已废弃）→ 1 次正向写入（应恢复到观察）。验证每一步的实际状态。
-
-### 输出格式
-
-```
-## 维度 N: [名称]（权重 X%）
-
-**得分: N/10**
-
-### 证据（支持得分）
-- [文件:行号] 具体描述 → 得分贡献
-
-### 缺陷（扣分项）
-- [严重度: CRITICAL/WARNING/INFO] [文件:行号] 具体描述 → 扣分理由
-
-### 模拟测试
-- 输入: [具体值]
-- 预期: [预期结果]
-- 实际代码路径: [追踪到的代码行]
-- 结果: PASS/FAIL
+Send the following content to the review LLM as the prompt (it is recommended to use a different model from development to ensure independence).
 
 ---
 
-## 加权总分
+## Prompt Body
 
-| 维度 | 权重 | 得分 | 贡献 |
-|------|------|------|------|
+You are a methodology review expert. Please perform the **strictest** possible six-dimension review of the AutoLoop autonomous iteration engine.
+
+### Review Target
+
+AutoLoop is a Claude Code skill that implements an OODA+ 8-stage loop (OBSERVE→ORIENT→DECIDE→ACT→VERIFY→SYNTHESIZE→EVOLVE→REFLECT), supports 7 task templates (T1 Research ~ T7 Optimize), and uses quality gates to drive automatic convergence.
+
+### Review Criteria
+
+**You must read all of the following files** (ordered by priority):
+
+Core scripts (review line by line; **line counts must follow the current repository files**, not old estimates):
+1. `scripts/autoloop-controller.py` - main loop controller (about 1100+ lines, including `run_loop`, `phase_evolve`, `check_gates_passed`, `run_tool`, the eight stages, and checkpoint handling)
+2. `scripts/autoloop-experience.py` - experience registry read/write tool (use the file as the source of truth)
+3. `scripts/autoloop-score.py` - scoring engine (use the file as the source of truth, including `_eval_gate`, `plan_gates_for_ssot_init`, and `score_from_ssot`)
+
+**Must-review functions / areas (controller)**: `run_loop`, `run_init`, `phase_verify`, `phase_evolve`, `phase_orient`, `check_gates_passed`, `_lookup_manifest_comparator`, `_plan_gate_matches_score_result`, `detect_stagnation`, `detect_oscillation`.
+**Must-review functions / areas (score)**: `_manifest_to_scorer_gates`, `plan_gates_for_ssot_init`, `_eval_gate`, `score_from_ssot`.
+
+Protocols and configuration (review section by section):
+4. `references/gate-manifest.json` - gate SSOT
+5. `references/experience-registry.md` - experience registry spec + lifecycle rules
+6. `references/loop-protocol.md` - loop protocol
+7. `references/quality-gates.md` - gate scoring rules
+8. `references/parameters.md` - parameter definitions
+9. `references/evolution-rules.md` - evolution rules
+
+Entry points and templates:
+10. `SKILL.md` - main protocol definition (~300 lines)
+11. `assets/findings-template.md` - findings template
+12. `mcp-server/server.py` - MCP tool layer
+
+### Six-Dimension Scoring Framework
+
+Score each dimension from 1-10. **You must provide specific file paths + line numbers as evidence**.
+
+#### Dimension 1: Measurement Validity and Consistency (weight 20%)
+
+Evaluation criteria:
+- Are all thresholds loaded from gate-manifest.json (the SSOT)? Are there any hard-coded thresholds?
+- Do score.py and controller.py use the same comparator logic? Trace the full `comparator` chain from manifest → scorer → controller
+- Are the four scoring concepts (quality_score / confidence / severity / gate_status) kept strictly separate? Is there any mixing?
+- Are the oscillation / stagnation detection thresholds consistent with the manifest?
+- Do the textual descriptions in quality-gates.md exactly match the numeric values in gate-manifest.json? Verify them one by one
+
+**Deduction trap**: check whether score.py and controller.py produce different pass/fail results for the same gate (split verdict). Use concrete input values to simulate the test.
+
+#### Dimension 2: Data-to-Strategy Closed Loop (weight 20%)
+
+Evaluation criteria:
+- Does OBSERVE automatically read the experience registry? Trace the `phase_observe` → `run_tool("autoloop-experience.py", ...)` call chain
+- Does REFLECT write strategy effects back to the experience registry? Trace the output content of `phase_reflect`
+- Can data written by `cmd_write` be read back correctly by `cmd_query`? Simulate a full write → query loop
+- Is the auto-promotion chain (observed → recommended → candidate default) correct? Use `prev_same` to simulate 3 writes and verify the state transition
+- Does automatic deprecation work (two consecutive negative results → deprecated)? Simulate a negative write sequence
+- Is time decay persisted? Check the downgrade write-back logic in `cmd_query`
+
+**Deduction trap**: Which steps in DECIDE / ACT / REFLECT are deterministic, and which depend on the LLM following the prompt? Any LLM-dependent step is a closed-loop weakness.
+
+#### Dimension 3: Convergence Performance (weight 20%)
+
+Evaluation criteria:
+- Does oscillation detection require both narrow-range fluctuation AND direction alternation? Verify the `direction_changes >= 1` logic
+- Does stagnation detection use template-specific thresholds? Trace `_get_stagnation_threshold(template_key)` back to the manifest
+- Does stagnation detection skip dimensions that have already met the target? Inspect the `gate_thresholds` dictionary construction and comparison logic
+- Is regression (continued decline) distinguished from stagnation (plateau)? Check the `'regressing'` vs `'stagnating'` signals
+- Are T4/T5 correctly excluded from stagnation detection?
+- Is EVOLVE's termination decision correct? Simulate combinations such as: all passed, regression, multi-dimension stagnation, single-dimension stagnation
+
+**Deduction trap**: Use boundary values to test `detect_stagnation` - for example `[8.0, 8.0, 8.0]` (no improvement), `[8.0, 7.9, 7.8]` (pure regression), `[8.0, 8.1, 8.0]` (oscillation).
+
+#### Dimension 4: Gate Discriminative Power (weight 10%)
+
+Evaluation criteria:
+- Is the hard/soft classification consistent across manifest, score.py, and controller.py?
+- Is the comparator (`>=`, `<=`, `==`) executed consistently in score.py `_eval_gate` and controller.py `check_gates_passed`?
+- Does T5's `syntax_errors == 0` truly use `==` rather than `<=`?
+- Is the tiered T6 gating (security P2 hard vs reliability P2 soft <= 3) correctly separated?
+- Does T3's user-defined `kpi_target` gate handle `threshold: null` correctly?
+
+**Deduction trap**: Check whether the gap calculation direction in `phase_orient` matches the comparator. Does the percentage gap calculation make sense for `<=` gates?
+
+#### Dimension 5: Task Model Fit (weight 10%)
+
+Evaluation criteria:
+- Do all 7 templates have differentiated gate definitions? Compare the gates list for each template in the manifest
+- Can `_infer_template` extract the template correctly from `strategy_id`? Test `S15-T3-xxx`, `C01-composed`, `T6-scan`
+- Are the trigger words in the template routing table (SKILL.md) ambiguous?
+- Is `DEFAULT_ROUNDS` loaded from the manifest? Do T3/T6/T7 have a safe upper bound for infinite rounds?
+- Does the linear phase model for T5 receive special handling in the controller, or is it treated like a normal round loop?
+
+**Deduction trap**: Check the interaction between T5 `default_rounds=1` and the controller main loop - does T5 terminate after round 1 because the budget is exhausted?
+
+#### Dimension 6: Self-Evolution and Compounding Ability (weight 20%)
+
+Evaluation criteria:
+- Is the lifecycle state machine complete (observed → recommended → candidate default → deprecated → restored)? Draw the actual state transition graph from code
+- Does `existing_status` read the latest status from existing records correctly, or does it use the new-row default value?
+- Is `success_rate` automatically computed on every write?
+- Are the `[Keep]` / `[Avoid]` labels written into `description` and readable on query?
+- Is time decay (30/60/90-day coefficients) implemented in `cmd_query`? Does the >90d downgrade persist back to the file?
+- Features marked as "v2 reserved" **must not be penalized** - these are explicit scope boundaries
+
+**Deduction trap**: Simulate a strategy's full lifecycle - 3 positive writes (should promote to recommended) → 2 negative writes (should downgrade to deprecated) → 1 positive write (should restore to observed). Verify the actual state at each step.
+
+### Output Format
+
+```text
+## Dimension N: [Name] (weight X%)
+
+**Score: N/10**
+
+### Evidence (supports the score)
+- [file:line] specific description → score contribution
+
+### Defects (deduction items)
+- [severity: CRITICAL/WARNING/INFO] [file:line] specific description → deduction reason
+
+### Simulation Test
+- Input: [specific values]
+- Expected: [expected result]
+- Actual code path: [tracked code lines]
+- Result: PASS/FAIL
+
+---
+
+## Weighted Total
+
+| Dimension | Weight | Score | Contribution |
+|-----------|--------|-------|--------------|
 | ... | ... | ... | ... |
-| **总计** | 100% | | **X.XX/10** |
+| **Total** | 100% | | **X.XX/10** |
 
-## 最高优先级修复建议（按影响排序，最多 5 条）
+## Highest-Priority Fix Suggestions (ordered by impact, max 5)
 ```
 
-### 评审纪律
+### Review Discipline
 
-1. **不接受自称**——只看代码和文件，不看注释中的 "已实现" 声明
-2. **模拟测试优先**——对关键逻辑用具体输入值走一遍代码路径
-3. **split verdict 零容忍**——score.py 和 controller.py 对同一输入必须给出相同 pass/fail
-4. **v2 预留豁免**——明确标注 "v2 预留" 的功能不计入评审范围
-5. **严格但公平**——已实现且正确的功能必须给予满分
+1. **Do not accept self-claims** - inspect only code and files, not comments that say "implemented"
+2. **Prefer simulation tests** - walk through key logic with concrete input values
+3. **Zero tolerance for split verdicts** - score.py and controller.py must give the same pass/fail result for the same input
+4. **v2 reserved exemption** - explicitly marked "v2 reserved" features are outside the review scope
+5. **Strict but fair** - implemented and correct functionality must receive full credit

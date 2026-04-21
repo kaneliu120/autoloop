@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AutoLoop 评分方差+置信度计算工具"""
+"""AutoLoop scoring variance and confidence calculator."""
 
 import sys
 import os
@@ -8,7 +8,7 @@ import math
 
 
 def compute_variance(scores):
-    """计算评分方差"""
+    """Compute score variance."""
     n = len(scores)
     if n < 2:
         return 0.0
@@ -18,15 +18,15 @@ def compute_variance(scores):
 
 
 def compute_confidence(variance, evidence_count):
-    """根据方差和证据数量计算置信度"""
+    """Compute confidence from variance and evidence count."""
     if evidence_count == 0 or variance >= 2.0:
-        return 30, "低", True  # fail-closed
+        return 30, "low", True  # fail-closed
     elif evidence_count >= 3 and variance < 1.0:
-        return 85, "高", False
+        return 85, "high", False
     elif evidence_count >= 1 and variance < 2.0:
-        return 65, "中", False
+        return 65, "medium", False
     else:
-        return 30, "低", True
+        return 30, "low", True
 
 
 def cmd_compute(args):
@@ -43,7 +43,7 @@ def cmd_compute(args):
             i += 1
 
     if len(scores) < 1:
-        print("ERROR: 至少需要1个评分")
+        print("ERROR: At least one score is required")
         return False
 
     mean = sum(scores) / len(scores)
@@ -51,19 +51,19 @@ def cmd_compute(args):
     pct, level, fail_closed = compute_confidence(variance, evidence)
 
     status = "FAIL (fail-closed)" if fail_closed else "PASS"
-    print(f"{status}: 置信度={pct}%（{level}）")
-    print(f"  均值: {mean:.2f}")
-    print(f"  方差: {variance:.4f}")
-    print(f"  证据数: {evidence}")
-    print(f"  推荐 score_variance: {variance:.2f}")
-    print(f"  推荐 confidence: {pct}%")
+    print(f"{status}: confidence={pct}% ({level})")
+    print(f"  Mean: {mean:.2f}")
+    print(f"  Variance: {variance:.4f}")
+    print(f"  Evidence count: {evidence}")
+    print(f"  Recommended score_variance: {variance:.2f}")
+    print(f"  Recommended confidence: {pct}%")
     return not fail_closed
 
 
 def cmd_check(tsv_path):
-    """check <tsv文件> — 检查所有行的方差和置信度"""
+    """check <tsv file> - check variance and confidence for every row."""
     if not os.path.exists(tsv_path):
-        print(f"ERROR: 文件不存在: {tsv_path}")
+        print(f"ERROR: File does not exist: {tsv_path}")
         return False
 
     issues = []
@@ -78,37 +78,37 @@ def cmd_check(tsv_path):
             try:
                 variance = float(sv) if sv and sv != "—" else 0.0
             except ValueError:
-                issues.append(f"行{line_num}: score_variance非数字: '{sv}'")
+                issues.append(f"Row {line_num}: score_variance is not numeric: '{sv}'")
                 continue
 
             try:
                 confidence = float(conf.replace("%", "")) if conf and conf != "—" else 0.0
             except ValueError:
-                issues.append(f"行{line_num}: confidence非数字: '{conf}'")
+                issues.append(f"Row {line_num}: confidence is not numeric: '{conf}'")
                 continue
 
             if variance >= 2.0:
-                issues.append(f"行{line_num} [iter={it}, dim={dim}]: 方差={variance} ≥ 2.0 → fail-closed")
+                issues.append(f"Row {line_num} [iter={it}, dim={dim}]: variance={variance} ≥ 2.0 → fail-closed")
             if confidence < 50 and confidence != 0:
-                issues.append(f"行{line_num} [iter={it}, dim={dim}]: 置信度={confidence}% < 50% → fail-closed")
+                issues.append(f"Row {line_num} [iter={it}, dim={dim}]: confidence={confidence}% < 50% → fail-closed")
             if variance >= 2.0 and confidence >= 50:
-                issues.append(f"行{line_num} [iter={it}, dim={dim}]: 方差≥2.0但置信度≥50%，数据矛盾")
+                issues.append(f"Row {line_num} [iter={it}, dim={dim}]: variance≥2.0 but confidence≥50%, inconsistent data")
 
     if issues:
-        print(f"FAIL: {len(issues)}个问题")
+        print(f"FAIL: {len(issues)} issues")
         for issue in issues:
             print(f"  - {issue}")
         return False
     else:
-        print("PASS: 所有行的方差和置信度合规")
+        print("PASS: All rows satisfy variance and confidence requirements")
         return True
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("用法:")
+        print("Usage:")
         print("  autoloop-variance.py compute <score1> <score2> [--evidence N]")
-        print("  autoloop-variance.py check <tsv文件>")
+        print("  autoloop-variance.py check <tsv file>")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -119,5 +119,5 @@ if __name__ == "__main__":
         ok = cmd_check(sys.argv[2])
         sys.exit(0 if ok else 1)
     else:
-        print(f"未知命令: {cmd}")
+        print(f"Unknown command: {cmd}")
         sys.exit(1)

@@ -1,4 +1,4 @@
-"""P2-2：Runner 指标（Prometheus 文本导出 + SSOT metadata）。"""
+"""P2-2: Runner metrics (Prometheus text export + SSOT metadata)."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ def _escape_label_value(s: str) -> str:
 
 
 def record_runner_outcome(work_dir: str, rc: int) -> None:
-    """按 tick 退出码累计 pauses / failures / lock_denied（成功 rc=0 不计）。"""
+    """Accumulate pauses / failures / lock_denied by tick exit code (rc=0 is ignored)."""
     if rc == 0:
         return
     try:
@@ -67,7 +67,7 @@ def record_api_call(work_dir: str, latency_ms: float) -> None:
 
 
 def render_prometheus_text(work_dir: str) -> str:
-    """OpenMetrics/Prometheus exposition（无 HTTP 服务，供 file_sd 或 sidecar 抓取）。"""
+    """OpenMetrics/Prometheus exposition (no HTTP service; for file_sd or sidecar scraping)."""
     try:
         sp = stateutil.state_path(work_dir)
         st = stateutil.load_json(sp)
