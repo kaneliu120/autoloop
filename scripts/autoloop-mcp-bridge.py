@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""AutoLoop MCP Bridge — 跨平台 MCP 工具发现与调用
+"""AutoLoop MCP Bridge — cross-platform MCP tool discovery and invocation
 
-在非 Claude Code 环境中（Gemini CLI、Codex CLI 等），
-subagent 不能直接使用宿主的 MCP 工具。此桥接脚本提供：
-1. MCP 工具发现：列出可用的 MCP 工具
-2. MCP 工具调用：通过 stdin/stdout JSON-RPC 协议调用 MCP 工具
-3. 平台检测：自动检测当前 IDE 环境，决定是否需要桥接
+In non-Claude Code environments (Gemini CLI, Codex CLI, etc.),
+subagents cannot use the host's MCP tools directly. This bridge provides:
+1. MCP tool discovery: list available MCP tools
+2. MCP tool invocation: call MCP tools via stdin/stdout JSON-RPC
+3. Platform detection: detect the current IDE environment and decide whether a bridge is needed
 
-用法:
-  autoloop-mcp-bridge.py discover          # 列出可用 MCP 工具
-  autoloop-mcp-bridge.py call <tool> <args> # 调用 MCP 工具
-  autoloop-mcp-bridge.py detect-platform    # 检测当前平台
+Usage:
+  autoloop-mcp-bridge.py discover          # List available MCP tools
+  autoloop-mcp-bridge.py call <tool> <args> # Call an MCP tool
+  autoloop-mcp-bridge.py detect-platform    # Detect the current platform
 """
 import os
 import sys
@@ -18,9 +18,9 @@ import json
 
 
 def detect_platform():
-    """检测当前 IDE 平台"""
+    """Detect the current IDE platform."""
     if os.environ.get("CLAUDE_CODE"):
-        return "claude-code"  # 原生支持，无需桥接
+        return "claude-code"  # Native support; no bridge needed
     elif os.environ.get("GEMINI_CLI"):
         return "gemini-cli"
     elif os.environ.get("CODEX_CLI"):
@@ -30,13 +30,13 @@ def detect_platform():
 
 
 def discover_mcp_tools():
-    """发现可用的 MCP 工具"""
+    """Discover available MCP tools."""
     platform = detect_platform()
     if platform == "claude-code":
-        print(json.dumps({"status": "native", "message": "Claude Code 原生支持 MCP，无需桥接"}))
+        print(json.dumps({"status": "native", "message": "Claude Code supports MCP natively; no bridge needed"}))
         return
 
-    # 非 Claude Code 环境：读取 MCP 配置
+    # Non-Claude Code environment: read MCP configuration
     mcp_config_paths = [
         os.path.expanduser("~/.config/claude-code/mcp.json"),
         ".mcp.json",
@@ -53,10 +53,10 @@ def discover_mcp_tools():
 
 
 def call_mcp_tool(tool_name, args_json):
-    """调用 MCP 工具（预留接口）"""
+    """Call an MCP tool (reserved interface)."""
     print(json.dumps({
         "status": "not_implemented",
-        "message": "MCP call bridge 将在需要时实现",
+        "message": "The MCP call bridge will be implemented when needed",
         "tool": tool_name,
         "args": args_json,
     }))

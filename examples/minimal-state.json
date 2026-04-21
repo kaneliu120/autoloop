@@ -5,8 +5,8 @@
     "goal": "example",
     "detailed_background": "",
     "success_criteria": [],
-    "status": "准备开始",
-    "work_dir": "<你的任务目录绝对路径>",
+    "status": "Ready to start",
+    "work_dir": "<absolute path to your task directory>",
     "plan_version": "1.0",
     "dimensions": [],
     "gates": [
@@ -14,56 +14,56 @@
         "dim": "coverage",
         "dimension": "coverage",
         "manifest_dimension": "coverage",
-        "label": "覆盖率",
+        "label": "Coverage",
         "threshold": 85,
         "unit": "%",
         "gate": "hard",
         "comparator": ">=",
         "current": null,
-        "status": "未达标"
+        "status": "Not met"
       },
       {
         "dim": "credibility",
         "dimension": "credibility",
         "manifest_dimension": "credibility",
-        "label": "可信度",
+        "label": "Credibility",
         "threshold": 80,
         "unit": "%",
         "gate": "hard",
         "comparator": ">=",
         "current": null,
-        "status": "未达标"
+        "status": "Not met"
       },
       {
         "dim": "consistency",
         "dimension": "consistency",
         "manifest_dimension": "consistency",
-        "label": "一致性",
+        "label": "Consistency",
         "threshold": 90,
         "unit": "%",
         "gate": "soft",
         "comparator": ">=",
         "current": null,
-        "status": "未达标"
+        "status": "Not met"
       },
       {
         "dim": "completeness",
         "dimension": "completeness",
         "manifest_dimension": "completeness",
-        "label": "完整性",
+        "label": "Completeness",
         "threshold": 85,
         "unit": "%",
         "gate": "soft",
         "comparator": ">=",
         "current": null,
-        "status": "未达标"
+        "status": "Not met"
       }
     ],
     "budget": {
       "max_rounds": 0,
       "current_round": 0,
-      "time_limit": "无限制",
-      "exhaustion_strategy": "输出当前最优"
+      "time_limit": "Unlimited",
+      "exhaustion_strategy": "Output the current best result"
     },
     "scope": {
       "includes": [],
@@ -76,26 +76,26 @@
     "output_files": {
       "plan": {
         "path": "autoloop-plan.md",
-        "status": "已创建"
+        "status": "Created"
       },
       "progress": {
         "path": "autoloop-progress.md",
-        "status": "待创建"
+        "status": "Pending creation"
       },
       "findings": {
         "path": "autoloop-findings.md",
-        "status": "待创建"
+        "status": "Pending creation"
       },
       "results_tsv": {
         "path": "autoloop-results.tsv",
-        "status": "待创建"
+        "status": "Pending creation"
       }
     },
     "strategy_history": [],
     "change_log": [
       {
         "time": "2026-03-29T09:42:17",
-        "field": "初始创建",
+        "field": "Initial creation",
         "before": "",
         "after": "",
         "reason": ""
@@ -105,7 +105,7 @@
   "iterations": [],
   "findings": {
     "executive_summary": {
-      "topic": "待填写",
+      "topic": "To be filled in",
       "total_rounds": 0,
       "final_scores": {},
       "top_conclusions": []

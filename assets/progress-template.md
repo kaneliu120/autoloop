@@ -1,270 +1,270 @@
-# AutoLoop Progress — 迭代进度追踪
+# AutoLoop Progress — Iteration Progress Tracker
 
-**任务 ID**：autoloop-{YYYYMMDD-HHMMSS}
-**模板**：T{N}: {名称}
-**开始时间**：{ISO 8601}
-**当前状态**：进行中
-
----
-
-## 质量门禁总览
-
-| 维度 | 基线 | 第1轮 | 第2轮 | 第3轮 | 目标 |
-|------|------|-------|-------|-------|------|
-| {维度 1} | — | — | — | — | ≥{阈值} |
-| {维度 2} | — | — | — | — | ≥{阈值} |
-| {维度 3} | — | — | — | — | ≥{阈值} |
+**Task ID**: autoloop-{YYYYMMDD-HHMMSS}
+**Template**: T{N}: {Name}
+**Start time**: {ISO 8601}
+**Current status**: In progress
 
 ---
 
-## 基线记录（第 0 轮，任何改动前）
+## Quality Gate Overview
 
-**测量时间**：{时间}
-**测量结果**：
-
-| 维度 | 基线值 | 测量方法 |
-|------|--------|---------|
-| {维度 1} | {值} | {命令/方法} |
-| {维度 2} | {值} | {命令/方法} |
-
-**初始状态摘要**：{描述现状，识别主要问题点}
+| Dimension | Baseline | Round 1 | Round 2 | Round 3 | Target |
+|-----------|----------|---------|---------|---------|--------|
+| {dimension 1} | — | — | — | — | ≥ {threshold} |
+| {dimension 2} | — | — | — | — | ≥ {threshold} |
+| {dimension 3} | — | — | — | — | ≥ {threshold} |
 
 ---
 
-## 迭代循环 #1
+## Baseline Record (Round 0, before any changes)
 
-**开始时间**：{ISO 8601}
-**状态**：进行中 / 已完成
+**Measurement time**: {time}
+**Measurement results**:
 
-### 观察（OBSERVE）
+| Dimension | Baseline value | Measurement method |
+|-----------|----------------|--------------------|
+| {dimension 1} | {value} | {command / method} |
+| {dimension 2} | {value} | {command / method} |
 
-当前差距：
-| 维度 | 当前值 | 目标值 | 差距 |
-|------|--------|--------|------|
-| {维度 1} | {当前} | {目标} | {差距} |
-
-剩余预算：{X}%（已用 0 轮 / 最大 {N} 轮）
-本轮观察重点：{最需要解决的维度}
-
-### 定向（ORIENT）
-
-主要差距原因：{分析}
-本轮策略：{策略名 + 说明}
-范围调整：{无 / 扩展/收窄 + 原因}
-预期改善：{预计能提升多少}
-
-### 决策（DECIDE）
-
-本轮行动：
-
-| # | 行动 | 执行者 | 输入 | 期望输出 | 并行？|
-|---|------|--------|------|---------|------|
-| 1 | {行动 1} | {agent} | {文件/信息} | {产出} | — |
-| 2 | {行动 2} | {agent} | {文件/信息} | {产出} | 与3并行 |
-| 3 | {行动 3} | {agent} | {文件/信息} | {产出} | 与2并行 |
-
-执行顺序：{说明并行/串行关系}
-
-### 行动记录（ACT）
-
-| # | 执行者 | 任务 | 开始时间 | 完成时间 | 状态 | 结果摘要 |
-|---|--------|------|---------|---------|------|---------|
-| 1 | researcher | {任务} | {时间} | {时间} | 通过/未通过 | {摘要} |
-| 2 | code-reviewer | {任务} | {时间} | {时间} | 通过/未通过 | 发现 {N} 个问题 |
-
-失败记录（如有）：
-- {行动 #N}：失败原因 {原因}，备用策略：{策略}，结果：{通过/未通过}
-
-### 验证（VERIFY）
-
-得分更新：
-| 维度 | 上轮 | 本轮 | 变化 | 状态 |
-|------|------|------|------|------|
-| {维度 1} | {上轮} | {本轮} | {+/-} | 达标/未达标 |
-
-验证方法：{具体命令或检查方法}
-
-新发现问题（本轮引入的）：
-- {问题}（将在下轮处理）
-
-### 整合（SYNTHESIZE）
-
-发现的矛盾：
-- {矛盾 1}：{subagent A 说 X，subagent B 说 Y，冲突点说明}
-- 无矛盾（如无冲突填此项）
-
-解决的矛盾：
-- {矛盾 1}：{解决方式，例：采用更保守结论 / 运行第三次验证 / 选择改动更小的修复方案}
-
-合并的数据：
-- `autoloop-findings.md`：追加了 {N} 条发现（第 N 轮）
-- `autoloop-results.tsv`：更新了 {N} 条记录（如有）
-- {其他更新文件}：{说明}
-
-新洞察（整合后才显现的）：
-- {洞察 1}：{跨 subagent 输出合并后发现的模式或规律}
-- 无（如无新洞察填此项）
-
-### 进化决策（EVOLVE）
-
-终止判断：继续 / 质量达标 / 预算耗尽 / 用户中断 / 无法继续
-
-如继续：
-- 下一轮重点：{维度}
-- 策略调整：{无 / 切换策略（已尝试：{旧策略}，新策略：{新策略}）}
-- 范围变更：{无 / 扩展 {新维度} / 收窄 {降低 {维度} 要求}}
-
-### 反思（REFLECT）
-
-- **问题登记**: {本轮新发现 N 个，修复 M 个，遗留 K 个}
-- **策略复盘**: {本轮策略} — 效果评分 {1-5}/5，{保持 | 避免 | 待验证}（策略评价枚举见 references/loop-data-schema.md 统一状态枚举）
-- **模式识别**: {新发现的模式 / 无新模式}
-- **经验教训**: {本轮最重要的一条经验}
-- **下轮指导**: {基于反思，下轮应该重点做什么、避免做什么}
-
-**完成时间**：{ISO 8601}
-**本轮耗时**：{N} 分钟
+**Initial state summary**: {describe the current situation and identify the main issues}
 
 ---
 
-## 迭代循环 #2
+## Iteration Round #1
 
-**开始时间**：{ISO 8601}
-**状态**：进行中 / 已完成
+**Start time**: {ISO 8601}
+**Status**: In progress / Completed
 
-> 说明：每个后续迭代循环必须包含完整的 8 个阶段，格式与循环 #1 完全相同，不得省略或合并任何阶段。以下为第 2 轮结构占位，复制并填写所有字段。
+### OBSERVE
 
-### 观察（OBSERVE）
+Current gaps:
+| Dimension | Current value | Target value | Gap |
+|-----------|---------------|--------------|-----|
+| {dimension 1} | {current} | {target} | {gap} |
 
-> 注意：第 2 轮起必须先读取 autoloop-findings.md 中上一轮的反思记录（REFLECT），将遗留问题、有效策略、识别模式作为本轮观察的输入。
+Remaining budget: {X}% (0 rounds used / max {N} rounds)
+Observation focus for this round: {most important dimension to address}
 
-当前差距：
-| 维度 | 当前值 | 目标值 | 差距 |
-|------|--------|--------|------|
-| {维度 1} | {当前} | {目标} | {差距} |
+### ORIENT
 
-剩余预算：{X}%（已用 1 轮 / 最大 {N} 轮）
-本轮观察重点：{最需要解决的维度}
-上轮遗留：{遗留问题，无则填"无"}
+Main reason for the gap: {analysis}
+Strategy for this round: {strategy name + explanation}
+Scope adjustment: {none / expand / narrow + reason}
+Expected improvement: {how much improvement is expected}
 
-### 定向（ORIENT）
+### DECIDE
 
-主要差距原因：{分析}
-本轮策略：{策略名 + 说明}
-范围调整：{无 / 扩展/收窄 + 原因}
-预期改善：{预计能提升多少}
+Actions for this round:
 
-### 决策（DECIDE）
+| # | Action | Owner | Input | Expected output | Parallel? |
+|---|--------|-------|-------|-----------------|-----------|
+| 1 | {action 1} | {agent} | {file / information} | {output} | — |
+| 2 | {action 2} | {agent} | {file / information} | {output} | Parallel with 3 |
+| 3 | {action 3} | {agent} | {file / information} | {output} | Parallel with 2 |
 
-本轮行动：
+Execution order: {explain parallel / serial relationships}
 
-| # | 行动 | 执行者 | 输入 | 期望输出 | 并行？|
-|---|------|--------|------|---------|------|
-| 1 | {行动 1} | {agent} | {文件/信息} | {产出} | — |
-| 2 | {行动 2} | {agent} | {文件/信息} | {产出} | 与3并行 |
-| 3 | {行动 3} | {agent} | {文件/信息} | {产出} | 与2并行 |
+### ACT
 
-执行顺序：{说明并行/串行关系}
+| # | Owner | Task | Start time | End time | Status | Result summary |
+|---|-------|------|------------|----------|--------|----------------|
+| 1 | researcher | {task} | {time} | {time} | passed / failed | {summary} |
+| 2 | code-reviewer | {task} | {time} | {time} | passed / failed | found {N} issues |
 
-### 行动记录（ACT）
+Failure log, if any:
+- {action #N}: failure reason {reason}, fallback strategy: {strategy}, result: {passed / failed}
 
-| # | 执行者 | 任务 | 开始时间 | 完成时间 | 状态 | 结果摘要 |
-|---|--------|------|---------|---------|------|---------|
-| 1 | {agent} | {任务} | {时间} | {时间} | 通过/未通过 | {摘要} |
+### VERIFY
 
-失败记录（如有）：
-- {行动 #N}：失败原因 {原因}，备用策略：{策略}，结果：{通过/未通过}
+Score updates:
+| Dimension | Previous round | This round | Change | Status |
+|-----------|----------------|------------|--------|--------|
+| {dimension 1} | {previous} | {this round} | {+/−} | Met / Not met |
 
-### 验证（VERIFY）
+Verification method: {specific command or check method}
 
-得分更新：
-| 维度 | 上轮 | 本轮 | 变化 | 状态 |
-|------|------|------|------|------|
-| {维度 1} | {上轮} | {本轮} | {+/-} | 达标/未达标 |
+New issues introduced this round:
+- {issue} (to be handled next round)
 
-验证方法：{具体命令或检查方法}
+### SYNTHESIZE
 
-新发现问题（本轮引入的）：
-- {问题}（将在下轮处理）
+Conflicts identified:
+- {conflict 1}: {subagent A said X, subagent B said Y, explanation of the conflict}
+- No conflicts (fill this in if none)
 
-### 整合（SYNTHESIZE）
+Conflicts resolved:
+- {conflict 1}: {resolution, e.g. use the more conservative conclusion / run a third verification / choose the smaller change}
 
-发现的矛盾：
-- {矛盾 1}：{说明}
-- 无矛盾（如无冲突填此项）
+Merged data:
+- `autoloop-findings.md`: appended {N} findings (round {N})
+- `autoloop-results.tsv`: updated {N} records (if any)
+- {other updated file}: {explanation}
 
-解决的矛盾：
-- {矛盾 1}：{解决方式}
+New insights (visible only after synthesis):
+- {insight 1}: {pattern or rule discovered by combining subagent outputs}
+- None (fill this in if none)
 
-合并的数据：
-- `autoloop-findings.md`：追加了 {N} 条发现（第 2 轮）
-- `autoloop-results.tsv`：更新了 {N} 条记录（如有）
-- {其他更新文件}：{说明}
+### EVOLVE
 
-新洞察（整合后才显现的）：
-- {洞察 1}：{说明}
-- 无（如无新洞察填此项）
+Termination decision: continue / quality met / budget exhausted / user interrupted / cannot continue
 
-### 进化决策（EVOLVE）
+If continuing:
+- Next round focus: {dimension}
+- Strategy adjustment: {none / switch strategy (attempted: {old strategy}, new strategy: {new strategy})}
+- Scope change: {none / expand {new dimension} / narrow {reduce {dimension} requirement}}
 
-终止判断：继续 / 质量达标 / 预算耗尽 / 用户中断 / 无法继续
+### REFLECT
 
-如继续：
-- 下一轮重点：{维度}
-- 策略调整：{无 / 切换策略（已尝试：{旧策略}，新策略：{新策略}）}
-- 范围变更：{无 / 扩展 {新维度} / 收窄 {降低 {维度} 要求}}
+- **Issue log**: {newly discovered N, fixed M, remaining K}
+- **Strategy review**: {this round's strategy} - effect score {1-5}/5, {keep | avoid | to verify} (see the canonical status enum in references/loop-data-schema.md)
+- **Pattern recognition**: {new pattern / no new pattern}
+- **Lesson learned**: {the most important lesson from this round}
+- **Guidance for next round**: {what to focus on and what to avoid based on reflection}
 
-### 反思（REFLECT）
-
-- **问题登记**: {本轮新发现 N 个，修复 M 个，遗留 K 个}
-- **策略复盘**: {本轮策略} — 效果评分 {1-5}/5，{保持 | 避免 | 待验证}（策略评价枚举见 references/loop-data-schema.md 统一状态枚举）
-- **模式识别**: {新发现的模式 / 无新模式}
-- **经验教训**: {本轮最重要的一条经验}
-- **下轮指导**: {基于反思，下轮应该重点做什么、避免做什么}
-
-**完成时间**：{ISO 8601}
-**本轮耗时**：{N} 分钟
-
-> 提示：第 3 轮及后续轮次继续按此完整格式追加，每轮递增循环编号（#3、#4...），所有 8 个阶段都必须完整填写，不得省略。
+**End time**: {ISO 8601}
+**Round duration**: {N} minutes
 
 ---
 
-## 任务完成记录
+## Iteration Round #2
 
-**完成时间**：{ISO 8601}
-**终止原因**：{质量达标 / 预算耗尽 / 用户中断 / 无法继续}
-**总耗时**：{N} 分钟
-**总轮次**：{N}
+**Start time**: {ISO 8601}
+**Status**: In progress / Completed
 
-### 最终得分
+> Note: every later iteration round must include the full 8-stage structure, exactly matching round #1, with no omissions or merges. The block below is a placeholder for round 2; copy it and fill in all fields.
 
-| 维度 | 基线 | 最终 | 目标 | 改善量 | 状态 |
-|------|------|------|------|--------|------|
-| {维度 1} | {基线} | {最终} | {目标} | {+/-} | 达标/未达标 |
+### OBSERVE
 
-### 任务摘要
+> Note: starting from round 2, you must first read the previous round's REFLECT record in `autoloop-findings.md`, and use the remaining issues, effective strategies, and recognized patterns as inputs to this round's observation.
 
-{一段话描述这次任务做了什么，达成了什么，遗留了什么}
+Current gaps:
+| Dimension | Current value | Target value | Gap |
+|-----------|---------------|--------------|-----|
+| {dimension 1} | {current} | {target} | {gap} |
 
-### 产出文件
+Remaining budget: {X}% (1 round used / max {N} rounds)
+Observation focus for this round: {most important dimension to address}
+Carryover from last round: {remaining issues, or "none"}
 
-| 文件 | 路径 | 说明 |
-|------|------|------|
-| 最终报告 | {路径} | {说明} |
-| 发现记录 | {路径} | {N} 条发现 |
+### ORIENT
+
+Main reason for the gap: {analysis}
+Strategy for this round: {strategy name + explanation}
+Scope adjustment: {none / expand / narrow + reason}
+Expected improvement: {how much improvement is expected}
+
+### DECIDE
+
+Actions for this round:
+
+| # | Action | Owner | Input | Expected output | Parallel? |
+|---|--------|-------|-------|-----------------|-----------|
+| 1 | {action 1} | {agent} | {file / information} | {output} | — |
+| 2 | {action 2} | {agent} | {file / information} | {output} | Parallel with 3 |
+| 3 | {action 3} | {agent} | {file / information} | {output} | Parallel with 2 |
+
+Execution order: {explain parallel / serial relationships}
+
+### ACT
+
+| # | Owner | Task | Start time | End time | Status | Result summary |
+|---|-------|------|------------|----------|--------|----------------|
+| 1 | {agent} | {task} | {time} | {time} | passed / failed | {summary} |
+
+Failure log, if any:
+- {action #N}: failure reason {reason}, fallback strategy: {strategy}, result: {passed / failed}
+
+### VERIFY
+
+Score updates:
+| Dimension | Previous round | This round | Change | Status |
+|-----------|----------------|------------|--------|--------|
+| {dimension 1} | {previous} | {this round} | {+/−} | Met / Not met |
+
+Verification method: {specific command or check method}
+
+New issues introduced this round:
+- {issue} (to be handled next round)
+
+### SYNTHESIZE
+
+Conflicts identified:
+- {conflict 1}: {explanation}
+- No conflicts (fill this in if none)
+
+Conflicts resolved:
+- {conflict 1}: {resolution}
+
+Merged data:
+- `autoloop-findings.md`: appended {N} findings (round 2)
+- `autoloop-results.tsv`: updated {N} records (if any)
+- {other updated file}: {explanation}
+
+New insights (visible only after synthesis):
+- {insight 1}: {explanation}
+- None (fill this in if none)
+
+### EVOLVE
+
+Termination decision: continue / quality met / budget exhausted / user interrupted / cannot continue
+
+If continuing:
+- Next round focus: {dimension}
+- Strategy adjustment: {none / switch strategy (attempted: {old strategy}, new strategy: {new strategy})}
+- Scope change: {none / expand {new dimension} / narrow {reduce {dimension} requirement}}
+
+### REFLECT
+
+- **Issue log**: {newly discovered N, fixed M, remaining K}
+- **Strategy review**: {this round's strategy} - effect score {1-5}/5, {keep | avoid | to verify} (see the canonical status enum in references/loop-data-schema.md)
+- **Pattern recognition**: {new pattern / no new pattern}
+- **Lesson learned**: {the most important lesson from this round}
+- **Guidance for next round**: {what to focus on and what to avoid based on reflection}
+
+**End time**: {ISO 8601}
+**Round duration**: {N} minutes
+
+> Tip: continue appending later rounds in this full format (#3, #4, ...), incrementing the round number each time. All 8 stages must be filled in completely, with nothing omitted.
 
 ---
 
-## 策略历史
+## Task Completion Record
 
-| 轮次 | strategy_id | 维度 | 策略 | 结果 | 是否有效 |
-|------|-------------|------|------|------|---------|
-| 1 | S01-{简称} | {维度} | {策略} | {结果} | 保持 / 避免 / 待验证（原因：{原因}）|
+**End time**: {ISO 8601}
+**Termination reason**: {quality met / budget exhausted / user interrupted / cannot continue}
+**Total duration**: {N} minutes
+**Total rounds**: {N}
+
+### Final Scores
+
+| Dimension | Baseline | Final | Target | Improvement | Status |
+|-----------|----------|-------|--------|------------|--------|
+| {dimension 1} | {baseline} | {final} | {target} | {+/−} | Met / Not met |
+
+### Task Summary
+
+{a paragraph describing what this task did, what it achieved, and what it left behind}
+
+### Output Files
+
+| File | Path | Description |
+|------|------|-------------|
+| Final report | {path} | {description} |
+| Findings log | {path} | {N} findings |
 
 ---
 
-## 遇到的问题与处理
+## Strategy History
 
-| 问题 | 轮次 | 处理方式 | 结果 |
-|------|------|---------|------|
-| {问题描述} | {N} | {处理} | {结果} |
+| Round | strategy_id | Dimension | Strategy | Result | Effective? |
+|-------|-------------|-----------|----------|--------|------------|
+| 1 | S01-{short name} | {dimension} | {strategy} | {result} | Keep / Avoid / To verify (reason: {reason}) |
+
+---
+
+## Issues Encountered and Handling
+
+| Issue | Round | Handling | Result |
+|-------|-------|----------|--------|
+| {issue description} | {N} | {handling} | {result} |

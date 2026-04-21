@@ -1,176 +1,176 @@
-# AutoLoop 任务计划
+# AutoLoop Task Plan
 
-## 元信息
+## Metadata
 
-| 字段 | 值 |
+| Field | Value |
 |------|-----|
-| 任务 ID | autoloop-{YYYYMMDD-HHMMSS} |
-| 模板 | T{N}: {名称} |
-| 状态 | 准备开始 / 进行中 / 暂停等待确认 / 已完成 |
-| 创建时间 | {ISO 8601} |
-| 最后更新 | {ISO 8601} |
-| 工作目录 | {绝对路径} |
-| 计划版本 | 1.0 |
+| Task ID | autoloop-{YYYYMMDD-HHMMSS} |
+| Template | T{N}: {Name} |
+| Status | Ready / In progress / Paused awaiting confirmation / Completed |
+| Created at | {ISO 8601} |
+| Last updated | {ISO 8601} |
+| Workdir | {absolute path} |
+| Plan version | 1.0 |
 
 ---
 
-## 目标描述
+## Goal Description
 
-**一句话目标**：{简洁描述，最多 1 句}
+**One-line goal**: {concise description, no more than one sentence}
 
-**详细背景**：
-{用户目标的完整描述，包含背景、现状、期望结果}
+**Detailed background**:
+{complete description of the user's goal, including background, current state, and desired outcome}
 
-**成功标准**（可测量）：
-- {标准 1}：{具体判断方法}
-- {标准 2}：{具体判断方法}
-- {标准 3}：{具体判断方法}
-
----
-
-## 任务参数
-
-### 模板特定参数
-
-**T1 Research**：
-- 核心主题：{主题}
-- 调研维度：
-  1. {维度 1}
-  2. {维度 2}
-  3. {维度 3}
-- 排除范围：{不调研的内容}
-- 时间范围：最近 {N} 年
-
-**T2 Compare**：
-- 选项 A：{描述}
-- 选项 B：{描述}
-- 评估维度：{维度 1}（权重 {X}%）、{维度 2}（权重 {Y}%）...
-- 决策标准：{最重要的因素}
-- key_assumptions（关键假设表，用于敏感性分析）：
-
-| 假设名称 | 当前值 | 单位 | 敏感性区间（±20% 范围）|
-|---------|--------|------|----------------------|
-| {假设 1，如市场增长率} | {当前值，如 15} | {单位，如 %/年} | {低值} ~ {高值} |
-| {假设 2，如实施周期} | {当前值，如 6} | {单位，如 月} | {低值} ~ {高值} |
-| {假设 3，如团队规模} | {当前值，如 5} | {单位，如 人} | {低值} ~ {高值} |
-
-**T3 Product Design**：
-- 功能需求：{详细描述}
-- 目标代码库路径：{绝对路径}
-- 输出文档路径：{绝对路径}
-
-**T4 Deliver**：
-- 功能描述：{详细需求}
-- 代码库路径：{绝对路径}
-- 新增路由：{是/否}，路由前缀：{前缀}
-- new_router_name：{本次新增的 router 变量名，如 comments_router}
-- main_entry_file：{主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
-- 数据库变更：{是/否}，变更内容：{描述}
-- syntax_check_cmd：{语法检查命令，如 python3 -m py_compile {file}}
-- syntax_check_file_arg：{true/false，语法检查命令是否接受单文件参数；python3 -m py_compile → true，npx tsc --noEmit → false}
-- deploy_target：{部署目标主机/环境，如 prod-server}
-- deploy_command：{完整部署执行命令，如 gcloud compute ssh ... --command="cd /opt/sip && git pull && sudo bash deploy.sh"}
-- service_list：{服务名称列表，如 [backend-api, worker, scheduler, frontend]；不适用则填 N/A}
-- service_count：{自动计算，= len(service_list)；service_list=N/A 时填 0}
-- health_check_url：{健康检查 URL，如 https://example.com/api/health；不适用则留空}
-- acceptance_url：{线上验收 URL，如 https://example.com}
-- migration_check_cmd：{数据库迁移检查命令，如 `alembic check` / `prisma migrate status` / N/A}
-- doc_output_path：{方案文档输出目录绝对路径}
-
-**T5 Iterate**：
-- KPI：{指标名} = {目标值}
-- 当前基线：{基线值}（{测量时间}）
-- 测量方法：{命令或步骤}
-- 改动约束：{允许 / 不允许的改动范围}
-
-**T6 Generate**：
-- 内容类型：{类型}
-- 数量：{N} 个
-- 变量：{变量 1}、{变量 2}
-- 质量阈值：{N}/10
-- output_path：{输出目录绝对路径，默认 {工作目录}/autoloop-output/}
-- naming_pattern：{文件命名规则，如 {template_name}-{index}.md}
-
-**T7 Quality**：
-- 代码库路径：{绝对路径}
-- main_entry_file：{主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
-- 审查模块：{模块列表 / 全量}
-- syntax_check_cmd：{语法检查命令，如 python3 -m py_compile {file}}
-- syntax_check_file_arg：{true/false，语法检查命令是否接受单文件参数}
-- 已知问题：{描述 / 无}
-- 特殊约束：{约束 / 无}
-
-**T8 Optimize**：
-- 系统路径：{绝对路径}
-- main_entry_file：{主入口文件绝对路径，如 /project/backend/main.py 或 /project/src/app.ts}
-- syntax_check_cmd：{语法检查命令，如 python3 -m py_compile {file}}
-- syntax_check_file_arg：{true/false，语法检查命令是否接受单文件参数}
-- 当前性能：{指标：值}
-- 优先方向：{全部 / 架构 / 性能 / 稳定性}
-- 不可修改：{内容}
+**Success criteria** (measurable):
+- {criterion 1}: {specific verification method}
+- {criterion 2}: {specific verification method}
+- {criterion 3}: {specific verification method}
 
 ---
 
-## 范围定义
+## Task Parameters
 
-**包含**：
-- {范围 1}
-- {范围 2}
+### Template-Specific Parameters
 
-**排除**：
-- {排除项 1}（原因：{原因}）
-- {排除项 2}
+**T1 Research**:
+- Core topic: {topic}
+- Research dimensions:
+  1. {dimension 1}
+  2. {dimension 2}
+  3. {dimension 3}
+- Exclusions: {what not to research}
+- Time range: the last {N} years
 
-**扩展维度**（迭代中新增）：
-- {新维度}（第 {N} 轮新增，原因：{原因}）
+**T2 Compare**:
+- Option A: {description}
+- Option B: {description}
+- Evaluation dimensions: {dimension 1} (weight {X}%), {dimension 2} (weight {Y}%), ...
+- Decision criterion: {most important factor}
+- key_assumptions (assumptions table for sensitivity analysis):
+
+| Assumption name | Current value | Unit | Sensitivity range (±20%) |
+|-----------------|---------------|------|--------------------------|
+| {assumption 1, e.g. market growth rate} | {current value, e.g. 15} | {unit, e.g. %/year} | {low} ~ {high} |
+| {assumption 2, e.g. implementation cycle} | {current value, e.g. 6} | {unit, e.g. months} | {low} ~ {high} |
+| {assumption 3, e.g. team size} | {current value, e.g. 5} | {unit, e.g. people} | {low} ~ {high} |
+
+**T3 Product Design**:
+- Functional requirements: {detailed description}
+- Target codebase path: {absolute path}
+- Output document path: {absolute path}
+
+**T4 Deliver**:
+- Functional description: {detailed requirements}
+- Codebase path: {absolute path}
+- New route: {yes/no}, route prefix: {prefix}
+- new_router_name: {router variable name to add, e.g. comments_router}
+- main_entry_file: {absolute path to the main entry file, e.g. /project/backend/main.py or /project/src/app.ts}
+- Database changes: {yes/no}, change details: {description}
+- syntax_check_cmd: {syntax check command, e.g. python3 -m py_compile {file}}
+- syntax_check_file_arg: {true/false, whether the syntax check command accepts a single-file argument; python3 -m py_compile -> true, npx tsc --noEmit -> false}
+- deploy_target: {deployment host/environment, e.g. prod-server}
+- deploy_command: {full deployment command, e.g. gcloud compute ssh ... --command="cd /opt/sip && git pull && sudo bash deploy.sh"}
+- service_list: {service names, e.g. [backend-api, worker, scheduler, frontend]; use N/A if not applicable}
+- service_count: {auto-calculated, = len(service_list); use 0 when service_list=N/A}
+- health_check_url: {health check URL, e.g. https://example.com/api/health; leave blank if not applicable}
+- acceptance_url: {online acceptance URL, e.g. https://example.com}
+- migration_check_cmd: {database migration check command, e.g. `alembic check` / `prisma migrate status` / N/A}
+- doc_output_path: {absolute output directory for the design document}
+
+**T5 Iterate**:
+- KPI: {metric name} = {target value}
+- Current baseline: {baseline value} ({measurement time})
+- Measurement method: {command or steps}
+- Change constraints: {allowed / disallowed change scope}
+
+**T6 Generate**:
+- Content type: {type}
+- Quantity: {N}
+- Variables: {variable 1}, {variable 2}
+- Quality threshold: {N}/10
+- output_path: {absolute output directory, default {workdir}/autoloop-output/}
+- naming_pattern: {filename convention, e.g. {template_name}-{index}.md}
+
+**T7 Quality**:
+- Codebase path: {absolute path}
+- main_entry_file: {absolute path to the main entry file, e.g. /project/backend/main.py or /project/src/app.ts}
+- Review scope: {module list / all}
+- syntax_check_cmd: {syntax check command, e.g. python3 -m py_compile {file}}
+- syntax_check_file_arg: {true/false, whether the syntax check command accepts a single-file argument}
+- Known issues: {description / none}
+- Special constraints: {constraint / none}
+
+**T8 Optimize**:
+- System path: {absolute path}
+- main_entry_file: {absolute path to the main entry file, e.g. /project/backend/main.py or /project/src/app.ts}
+- syntax_check_cmd: {syntax check command, e.g. python3 -m py_compile {file}}
+- syntax_check_file_arg: {true/false, whether the syntax check command accepts a single-file argument}
+- Current performance: {metric: value}
+- Priority focus: {all / architecture / performance / stability}
+- Do not modify: {content}
 
 ---
 
-## 质量门禁
+## Scope Definition
 
-| 维度 | 目标分数 | 当前分数 | 目标阈值 | 状态 |
-|------|---------|---------|---------|------|
-| {维度 1} | — | — | ≥ {阈值} | 准备开始 |
-| {维度 2} | — | — | ≥ {阈值} | 准备开始 |
-| {维度 3} | — | — | ≥ {阈值} | 准备开始 |
+**Included**:
+- {scope 1}
+- {scope 2}
 
-**全部达标条件**：所有维度同时达到目标阈值
+**Excluded**:
+- {exclusion 1} (reason: {reason})
+- {exclusion 2}
+
+**Extended dimensions** (added during iteration):
+- {new dimension} (added in round {N}, reason: {reason})
 
 ---
 
-## 迭代预算
+## Quality Gates
 
-| 字段 | 值 |
+| Dimension | Target score | Current score | Target threshold | Status |
+|-----------|--------------|---------------|------------------|--------|
+| {dimension 1} | — | — | ≥ {threshold} | Ready |
+| {dimension 2} | — | — | ≥ {threshold} | Ready |
+| {dimension 3} | — | — | ≥ {threshold} | Ready |
+
+**All-pass condition**: all dimensions reach their target thresholds at the same time
+
+---
+
+## Iteration Budget
+
+| Field | Value |
 |------|-----|
-| 最大轮次 | {N} |
-| 当前轮次 | 0 |
-| 时间限制 | {无限制 / N 分钟} |
-| 预算耗尽策略 | {输出当前最优 / 询问用户} |
+| Max rounds | {N} |
+| Current round | 0 |
+| Time limit | {unlimited / N minutes} |
+| Budget exhaustion policy | {return best current result / ask the user} |
 
 ---
 
-## 输出文件
+## Output Files
 
-| 文件 | 路径 | 用途 | 状态 |
-|------|------|------|------|
-| autoloop-plan.md | {工作目录}/autoloop-plan.md | 任务计划（本文件）| 已创建 |
-| autoloop-progress.md | {工作目录}/autoloop-progress.md | 迭代进度 | 待创建 |
-| autoloop-findings.md | {工作目录}/autoloop-findings.md | 发现记录 | 待创建 |
-| 最终报告 | {工作目录}/ | 最终报告（文件命名见 references/loop-data-schema.md 统一输出文件命名章节）| 待创建 |
-| autoloop-results.tsv | {工作目录}/autoloop-results.tsv | 结构化迭代日志（所有模板通用）| 待创建 |
+| File | Path | Purpose | Status |
+|------|------|---------|--------|
+| autoloop-plan.md | {workdir}/autoloop-plan.md | Task plan (this file) | Created |
+| autoloop-progress.md | {workdir}/autoloop-progress.md | Iteration progress | To create |
+| autoloop-findings.md | {workdir}/autoloop-findings.md | Findings log | To create |
+| Final report | {workdir}/ | Final report (file naming follows the unified output naming section in references/loop-data-schema.md) | To create |
+| autoloop-results.tsv | {workdir}/autoloop-results.tsv | Structured iteration log (shared by all templates) | To create |
 
 ---
 
-## 策略历史（已尝试方法）
+## Strategy History (Attempted Methods)
 
-| 轮次 | strategy_id | 维度 | 策略 | 结果 | 弃用原因 |
-|------|-------------|------|------|------|---------|
+| Round | strategy_id | Dimension | Strategy | Result | Why discarded |
+|-------|-------------|-----------|----------|--------|---------------|
 | — | — | — | — | — | — |
 
 ---
 
-## 变更记录
+## Change Log
 
-| 时间 | 字段 | 变更前 | 变更后 | 原因 |
-|------|------|--------|--------|------|
-| {时间} | 初始创建 | — | — | — |
+| Time | Field | Before | After | Reason |
+|------|------|--------|-------|--------|
+| {time} | Initial creation | — | — | — |

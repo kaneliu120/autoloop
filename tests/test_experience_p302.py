@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P3-02：经验 query 与 context_tags / context-scoped 规格一致。"""
+"""P3-02: experience query matches the context_tags / context-scoped spec."""
 
 import importlib.util
 import os
@@ -40,8 +40,8 @@ class TestExperienceP302ContextMatch(unittest.TestCase):
     def test_overlap_at_least_two_filters_strategies(self):
         m = self.mod
         rows = (
-            "| S-a | T1 | d | [保持] @2026-01-15 [python,backend,security] | 1 | — | 2 | 100% | 推荐 |\n"
-            "| S-b | T1 | d | [保持] @2026-01-15 [go,frontend,performance] | 1 | — | 2 | 100% | 推荐 |\n"
+            "| S-a | T1 | d | [Keep] @2026-03-15 [python,backend,security] | 1 | — | 2 | 100% | Recommended |\n"
+            "| S-b | T1 | d | [Keep] @2026-03-15 [go,frontend,performance] | 1 | — | 2 | 100% | Recommended |\n"
         )
         self._write_reg(rows)
         r_all = m.cmd_query(self.reg, "T1", [])
@@ -54,7 +54,7 @@ class TestExperienceP302ContextMatch(unittest.TestCase):
     def test_tag_overlap_case_insensitive(self):
         m = self.mod
         rows = (
-            "| S-a | T1 | d | [保持] @2026-01-15 [python,backend] | 1 | — | 2 | 100% | 推荐 |\n"
+            "| S-a | T1 | d | [Keep] @2026-03-15 [python,backend] | 1 | — | 2 | 100% | Recommended |\n"
         )
         self._write_reg(rows)
         r = m.cmd_query(self.reg, "T1", ["PYTHON", "BACKEND", "security"])
@@ -64,37 +64,37 @@ class TestExperienceP302ContextMatch(unittest.TestCase):
     def test_scoped_exact_overrides_global(self):
         m = self.mod
         rows = (
-            "| S-z | T1 | d | [保持] @2026-02-01 [python,backend,security] | 1 | — | 2 | 100% | 观察 |\n"
+            "| S-z | T1 | d | [Keep] @2026-02-01 [python,backend,security] | 1 | — | 2 | 100% | Observation |\n"
         )
         scoped = """
 | strategy_id | context_tags | status | evidence | last_validated |
 |-------------|--------------|--------|----------|----------------|
-| S-z | [python, backend, security] | 推荐 | x | 2026-02-01 |
+| S-z | [python, backend, security] | Recommended | x | 2026-02-01 |
 """
         self._write_reg(rows, scoped)
         r = m.cmd_query(self.reg, "T1", ["python", "backend", "security"])
         self.assertEqual(len(r), 1)
-        self.assertEqual(r[0]["effective_status"], "推荐")
+        self.assertEqual(r[0]["effective_status"], "Recommended")
 
     def test_scoped_subset_pick_longest_row(self):
         m = self.mod
         rows = (
-            "| S-z | T1 | d | [保持] @2026-02-01 [python,backend,security] | 1 | — | 2 | 100% | 观察 |\n"
+            "| S-z | T1 | d | [Keep] @2026-02-01 [python,backend,security] | 1 | — | 2 | 100% | Observation |\n"
         )
         scoped = """
 | strategy_id | context_tags | status | evidence | last_validated |
 |-------------|--------------|--------|----------|----------------|
-| S-z | [python] | 候选默认 | a | 2026-02-01 |
-| S-z | [python, backend] | 推荐 | b | 2026-02-01 |
+| S-z | [python] | Candidate Default | a | 2026-02-01 |
+| S-z | [python, backend] | Recommended | b | 2026-02-01 |
 """
         self._write_reg(rows, scoped)
         r = m.cmd_query(self.reg, "T1", ["python", "backend", "security"])
         self.assertEqual(len(r), 1)
-        self.assertEqual(r[0]["effective_status"], "推荐")
+        self.assertEqual(r[0]["effective_status"], "Recommended")
 
     def test_extract_tags_fallback_bracket_with_comma(self):
         m = self.mod
-        desc = "note [保持] @2026-02-01 [rust,backend]"
+        desc = "note [Keep] @2026-02-01 [rust,backend]"
         self.assertEqual(
             m._extract_context_tags_from_description(desc),
             ["rust", "backend"],
@@ -103,7 +103,7 @@ class TestExperienceP302ContextMatch(unittest.TestCase):
     def test_query_excludes_observation_by_default(self):
         m = self.mod
         rows = (
-            "| S-obs | T1 | d | [保持] @2026-02-01 [python,backend,security] | 1 | — | 2 | 100% | 观察 |\n"
+            "| S-obs | T1 | d | [Keep] @2026-02-01 [python,backend,security] | 1 | — | 2 | 100% | Observation |\n"
         )
         self._write_reg(rows)
         r = m.cmd_query(self.reg, "T1", ["python", "backend", "security"])
@@ -112,7 +112,7 @@ class TestExperienceP302ContextMatch(unittest.TestCase):
     def test_query_include_observation_returns_obs_row(self):
         m = self.mod
         rows = (
-            "| S-obs | T1 | d | [保持] @2026-02-01 [python,backend,security] | 1 | — | 2 | 100% | 观察 |\n"
+            "| S-obs | T1 | d | [Keep] @2026-02-01 [python,backend,security] | 1 | — | 2 | 100% | Observation |\n"
         )
         self._write_reg(rows)
         r = m.cmd_query(
@@ -125,10 +125,10 @@ class TestExperienceP302ContextMatch(unittest.TestCase):
         self.assertEqual(r[0]["strategy_id"], "S-obs")
 
     def test_decay_downgrade_not_in_default_results(self):
-        """>90d 推荐在 query 内降为观察后，默认列表不得再返回该行（P0-03）。"""
+        """>90d recommended strategies are downgraded to observation inside query and should disappear from the default list (P0-03)."""
         m = self.mod
         rows = (
-            "| S-old | T1 | d | [保持] @2020-01-01 [python,backend,security] | 1 | — | 2 | 100% | 推荐 |\n"
+            "| S-old | T1 | d | [Keep] @2020-01-01 [python,backend,security] | 1 | — | 2 | 100% | Recommended |\n"
         )
         self._write_reg(rows)
         r = m.cmd_query(self.reg, "T1", ["python", "backend", "security"])
@@ -140,7 +140,7 @@ class TestExperienceP302ContextMatch(unittest.TestCase):
             include_observation=True,
         )
         self.assertEqual(len(r_obs), 1)
-        self.assertEqual(r_obs[0].get("effective_status"), "观察")
+        self.assertEqual(r_obs[0].get("effective_status"), "Observation")
 
 
 if __name__ == "__main__":

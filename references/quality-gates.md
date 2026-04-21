@@ -1,424 +1,424 @@
-# Quality Gates — 质量门禁规范
+# Quality Gates — Quality Gate Specification
 
-## 概述
+## Overview
 
-质量门禁是 AutoLoop 迭代的**首要终止标准（成功路径）**。本文档定义所有任务类型的质量门禁，包括计算方法、评分规则和通过标准。
+Quality gates are the **primary termination criterion (success path)** for AutoLoop iterations. This document defines the quality gates for all task types, including calculation methods, scoring rules, and pass criteria.
 
-**终止层级**：
-1. **质量门禁全部达标** → 成功终止（优先路径）
-2. **用户中断** → 暂停，保存进度，可恢复
-3. **预算耗尽（达到最大轮次）** → 输出当前最优结果，明确标注未达标项
-4. **无法继续推进** → 上报用户，说明原因和所需信息
+**Termination hierarchy**:
+1. **All quality gates met** → terminate successfully (preferred path)
+2. **User interruption** → pause, save progress, resumable
+3. **Budget exhausted (maximum rounds reached)** → output the current best result and clearly mark unmet items
+4. **Unable to continue** → report to the user, explain the reason, and specify what information is needed
 
-质量门禁是成功终止的判断标准；预算、中断、无法继续是其他终止路径，均在 `references/loop-protocol.md` 中有完整处理流程。
+Quality gates determine successful termination; budget exhaustion, interruption, and inability to continue are alternative termination paths, all of which are fully handled in `references/loop-protocol.md`.
 
-**核心原则**：质量门禁必须是**数字化的、可测量的**，不接受"差不多好了"这样的描述。
+**Core principle**: Quality gates must be **quantified and measurable**. Descriptions like "almost done" are not acceptable.
 
-## 评分语义词汇表（所有文件以此为准）
+## Scoring Semantics Glossary (authoritative for all files)
 
-AutoLoop 使用 4 种不同语义的评分概念，不可混用：
+AutoLoop uses 4 distinct scoring concepts with different semantics. They must not be mixed:
 
-| 概念 | 英文标识 | 类型 | 取值范围 | 含义 | 使用场景 |
+| Concept | English identifier | Type | Range | Meaning | Usage scenario |
 |------|---------|------|---------|------|---------|
-| 质量得分 | quality_score | 连续值 | 0-10（保留1位小数） | 维度的当前质量水平 | TSV的metric_value列；门禁评估矩阵的阈值比较 |
-| 置信度 | confidence | 百分比 | 0-100%（整数） | 评分本身的可信程度 | TSV的confidence列；fail-closed判定 |
-| 严重度 | severity | 枚举 | P1 / P2 / P3 | 发现问题的影响程度 | enterprise-standard.md扣分规则；门禁计数条件 |
-| 门禁状态 | gate_status | 枚举 | **达标 / 未达标 / 豁免**（与 `gate-manifest.json` 的 `gate_status_enum` 一致；SSOT JSON 中 `plan.gates[].status` 使用此三词） | 门禁的最终判定 | 门禁评估矩阵；终止条件判断 |
+| Quality score | quality_score | Continuous value | 0-10 (1 decimal place) | The current quality level of a dimension | `metric_value` column in TSV; threshold comparisons in the gate evaluation matrix |
+| Confidence | confidence | Percentage | 0-100% (integer) | The reliability of the score itself | `confidence` column in TSV; fail-closed decisions |
+| Severity | severity | Enum | P1 / P2 / P3 | The impact level of a discovered issue | Deduction rules in `enterprise-standard.md`; gate counting conditions |
+| Gate status | gate_status | Enum | **Met / Not Met / Exempt** (aligned with `gate_status_enum` in `gate-manifest.json`; `plan.gates[].status` in SSOT JSON uses these three terms) | Final gate decision | Gate evaluation matrix; termination decision |
 
-**混用禁止规则**：
-- quality_score 不可用于表示置信度（"这个评分质量高"应该用 confidence）
-- severity 不可用于替代 quality_score（P1/P2/P3 是问题分类，不是分数）
-- confidence 低 ≠ quality_score 低（可能质量高但证据不足）
-- gate_status 由 quality_score + 阈值比较 + 计数条件 共同决定，不可独立赋值
+**No-mixing rules**:
+- `quality_score` must not be used to express confidence ("this score is high quality" should use `confidence`)
+- `severity` must not replace `quality_score` (`P1/P2/P3` are issue classifications, not scores)
+- Low `confidence` ≠ low `quality_score` (quality may be high but evidence may be insufficient)
+- `gate_status` is determined jointly by `quality_score` + threshold comparison + counting conditions, and must not be assigned independently
 
-**跨文件一致性**：所有 AutoLoop 文件在使用这 4 个概念时，必须使用上表中的英文标识或中文名称，不得使用同义词（如不可用"评分"模糊指代 quality_score 和 confidence 两种不同概念）。
+**Cross-file consistency**: Whenever AutoLoop files use these 4 concepts, they must use the English identifiers or the exact concept names in the table above. Do not use synonyms that blur the distinction between concepts.
 
 ---
 
-## 评分通用规范（所有模板适用）
+## General Scoring Rules (applies to all templates)
 
-**证据强制要求**：所有评分必须同时输出分数、判据、证据三项，缺少任一项的评分无效。
+**Evidence requirement**: Every score must output score, rationale, and evidence together. A score missing any of the three is invalid.
 
 ```text
-评分输出格式：
-- 分数：{数字}
-- 判据：命中了{区间}的{具体条目}
-- 证据：{文件路径+行号} 或 {来源URL+引用段落}
-无证据的评分视为未通过（fail-closed）。该维度必须在下轮补充证据后重新评分。缺证据不是"跳过"，而是强制系统反思、发现线索和问题后才能推进。
+Scoring output format:
+- Score: {number}
+- Rationale: matched {specific item} in the {range}
+- Evidence: {file path + line number} or {source URL + quoted paragraph}
+A score without evidence is treated as failed (fail-closed). That dimension must be re-scored in the next round after adding evidence. Missing evidence is not "skip"; it forces the system to reflect, discover clues, and identify issues before proceeding.
 ```
 
-**评分区间通用锚点**：
+**Universal score anchors**:
 
-| 区间 | 含义 | 判据要求 |
+| Range | Meaning | Rationale requirement |
 |------|------|---------|
-| 1-3分 | 明确缺陷 | 列出缺什么、错什么 |
-| 4-6分 | 部分满足 | 列出有什么、还缺什么 |
-| 7-8分 | 基本满足 | 列出满足了哪些标准 |
-| 9-10分 | 优秀 | 列出超出预期的具体方面 |
+| 1-3 | Clear defects | List what is missing and what is wrong |
+| 4-6 | Partially satisfied | List what exists and what is still missing |
+| 7-8 | Basically satisfied | List which standards are satisfied |
+| 9-10 | Excellent | List the concrete aspects that exceed expectations |
 
-**评分分歧仲裁协议**（唯一仲裁规则，所有模板适用）：
-
-```text
-仲裁触发：同一维度多个 evaluator 的 quality_score 差异 ≥ 2.0 分
-仲裁流程：
-  1. 取较低分作为当前轮次的 quality_score
-  2. 在 TSV 的 score_variance 列记录方差值
-  3. 在 TSV 的 details 列标注 "分歧仲裁：{evaluator_1}={分数1}, {evaluator_2}={分数2}"
-  4. 下轮 OBSERVE 必须将该分歧列为优先处理项
-  5. 如有第 3 个独立 evaluator，以 2/3 多数意见为准
-
-不触发仲裁的情况：
-  - 差异 < 2.0 分 → 取均值，无需仲裁
-  - 单 evaluator → 方差 = 0，无需仲裁
-```
-
-**评分置信度计算**：
+**Scoring disagreement arbitration protocol** (the only arbitration rule, applies to all templates):
 
 ```text
-置信度 = f(证据数量, evaluator一致性)
-- 证据 ≥ 3条 + 方差 < 1.0 → 高置信（≥ 80%）
-- 证据 1-2条 + 方差 < 2.0 → 中置信（50-79%）
-- 证据 0条 或 方差 ≥ 2.0 → 低置信（< 50%）→ fail-closed（视为未通过）
+Arbitration trigger: the difference in quality_score between multiple evaluators on the same dimension is >= 2.0
+Arbitration process:
+  1. Use the lower score as the quality_score for the current round
+  2. Record the variance in the TSV `score_variance` column
+  3. Mark the TSV `details` column with "Disagreement arbitration: {evaluator_1}={score_1}, {evaluator_2}={score_2}"
+  4. OBSERVE in the next round must list this disagreement as a priority item
+  5. If there is a third independent evaluator, use the 2/3 majority opinion
+
+Cases that do not trigger arbitration:
+  - Difference < 2.0 → use the average, no arbitration required
+  - Single evaluator → variance = 0, no arbitration required
 ```
 
-低置信评分与缺证据评分同等处理：视为未通过，必须在下轮补充证据或增加evaluator后重新评分。
+**Scoring confidence calculation**:
 
-**与脚本对齐**：TSV 末行 `score_variance` / `confidence` 的 fail-closed 规则由 `autoloop-variance.py check`、`autoloop-controller.py` 的 EVOLVE 与 `autoloop_kpi.results_tsv_last_row_fail_closed` 共用。SSOT 模式下 `autoloop-score.py --json` 的 `overall_pass` 亦会纳入末行 fail-closed（`gates_pass` 与 `overall_pass` 分列），避免「score 脚本通过、EVOLVE 仍拒收敛」的双口径误解。
+```text
+Confidence = f(amount_of_evidence, evaluator_consistency)
+- Evidence >= 3 items + variance < 1.0 → high confidence (>= 80%)
+- Evidence 1-2 items + variance < 2.0 → medium confidence (50-79%)
+- Evidence 0 items or variance >= 2.0 → low confidence (< 50%) → fail-closed (treated as failed)
+```
 
-### 跨模型评分一致性机制
+Low-confidence scores are handled the same as scores with missing evidence: treated as failed, and must be re-scored in the next round after adding evidence or increasing evaluator count.
 
-多 LLM evaluator 时：
-- **结构化 rubric**：prompt 必须含本文档锚点表全文
-- **盲评**：各 evaluator 独立评分，互不可见；T7/T8 建议 >= 2 模型
-- **晚聚合**：全部完成后统一聚合（VERIFY 阶段结束时），过程中不交换信息
-- **去偏**：T2 不同 evaluator 以不同顺序评估选项；维度 >= 5 时同理
+**Script alignment**: The fail-closed rules for the last TSV row `score_variance` / `confidence` are shared by `autoloop-variance.py check`, EVOLVE in `autoloop-controller.py`, and `autoloop_kpi.results_tsv_last_row_fail_closed`. In SSOT mode, `overall_pass` from `autoloop-score.py --json` also includes fail-closed on the last row (`gates_pass` and `overall_pass` remain separate), avoiding the dual-interpretation confusion of "the score script passed but EVOLVE still rejects convergence."
+
+### Cross-model scoring consistency mechanism
+
+When multiple LLM evaluators are used:
+- **Structured rubric**: the prompt must include the full anchor table from this document
+- **Blind review**: each evaluator scores independently and cannot see the others; T7/T8 recommend >= 2 models
+- **Late aggregation**: aggregate only after all evaluations are complete (at the end of VERIFY), with no information exchange during execution
+- **Debiasing**: in T2, different evaluators assess options in different orders; apply the same principle when dimensions >= 5
 
 ---
 
-## 门禁分类总览
+## Gate Classification Overview
 
-### 定义
-- **Hard Gate（硬门禁）**: 失败 = 整轮不通过，必须在下轮修复后才能继续
-- **Soft Gate（软门禁）**: 失败 = 记录到 progress.md + findings.md，不阻塞终止判定
+### Definitions
+- **Hard Gate**: failure = the entire round fails and must be fixed in the next round before proceeding
+- **Soft Gate**: failure = record it in `progress.md` + `findings.md`, but it does not block termination
 
-### 全模板 × 全维度矩阵
+### Full template × full dimension matrix
 
-| 模板 | 维度 | 阈值 | 门禁类型 | 失败行为 |
+| Template | Dimension | Threshold | Gate type | Failure behavior |
 |------|------|------|---------|---------|
-| T1 Research | 覆盖率 | ≥ 85% | Hard | 整轮不通过，下轮必须补充维度内容 |
-| T1 Research | 可信度 | ≥ 80% | Hard | 整轮不通过，下轮必须补充独立来源 |
-| T1 Research | 一致性 | ≥ 90% | Soft | 记录到 progress.md + findings.md，不阻塞终止 |
-| T1 Research | 完整性 | ≥ 85% | Soft | 记录到 progress.md + findings.md，不阻塞终止 |
-| T2 Compare | 覆盖率 | 100% | Hard | 整轮不通过，所有选项所有维度必须有内容 |
-| T2 Compare | 可信度 | ≥ 80% | Hard | 整轮不通过，下轮必须补充独立来源 |
-| T2 Compare | 偏见检查 | 所有选项通过（bool） | Hard | 整轮不通过，触发第 3 个独立 option-analyzer |
-| T2 Compare | 敏感性分析 | key_assumptions ±20% 后推荐第1位不变 | Soft | 记录到 progress.md + findings.md，不阻塞终止 |
-| T5 Iterate | KPI 达目标值 | 用户在 plan 中设定的目标阈值 | Hard | 整轮不通过，继续迭代优化 |
-| T6 Generate | 通过率 | ≥ 90% | Hard | 整轮不通过，下轮必须修复未通过内容项 |
-| T6 Generate | 平均分 | ≥ 7/10 | Hard | 整轮不通过，下轮必须提升内容质量 |
-| T4 Deliver | 语法验证 | 零错误 | Hard | 整轮不通过，下轮必须修复语法错误 |
-| T4 Deliver | P1/P2 问题 | = 0 | Hard | 整轮不通过，下轮必须修复安全/可靠性问题 |
-| T4 Deliver | 人工验收 | 用户输入"用户确认（线上验收）" | Hard | 整轮不通过，等待用户线上验收确认 |
-| T4 Deliver | 服务健康检查 | service_list 全部 active + health 200 | Soft | 记录到 progress.md，N/A 可跳过，不阻塞终止 |
-| T7 Quality | 安全性分数 | ≥ 9/10 | Hard | 整轮不通过，下轮必须提升安全性评分 |
-| T7 Quality | 可靠性分数 | ≥ 8/10 | Hard | 整轮不通过，下轮必须提升可靠性评分 |
-| T7 Quality | 可维护性分数 | ≥ 8/10 | Hard | 整轮不通过，下轮必须提升可维护性评分 |
-| T7 Quality | P1 问题（所有维度） | = 0 | Hard | 整轮不通过，P1 必须在下轮全部修复 |
-| T7 Quality | 安全 P2 问题 | = 0 | Hard | 整轮不通过，安全 P2 必须在下轮全部修复 |
-| T7 Quality | 可靠性 P2 问题 | ≤ 3 | Soft | 记录到 progress.md + findings.md，不阻塞终止 |
-| T7 Quality | 可维护性 P2 问题 | ≤ 5 | Soft | 记录到 progress.md + findings.md，不阻塞终止 |
-| T8 Optimize | 架构 | ≥ 8/10 | Hard | 整轮不通过，下轮必须解决架构问题 |
-| T8 Optimize | 性能 | ≥ 8/10 | Hard | 整轮不通过，下轮必须解决性能问题 |
-| T8 Optimize | 稳定性 | ≥ 8/10 | Hard | 整轮不通过，下轮必须解决稳定性问题 |
+| T1 Research | Coverage | >= 85% | Hard | Entire round fails; missing dimension content must be added next round |
+| T1 Research | Credibility | >= 80% | Hard | Entire round fails; independent sources must be added next round |
+| T1 Research | Consistency | >= 90% | Soft | Record in `progress.md` + `findings.md`; does not block termination |
+| T1 Research | Completeness | >= 85% | Soft | Record in `progress.md` + `findings.md`; does not block termination |
+| T2 Compare | Coverage | 100% | Hard | Entire round fails; every option must have content for every dimension |
+| T2 Compare | Credibility | >= 80% | Hard | Entire round fails; independent sources must be added next round |
+| T2 Compare | Bias Check | all options pass (bool) | Hard | Entire round fails; trigger a third independent `option-analyzer` |
+| T2 Compare | Sensitivity Analysis | top recommendation remains unchanged after `key_assumptions` +/-20% | Soft | Record in `progress.md` + `findings.md`; does not block termination |
+| T5 Iterate | KPI reaches target | target threshold defined by the user in plan | Hard | Entire round fails; continue iterative optimization |
+| T6 Generate | Pass Rate | >= 90% | Hard | Entire round fails; fix the failed content items next round |
+| T6 Generate | Average Score | >= 7/10 | Hard | Entire round fails; improve content quality next round |
+| T4 Deliver | Syntax Validation | zero errors | Hard | Entire round fails; syntax errors must be fixed next round |
+| T4 Deliver | P1/P2 issues | = 0 | Hard | Entire round fails; security/reliability issues must be fixed next round |
+| T4 Deliver | Human Acceptance | user input `"User confirmation (online acceptance)"` | Hard | Entire round fails; wait for user online acceptance confirmation |
+| T4 Deliver | Service Health Check | every item in `service_list` is `active` + health 200 | Soft | Record in `progress.md`; N/A may be skipped; does not block termination |
+| T7 Quality | Security Score | >= 9/10 | Hard | Entire round fails; the security score must improve next round |
+| T7 Quality | Reliability Score | >= 8/10 | Hard | Entire round fails; the reliability score must improve next round |
+| T7 Quality | Maintainability Score | >= 8/10 | Hard | Entire round fails; the maintainability score must improve next round |
+| T7 Quality | P1 Issues (all dimensions) | = 0 | Hard | Entire round fails; all P1 issues must be fixed next round |
+| T7 Quality | Security P2 Issues | = 0 | Hard | Entire round fails; all security P2 issues must be fixed next round |
+| T7 Quality | Reliability P2 Issues | <= 3 | Soft | Record in `progress.md` + `findings.md`; does not block termination |
+| T7 Quality | Maintainability P2 Issues | <= 5 | Soft | Record in `progress.md` + `findings.md`; does not block termination |
+| T8 Optimize | Architecture | >= 8/10 | Hard | Entire round fails; architecture issues must be fixed next round |
+| T8 Optimize | Performance | >= 8/10 | Hard | Entire round fails; performance issues must be fixed next round |
+| T8 Optimize | Stability | >= 8/10 | Hard | Entire round fails; stability issues must be fixed next round |
 
-### 判定规则（rollup 与 `plan.gates[].status`）
+### Decision rules (rollup and `plan.gates[].status`)
 
-以下用语与上文「门禁状态 gate_status」词汇表一致：**达标 / 未达标 / 豁免**。`autoloop-results.tsv` 的 `status` 列属于**检查结果**枚举（通过 / 未通过 / 待检查 / 待审查），与 SSOT 中每条门禁的 `plan.gates[].status` **不同层**，不得混写。
+The terms below must remain consistent with the `gate_status` glossary above: **Met / Not Met / Exempt**. The `status` column in `autoloop-results.tsv` belongs to the **check result** enum layer (`Pass / Fail / Pending Check / Pending Review`) and is **not** the same layer as `plan.gates[].status` in SSOT. Do not mix them.
 
-- 所有硬门禁 **status = 达标**（或豁免）且软门禁未达标项已记入 progress / findings → **本轮硬门禁路径视为可进入成功终止判定**（软门禁遗留单独跟踪）
-- 任一硬门禁 **status = 未达标** → **本轮门禁 rollup：未达标**（不论软门禁是否已记录）
-- 软门禁 **status = 未达标** 但硬门禁均达标或豁免 → **硬门禁路径仍视为达标**；软门禁问题记为跨轮遗留项
+- If all hard gates have **status = Met** (or Exempt), and soft-gate failures have been recorded in `progress` / `findings` → **the hard-gate path for this round is considered eligible to enter successful termination evaluation** (soft-gate leftovers are tracked separately)
+- If any hard gate has **status = Not Met** → **rollup for this round = Not Met** (regardless of whether soft-gate failures were recorded)
+- If any soft gate has **status = Not Met** but all hard gates are Met or Exempt → **the hard-gate path is still considered Met**; soft-gate issues become cross-round carryover items
 
-### 豁免规则
-- **豁免 (Exempt)**: 该维度不适用于当前任务（如纯前端项目的数据库迁移检查）
-- Roll-up: 豁免维度不参与门禁判定，等同于该行从矩阵中移除
-- 豁免必须在 autoloop-plan.md 中声明并说明原因
+### Exemption rules
+- **Exempt**: the dimension is not applicable to the current task (for example, database migration checks in a purely frontend project)
+- Roll-up: exempt dimensions do not participate in gate decisions, equivalent to removing that row from the matrix
+- Exemptions must be declared in `autoloop-plan.md` with a reason
 
 ---
 
-## 知识类任务门禁（T1/T2/T5/T6）
+## Knowledge-task Gates (T1/T2/T5/T6)
 
-### 覆盖率（Coverage）
+### Coverage
 
-**定义**：已经有实质内容的维度数 / 计划调研的总维度数
+**Definition**: number of dimensions with substantive content / total number of planned research dimensions
 
-**计算方法**：
+**Calculation**:
 
 ```text
-已覆盖维度 = 在 findings.md 中有至少 2 个具体信息点（不是"未找到"）的维度数
-覆盖率 = 已覆盖维度 / 总维度数 × 100%
+Covered dimensions = dimensions in findings.md that contain at least 2 concrete information points (not just "not found")
+Coverage = covered dimensions / total dimensions × 100%
 ```
 
-注：阈值定为 2 个信息点（而非 3 个），是因为信息点数量反映覆盖广度，信息的可信度由独立的"可信度"门禁负责（≥ 2 个独立来源）。两者分工不重叠。
+Note: the threshold is set to 2 information points (not 3) because the number of information points reflects breadth of coverage, while information trustworthiness is handled by the separate "Credibility" gate (>= 2 independent sources). The two are intentionally non-overlapping.
 
-**通过标准**：
-- T1 Research：≥ 85%
-- T2 Compare：100%（所有选项的所有维度都必须有内容）
-- T6 Generate：每个生成单元都完成 = 100%
+**Pass criteria**:
+- T1 Research: >= 85%
+- T2 Compare: 100% (every dimension of every option must contain content)
+- T6 Generate: every generated unit is completed = 100%
 
-**覆盖率评分锚点**：
+**Coverage scoring anchors**:
 
-| 区间 | 判据 |
+| Range | Criteria |
 |------|------|
-| 1-3 | <50% 维度有实质内容 |
-| 4-6 | 50-84% 有实质内容 |
-| 7-8 | 85-95% 有实质内容 |
-| 9-10 | >95% 且每维度 ≥ 3 信息点 |
+| 1-3 | <50% of dimensions have substantive content |
+| 4-6 | 50-84% have substantive content |
+| 7-8 | 85-95% have substantive content |
+| 9-10 | >95% and every dimension has >= 3 information points |
 
 ---
 
-### 可信度（Credibility）
+### Credibility
 
-**定义**：有 ≥ 2 个独立来源支撑的关键发现 / 总关键发现数
+**Definition**: key findings supported by >= 2 independent sources / total number of key findings
 
-**独立来源判定**：同一作者/同一公司/同一论坛不算独立（除非不同作者有原创内容）。官方文档+第三方评测、不同媒体+官方数据算独立。
+**Independent source criteria**: the same author / same company / same forum does not count as independent (unless different authors provide original content). Official docs + third-party review, or different media + official data, do count as independent.
 
-**信息来源可信度分级**：
-
-```text
-级别 1（高可信）：官方文档/官方 GitHub/一手研究报告
-级别 2（中高）：Gartner/Forrester/IDC/Stack Overflow/Hacker News 高票
-级别 3（中）：知名技术媒体、专家博客（有实名认证）
-级别 4（低中）：一般博客、Reddit 普通回答
-级别 5（低）：匿名内容、未注明时间的内容
-```
-
-**计算方法**：
+**Source credibility levels**:
 
 ```text
-关键发现 = 在 findings.md 中明确标注为"关键结论"的陈述
-有多源支撑 = 该陈述有 ≥2 个独立来源，且至少一个是级别 1-2
-可信度 = 有多源支撑的关键发现 / 总关键发现 × 100%
+Level 1 (high credibility): official documentation / official GitHub / primary research reports
+Level 2 (medium-high): Gartner / Forrester / IDC / Stack Overflow / high-vote Hacker News
+Level 3 (medium): reputable tech media, expert blogs (with verified identity)
+Level 4 (low-medium): general blogs, ordinary Reddit answers
+Level 5 (low): anonymous content, content without a stated time
 ```
 
-**通过标准**：≥ 80%
+**Calculation**:
 
-**可信度评分锚点**：
+```text
+Key finding = a statement explicitly labeled as a "key conclusion" in findings.md
+Multi-source support = the statement has >= 2 independent sources, and at least one is Level 1-2
+Credibility = key findings with multi-source support / total key findings × 100%
+```
 
-| 区间 | 判据 |
+**Pass criteria**: >= 80%
+
+**Credibility scoring anchors**:
+
+| Range | Criteria |
 |------|------|
-| 1-3 | <50% 关键发现有独立来源 |
-| 4-6 | 50-79% 有独立来源 |
-| 7-8 | ≥ 80% 有独立来源 |
-| 9-10 | >90% 且关键发现 ≥ 3 独立来源 |
+| 1-3 | <50% of key findings have independent sources |
+| 4-6 | 50-79% have independent sources |
+| 7-8 | >= 80% have independent sources |
+| 9-10 | >90% and each key finding has >= 3 independent sources |
 
 ---
 
-### 一致性（Consistency）
+### Consistency
 
-**定义**：无矛盾维度数 / 总维度数 × 100%
+**Definition**: number of contradiction-free dimensions / total dimensions × 100%
 
-注：以**维度**为计量单位（而非单条陈述）。维度内部有任一矛盾陈述，该维度即计为矛盾维度。
+Note: the unit of measurement is the **dimension**, not an individual statement. If any contradictory statement exists inside a dimension, that entire dimension counts as contradictory.
 
-**矛盾判定**：同一属性不同数据(无解释)、逻辑矛盾算矛盾；不同场景/不同版本/主观差异不算（需在 findings 说明）。
+**Contradiction criteria**: different values for the same attribute without explanation, or logical contradiction, count as contradictions; different scenarios, different versions, or subjective differences do not count as contradictions if explained in findings.
 
-**计算方法**：
+**Calculation**:
 
 ```text
-矛盾维度 = 在 cross-verification 报告中标注为"存在矛盾"的维度数
-无矛盾维度 = 总维度数 - 矛盾维度数
-一致性 = (无矛盾维度 / 总维度) × 100%
+Contradictory dimensions = dimensions marked as "contradiction exists" in the cross-verification report
+Contradiction-free dimensions = total dimensions - contradictory dimensions
+Consistency = (contradiction-free dimensions / total dimensions) × 100%
 ```
 
-**通过标准**：≥ 90%
+**Pass criteria**: >= 90%
 
-**一致性评分锚点**：
+**Consistency scoring anchors**:
 
-| 区间 | 判据 |
+| Range | Criteria |
 |------|------|
-| 1-3 | 存在未记录的矛盾信息 |
-| 4-6 | 矛盾已记录但未解决 |
-| 7-8 | 所有矛盾已解决并有说明 |
-| 9-10 | 无矛盾或全部解决有交叉验证证据 |
+| 1-3 | Contradictory information exists and is undocumented |
+| 4-6 | Contradictions are recorded but unresolved |
+| 7-8 | All contradictions are resolved and explained |
+| 9-10 | No contradictions, or all contradictions resolved with cross-verification evidence |
 
 ---
 
-### 完整性（Completeness）
+### Completeness
 
-**定义**：有引用来源的关键陈述数 / 总关键陈述数
+**Definition**: number of key statements with cited sources / total number of key statements
 
-**关键陈述**：支撑结论或推荐的陈述（必须有来源）。一般陈述（背景描述）建议有来源但不强制。
+**Key statements**: statements that support conclusions or recommendations (must have sources). General statements (background descriptions) are recommended to have sources but are not mandatory.
 
-**计算方法**：
+**Calculation**:
 
 ```text
-关键陈述 = 在 findings.md 中的结论类、数据类、推荐依据类陈述
-有来源 = 陈述后有 (来源: URL) 或 [^N] 引用标注
-完整性 = 有来源的关键陈述 / 总关键陈述 × 100%
+Key statements = conclusion statements, data statements, and recommendation-basis statements in findings.md
+Has source = the statement is followed by `(Source: URL)` or a `[^N]` citation
+Completeness = key statements with sources / total key statements × 100%
 ```
 
-**通过标准**：≥ 85%
+**Pass criteria**: >= 85%
 
 ---
 
-### T1 成稿深度补充检查（市场 / 行业主题）
+### T1 Draft-depth supplementary checks (market / industry topics)
 
-> 本节是 **T1 Research** 在市场 / 行业模式下的补充检查项，用于指导是否需要继续补证或改写。  
-> 它**不替代**上文四个门禁阈值，也不单独改变 Hard / Soft Gate 判定；其作用是避免“门禁过了，但成稿仍像提纲或资料堆砌”。
+> This section is an additional checklist for **T1 Research** in market / industry mode, used to judge whether more supporting evidence or rewriting is required.  
+> It **does not replace** the four formal gate thresholds above, nor does it independently alter Hard / Soft Gate decisions; its purpose is to prevent a situation where "the gates passed, but the draft still reads like an outline or a pile of materials."
 
-#### 薄稿判定原则
+#### Thin-draft criteria
 
-出现以下任一情况，应视为“结构正确但深度不足”：
+If any of the following occurs, it should be treated as "structurally correct but insufficiently deep":
 
-- 章节只有总括性判断，没有足够可核对数据块。
-- 有平均值但缺少结构拆分，如区域、产品、公司或时间维度。
-- 结论写得很满，但读者无法顺着前文证据复核到接近同一判断。
-- 来源很多，但没有与章节形成对应关系，读者难以回溯。
-- 专项模块只列岗位或方向名，没有拆到工作包、自动化边界和保留的人类任务。
+- A section contains only high-level judgments and lacks enough verifiable data blocks.
+- Averages are present but structural breakdowns are missing, such as region, product, company, or time dimension.
+- Conclusions sound complete, but the reader cannot follow the preceding evidence to independently reach a similar judgment.
+- There are many sources, but they are not mapped to sections, making traceability difficult.
+- Special-topic modules only list roles or directions, without breaking down work packages, automation boundaries, and retained human tasks.
 
-#### 检查项
+#### Checklist
 
-1. **强制章节完整**
-   - 是否包含：标题 / 主题 / 目标、市场规模与增长、需求侧、价值链与利润池、竞争格局、监管、技术、商业模式、风险、综合判断、数据来源。
-2. **每章三要素齐备**
-   - 每章是否同时具备：`数据`、`分析`、`结论`。
-3. **专项方向模块完整**
-   - 若题目含“行业 + 方向/主题”，是否增设专项模块，且该模块也具备：`数据`、`分析`、`结论`。
-4. **交叉验证痕迹充分**
-   - 关键判断是否有多源支撑；无法交叉验证的判断是否被降级为风险或争议点。
-5. **读者版边界合规**
-   - 最终报告中是否移除了内部运行、门禁、方法论显性标题、系统痕迹和模板提示语。
-6. **章节证据密度足够**
-   - 每章是否至少具备若干可核对数据块，而不是只有抽象概括。
-7. **结构拆分充分**
-   - 是否至少在若干关键章节中体现了区域、产品、公司、时间等交叉维度，而不是只给行业平均值。
-8. **来源组织可回溯**
-   - `数据来源` 是否按章节组织，或至少明显对应到章节，而不是纯 bibliography。
-9. **证据边界明确**
-   - 是否区分“直接证据”“组织信号”“分析推断”；无法强推之处是否明确写出边界。
-10. **专项模块工作包化**
-   - 对 AI / 自动化 / 岗位替代性等专项方向，是否拆到工作包层，而不是只停留在岗位名称。
+1. **Mandatory section completeness**
+   - Whether it includes: title / topic / objective, market size and growth, demand side, value chain and profit pools, competitive landscape, regulation, technology, business models, risks, synthesized judgment, and data sources.
+2. **Three elements present in every section**
+   - Whether every section contains all three: `data`, `analysis`, and `conclusion`.
+3. **Complete special-topic module**
+   - If the prompt includes "industry + direction/topic", whether a special-topic module is added, and whether it also contains `data`, `analysis`, and `conclusion`.
+4. **Sufficient cross-verification traces**
+   - Whether key judgments have multi-source support; whether judgments that cannot be cross-verified are downgraded to risks or disputed points.
+5. **Reader-facing boundary compliance**
+   - Whether the final report removes explicit internal execution labels, gate labels, methodology headings, system traces, and template hints.
+6. **Sufficient evidence density per section**
+   - Whether each section contains several verifiable data blocks rather than only abstract summaries.
+7. **Adequate structural breakdown**
+   - Whether several key sections include cross-dimensions such as region, product, company, or time, instead of only industry averages.
+8. **Traceable source organization**
+   - Whether `Data Sources` is organized by section, or at least clearly maps to sections, instead of being only a bibliography.
+9. **Clear evidence boundaries**
+   - Whether it distinguishes "direct evidence", "organizational signals", and "analytical inference"; whether unsupported claims are explicitly bounded.
+10. **Work-package breakdown in special-topic modules**
+   - For AI / automation / job substitutability themes, whether the content is broken down to the work-package level rather than stopping at job titles.
 
-#### 使用方式
+#### Usage
 
-- 若任一检查项失败，T1 在下一轮应优先补**章节深度**而非继续机械扩充维度数量。
-- 建议在 `autoloop-progress.md` 中记录本轮哪些章节缺：
-  - 数据
-  - 分析
-  - 结论
-  - 结构拆分
-  - 公司 / 区域实例
-  - 来源对应
-  - 证据边界
-- 对市场 / 行业主题，只有当四个正式门禁达标且本补充检查通过时，才建议进入最终成稿。
+- If any checklist item fails, T1 should prioritize improving **section depth** in the next round instead of mechanically expanding the number of dimensions.
+- It is recommended to record in `autoloop-progress.md` which sections are missing:
+  - data
+  - analysis
+  - conclusion
+  - structural breakdown
+  - company / regional examples
+  - source mapping
+  - evidence boundaries
+- For market / industry topics, only when the four formal gates are met and this supplementary check also passes should the workflow move to the final draft.
 
 ---
 
-## T2 专属门禁
+## T2-specific Gates
 
-### 偏见检查（Bias Check）
+### Bias Check
 
-**定义**：每个候选选项由 ≥ 2 个独立 subagent 评估，且各 subagent 对同一选项的评分差异在 0-10 量表上 < 1.5 分。
+**Definition**: each candidate option is evaluated by >= 2 independent subagents, and the scoring difference between subagents for the same option is < 1.5 points on a 0-10 scale.
 
-**唯一计算公式（所有文件以此为准）**：
+**Single authoritative formula (applies to all files)**:
 
 ```text
-对每个选项：
-  偏见分数 = (max_score - min_score) / 10
-  通过条件：偏见分数 < 0.15（即 10 分量表上最大差异 < 1.5 分）
-  不通过：触发第 3 个独立 option-analyzer 重新评估该选项
+For each option:
+  Bias score = (max_score - min_score) / 10
+  Pass condition: bias score < 0.15 (i.e. maximum difference < 1.5 points on a 10-point scale)
+  Fail: trigger a third independent option-analyzer to re-evaluate that option
 
-偏见检查通过 = 所有选项均满足上述条件
+Bias Check passes = all options satisfy the condition above
 ```
 
-**通过标准**：所有选项的偏见分数 < 0.15（差异 ≥ 1.5 分须运行第三次独立评估，以多数结论为准）。gate-manifest.json 中 bias_check 为 bool 类型（`unit: "bool"`），表示评审 subagent 预计算后写入 `true/false` 到 state.json。
+**Pass criteria**: all options have bias scores < 0.15 (if the difference is >= 1.5, a third independent evaluation must run and the majority conclusion prevails). In `gate-manifest.json`, `bias_check` is a bool (`unit: "bool"`), meaning the review subagent precomputes it and writes `true/false` into `state.json`.
 
 ---
 
-### 敏感性分析（Sensitivity Analysis）
+### Sensitivity Analysis
 
-**定义**：将 plan 中 `key_assumptions` 列表中的每个关键假设分别调整 ±20%，检查最终推荐排名第 1 位是否保持不变。
+**Definition**: adjust each key assumption in the `key_assumptions` list in plan by +/-20%, then check whether the final top-ranked recommendation stays unchanged.
 
-`key_assumptions` 格式：来自 `autoloop-plan.md`，每项含 name + current_value + unit。
+`key_assumptions` format: comes from `autoloop-plan.md`; each item contains `name` + `current_value` + `unit`.
 
-**唯一计算公式（所有文件以此为准）**：
+**Single authoritative formula (applies to all files)**:
 
 ```text
-对 plan.key_assumptions 中每个假设 H：
-  original_rank = 用 H.current_value 计算的推荐排名
-  high_rank = 用 H.current_value × 1.2 计算的排名
-  low_rank  = 用 H.current_value × 0.8 计算的排名
-  通过条件：original_rank == high_rank == low_rank（第 1 位不变）
+For each assumption H in plan.key_assumptions:
+  original_rank = recommendation ranking computed with H.current_value
+  high_rank = ranking computed with H.current_value × 1.2
+  low_rank  = ranking computed with H.current_value × 0.8
+  Pass condition: original_rank == high_rank == low_rank (top rank unchanged)
 
-敏感性分析通过 = 所有 key_assumptions 均满足上述条件
+Sensitivity Analysis passes = all key_assumptions satisfy the condition above
 ```
 
-**通过标准**：任意单一关键假设 ±20% 变动后，推荐排名第 1 位不变
+**Pass criteria**: the #1 recommendation remains unchanged after a +/-20% change to any single key assumption
 
 ---
 
-### T2 默认评估维度
+### Default T2 evaluation dimensions
 
-当用户未指定评估维度时，按选项类型使用默认权重。三类默认表：
+When the user does not specify evaluation dimensions, use default weights by option type. There are three default tables:
 
-- **技术栈/工具选型**：功能匹配度(25%) > 技术成熟度(20%) > 学习曲线/社区/成本(各15%) > 长期风险(10%)
-- **架构方案对比**：解耦/可扩展/性能(各20%) > 实施复杂度/运维(各15%) > 迁移风险(10%)
-- **商业方案对比**：ROI(25%) > 实施周期/资源/市场风险(各20%) > 战略契合(15%)
+- **Tech stack / tool selection**: feature fit (25%) > technical maturity (20%) > learning curve / community / cost (15% each) > long-term risk (10%)
+- **Architecture comparison**: decoupling / scalability / performance (20% each) > implementation complexity / operations (15% each) > migration risk (10%)
+- **Business option comparison**: ROI (25%) > implementation timeline / resources / market risk (20% each) > strategic fit (15%)
 
-用户在 plan 中定义的维度和权重优先于以上默认值。
+Dimensions and weights defined by the user in plan take precedence over these defaults.
 
-## T5 专属门禁
+## T5-specific Gates
 
-### KPI 目标（KPI Target）
+### KPI Target
 
-**定义**：用户在 autoloop-plan.md 中定义的 KPI 数值达到 plan 中设定的目标阈值。
+**Definition**: the KPI value defined by the user in `autoloop-plan.md` reaches the target threshold set in plan.
 
-**计算方法**：
+**Calculation**:
 
 ```text
-测量值 = VERIFY 阶段对 KPI 指标的实际测量结果
-通过 = 测量值 达到或优于 plan.md 中设定的目标阈值
+Measured value = the actual KPI measurement result in VERIFY
+Pass = measured value reaches or exceeds the target threshold defined in plan.md
 ```
 
-**要求**：plan 必须明确写出 KPI 名称、测量方法和目标阈值（例："API 响应时间 < 200ms"、"覆盖率 ≥ 90%"）。当 KPI 定义缺失（`plan.gates` 中无 `threshold=null` 行带有效 `target`）时，`autoloop-controller.py` 在 **OBSERVE** 阶段**暂停循环**并写入 checkpoint，要求用户补全 KPI 后 `--resume` 继续。
+**Requirement**: plan must explicitly state the KPI name, measurement method, and target threshold (for example, `"API response time < 200ms"` or `"Coverage >= 90%"`). When the KPI definition is missing (no row in `plan.gates` with `threshold=null` and a valid `target`), `autoloop-controller.py` **pauses the loop** during **OBSERVE** and writes a checkpoint, requiring the user to complete the KPI before continuing with `--resume`.
 
 ---
 
-## T6 专属门禁
+## T6-specific Gates
 
-### 通过率（Pass Rate）
+### Pass Rate
 
-**定义**：通过质检的内容数 / 总生成数 × 100%
+**Definition**: number of content items that pass QA / total generated items × 100%
 
-**计算方法**：
+**Calculation**:
 
 ```text
-通过质检 = 满足 plan 中定义的内容标准（非空、格式正确、无明显错误）的内容项数量
-通过率 = 通过质检的内容数 / 总生成数 × 100%
+Pass QA = the number of content items that meet the content standards defined in plan (non-empty, correct format, no obvious errors)
+Pass rate = number of items that pass QA / total content items × 100%
 ```
 
-**通过标准**：≥ 90%（SSOT: gate-manifest.json，T6 Generate）
+**Pass criteria**: >= 90% (SSOT: `gate-manifest.json`, T6 Generate)
 
-### 平均分（Average Score）
+### Average Score
 
-**定义**：所有内容项质量评分的算术平均值（评分标准须在 autoloop-plan.md 中定义，范围 0-10）
+**Definition**: arithmetic mean of the quality scores of all content items (the scoring standard must be defined in `autoloop-plan.md`, range 0-10)
 
-**计算方法**：
+**Calculation**:
 
 ```text
-各内容项得分由 subagent 按 plan 中定义的评分标准打分（0-10）
-平均分 = sum(所有内容项得分) / 总内容项数
+Each content item is scored by subagents according to the scoring standard defined in plan (0-10)
+Average score = sum(all content item scores) / total number of content items
 ```
 
-**通过标准**：≥ 7/10
+**Pass criteria**: >= 7/10
 
 ---
 
-> T5 迭代任务评分锚点：详见 `references/enterprise-standard.md` 对应维度。
-> T6 生成任务评分锚点：详见 `references/enterprise-standard.md` 对应维度。
+> Scoring anchors for T5 iterative tasks: see the corresponding dimensions in `references/enterprise-standard.md`.
+> Scoring anchors for T6 generation tasks: see the corresponding dimensions in `references/enterprise-standard.md`.
 ---
 
 
 ---
 
-> 工程类任务门禁（T4/T7/T8）、门禁评估矩阵、T7 复合判定规则、豁免规则见 `references/quality-gates-engineering.md`。
+> Engineering-task gates (T4/T7/T8), the gate evaluation matrix, T7 composite decision rules, and exemption rules are in `references/quality-gates-engineering.md`.

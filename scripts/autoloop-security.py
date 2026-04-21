@@ -1,27 +1,27 @@
 #!/usr/bin/env python3
-"""AutoLoop Security — 跨平台安全管线
+"""AutoLoop Security — cross-platform security pipeline
 
-提供三层安全保护（仅在非 Claude Code 环境中激活）：
-1. 编译时检查：工具白名单验证
-2. 运行时检查：敏感路径检测 + 写操作拦截
-3. 审计日志：所有安全事件记录
+Provides three layers of protection (enabled only outside Claude Code):
+1. Compile-time checks: tool allowlist validation
+2. Runtime checks: sensitive path detection + write interception
+3. Audit logs: record all security events
 
-用法:
-  autoloop-security.py check-tool <tool_name>     # 检查工具是否在白名单中
-  autoloop-security.py check-path <file_path>     # 检查路径是否敏感
-  autoloop-security.py check-write <file_path>    # 检查写操作是否需要审批
-  autoloop-security.py audit-log [--tail N]       # 查看安全审计日志
+Usage:
+  autoloop-security.py check-tool <tool_name>     # Check whether a tool is allowlisted
+  autoloop-security.py check-path <file_path>     # Check whether a path is sensitive
+  autoloop-security.py check-write <file_path>    # Check whether a write needs approval
+  autoloop-security.py audit-log [--tail N]       # View the security audit log
 """
 import os, sys, json, time
 
-# 工具白名单（ACT 阶段允许 subagent 使用的工具）
+# Tool allowlist (tools subagents may use during ACT)
 TOOL_ALLOWLIST = {
     "read_file", "write_file", "edit_file", "glob", "grep", "ls",
     "bash", "web_search", "task",
 }
 
-# 敏感路径检测（分两类，避免子串误报如 "tokenizer_output" 匹配 "token"）
-# 精确文件名匹配（用 os.path.basename）
+# Sensitive path detection (two classes to avoid substring false positives such as "tokenizer_output" matching "token")
+# Exact file-name matching (using os.path.basename)
 SENSITIVE_EXACT_FILENAMES = {
     ".env", ".env.production", ".env.local", ".env.staging",
     "id_rsa", "id_ed25519", "id_ecdsa",
@@ -29,39 +29,39 @@ SENSITIVE_EXACT_FILENAMES = {
     "api_key.txt", "api_keys.json",
     "gate-manifest.json",  # P1-04 config-protection
 }
-# 路径段匹配（检查路径中是否包含这些目录）
+# Path-segment matching (checks whether the path contains these directories)
 SENSITIVE_PATH_SEGMENTS = {".ssh", "secrets", ".credentials"}
 
-# 需要预审批的写操作路径模式
+# Write-path patterns that require pre-approval
 APPROVAL_REQUIRED_PATTERNS = [
-    "*.py",  # Python 脚本修改需要审批
-    "*.sh",  # Shell 脚本修改需要审批
-    "SKILL.md", "CLAUDE.md", "AGENTS.md",  # 配置文件修改需要审批
+    "*.py",  # Python script changes require approval
+    "*.sh",  # Shell script changes require approval
+    "SKILL.md", "CLAUDE.md", "AGENTS.md",  # Config file changes require approval
 ]
 
 
 def check_tool(tool_name):
-    """检查工具是否在白名单中"""
+    """Check whether a tool is in the allowlist."""
     allowed = tool_name in TOOL_ALLOWLIST
     result = {"tool": tool_name, "allowed": allowed}
     if not allowed:
-        result["message"] = f"工具 '{tool_name}' 不在 ACT 阶段白名单中"
+        result["message"] = f"Tool '{tool_name}' is not in the ACT allowlist"
         _log_event("tool_blocked", result)
     print(json.dumps(result))
     return allowed
 
 
 def check_path(file_path):
-    """检查路径是否敏感（精确匹配文件名 + 路径段匹配目录）"""
+    """Check whether a path is sensitive (exact filename match + path-segment match)."""
     basename = os.path.basename(file_path).lower()
-    # 精确文件名匹配
+    # Exact filename match
     for name in SENSITIVE_EXACT_FILENAMES:
         if basename == name.lower():
             result = {"path": file_path, "sensitive": True, "matched_pattern": name, "match_type": "exact_filename"}
             _log_event("sensitive_path_access", result)
             print(json.dumps(result))
             return True
-    # 路径段匹配（目录名）
+    # Path-segment match (directory names)
     path_parts = set(p.lower() for p in file_path.replace("\\", "/").split("/"))
     for seg in SENSITIVE_PATH_SEGMENTS:
         if seg.lower() in path_parts:
@@ -74,7 +74,7 @@ def check_path(file_path):
 
 
 def check_write(file_path):
-    """检查写操作是否需要预审批"""
+    """Check whether a write operation requires pre-approval."""
     import fnmatch
     for pattern in APPROVAL_REQUIRED_PATTERNS:
         if fnmatch.fnmatch(os.path.basename(file_path), pattern):
@@ -87,7 +87,7 @@ def check_write(file_path):
 
 
 def _log_event(event_type, details):
-    """记录安全审计日志"""
+    """Record a security audit log entry."""
     log_dir = os.path.expanduser("~/.autoloop/security/")
     os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, "audit.jsonl")
@@ -97,7 +97,7 @@ def _log_event(event_type, details):
 
 
 def audit_log(tail=20):
-    """查看安全审计日志"""
+    """View the security audit log."""
     log_file = os.path.expanduser("~/.autoloop/security/audit.jsonl")
     if not os.path.exists(log_file):
         print("No audit log found.")

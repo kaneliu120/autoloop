@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""AutoLoop 最终报告生成工具
+"""AutoLoop final report generator
 
-用法:
-  autoloop-finalize.py <work_dir>          生成最终报告
-  autoloop-finalize.py <work_dir> --json   JSON 输出
+Usage:
+  autoloop-finalize.py <work_dir>          Generate the final report
+  autoloop-finalize.py <work_dir> --json   JSON output
 """
 
 import json
@@ -13,7 +13,7 @@ import datetime
 
 
 def load_state(work_dir):
-    """加载 autoloop-state.json。"""
+    """Load autoloop-state.json."""
     path = os.path.join(work_dir, "autoloop-state.json")
     if not os.path.isfile(path):
         return None
@@ -22,18 +22,18 @@ def load_state(work_dir):
 
 
 def extract_plan_summary(state):
-    """提取计划摘要。"""
+    """Extract the plan summary."""
     plan = state.get("plan", {})
     budget = plan.get("budget", {})
     meta = state.get("metadata", {})
     max_r = budget.get("max_rounds")
     if not max_r:
-        max_r = plan.get("max_iterations", "未知")
-    created = meta.get("created_at") or plan.get("created_at", "未知")
+        max_r = plan.get("max_iterations", "unknown")
+    created = meta.get("created_at") or plan.get("created_at", "unknown")
     return {
-        "task_id": plan.get("task_id", "未知"),
-        "template": plan.get("template", "未知"),
-        "goal": plan.get("goal", "未知"),
+        "task_id": plan.get("task_id", "unknown"),
+        "template": plan.get("template", "unknown"),
+        "goal": plan.get("goal", "unknown"),
         "created_at": created,
         "max_iterations": max_r,
         "dimensions": plan.get("dimensions", []),
@@ -41,7 +41,7 @@ def extract_plan_summary(state):
 
 
 def extract_iteration_trajectory(state):
-    """提取迭代轨迹（每轮的分数变化）。"""
+    """Extract the iteration trajectory (per-round score changes)."""
     iterations = state.get("iterations", [])
     trajectory = []
     for i, it in enumerate(iterations):
@@ -57,7 +57,7 @@ def extract_iteration_trajectory(state):
 
 
 def extract_final_scores(state):
-    """提取最终分数。"""
+    """Extract the final scores."""
     iterations = state.get("iterations", [])
     if not iterations:
         return {}
@@ -65,7 +65,7 @@ def extract_final_scores(state):
 
 
 def extract_key_findings(state):
-    """提取关键发现。"""
+    """Extract the key findings."""
     findings = state.get("findings", {})
     rounds = findings.get("rounds", [])
     key = []
@@ -83,7 +83,7 @@ def extract_key_findings(state):
 
 
 def extract_strategy_effectiveness(state):
-    """提取策略有效性。"""
+    """Extract strategy effectiveness."""
     iterations = state.get("iterations", [])
     strategies = {}
     for it in iterations:
@@ -104,12 +104,12 @@ def extract_strategy_effectiveness(state):
 
 
 def extract_termination_reason(state):
-    """提取终止原因。"""
-    return state.get("termination", {}).get("reason", "未记录")
+    """Extract the termination reason."""
+    return state.get("termination", {}).get("reason", "not recorded")
 
 
 def extract_side_effects(state):
-    """提取副作用记录。"""
+    """Extract side-effect records."""
     effects = []
     for it in state.get("iterations", []):
         se = it.get("side_effects", [])
@@ -119,7 +119,7 @@ def extract_side_effects(state):
 
 
 def build_report_data(state):
-    """整合所有报告数据。"""
+    """Assemble all report data."""
     return {
         "generated_at": datetime.datetime.now().isoformat(),
         "plan_summary": extract_plan_summary(state),
@@ -134,41 +134,41 @@ def build_report_data(state):
 
 
 def format_markdown_report(data):
-    """将报告数据格式化为 Markdown。"""
+    """Format the report data as Markdown."""
     lines = []
     plan = data["plan_summary"]
 
-    lines.append("# AutoLoop 最终报告")
+    lines.append("# AutoLoop Final Report")
     lines.append("")
-    lines.append("## 元信息")
+    lines.append("## Metadata")
     lines.append("")
-    lines.append("| 字段 | 值 |")
+    lines.append("| Field | Value |")
     lines.append("|------|-----|")
-    lines.append(f"| 任务 ID | {plan['task_id']} |")
-    lines.append(f"| 模板 | {plan['template']} |")
-    lines.append(f"| 目标 | {plan['goal']} |")
-    lines.append(f"| 创建时间 | {plan['created_at']} |")
-    lines.append(f"| 报告生成时间 | {data['generated_at']} |")
-    lines.append(f"| 总迭代轮次 | {data['iteration_count']} |")
-    lines.append(f"| 终止原因 | {data['termination_reason']} |")
+    lines.append(f"| Task ID | {plan['task_id']} |")
+    lines.append(f"| Template | {plan['template']} |")
+    lines.append(f"| Goal | {plan['goal']} |")
+    lines.append(f"| Created at | {plan['created_at']} |")
+    lines.append(f"| Report generated at | {data['generated_at']} |")
+    lines.append(f"| Total iterations | {data['iteration_count']} |")
+    lines.append(f"| Termination reason | {data['termination_reason']} |")
     lines.append("")
 
-    # KPI 轨迹表
+    # KPI trajectory table
     lines.append("---")
     lines.append("")
-    lines.append("## KPI 轨迹")
+    lines.append("## KPI Trajectory")
     lines.append("")
 
     trajectory = data["iteration_trajectory"]
     if trajectory:
-        # 收集所有维度
+            # Collect all dimensions
         all_dims = set()
         for t in trajectory:
             all_dims.update(t["scores"].keys())
         all_dims = sorted(all_dims)
 
         if all_dims:
-            header = "| 轮次 | " + " | ".join(all_dims) + " | 策略 |"
+            header = "| Round | " + " | ".join(all_dims) + " | Strategy |"
             sep = "|------|" + "|".join(["------"] * len(all_dims)) + "|------|"
             lines.append(header)
             lines.append(sep)
@@ -183,31 +183,31 @@ def format_markdown_report(data):
                 ) or "—"
                 lines.append(f"| {t['round']} | {scores_str} | {strats} |")
         else:
-            lines.append("（无评分数据）")
+            lines.append("(No scoring data)")
     else:
-        lines.append("（无迭代记录）")
+        lines.append("(No iteration records)")
 
     lines.append("")
 
-    # 最终得分
+    # Final scores
     lines.append("---")
     lines.append("")
-    lines.append("## 最终得分")
+    lines.append("## Final Scores")
     lines.append("")
     final = data["final_scores"]
     if final:
-        lines.append("| 维度 | 得分 |")
+        lines.append("| Dimension | Score |")
         lines.append("|------|------|")
         for dim, score in sorted(final.items()):
             lines.append(f"| {dim} | {score} |")
     else:
-        lines.append("（无最终得分）")
+        lines.append("(No final scores)")
     lines.append("")
 
-    # 策略有效性
+    # Strategy effectiveness
     lines.append("---")
     lines.append("")
-    lines.append("## 策略有效性")
+    lines.append("## Strategy Effectiveness")
     lines.append("")
     strats = data["strategy_effectiveness"]
     if strats:
@@ -215,10 +215,10 @@ def format_markdown_report(data):
         sorted_strats = sorted(
             strats.items(), key=lambda x: x[1]["positive"], reverse=True
         )
-        lines.append("### 有效策略（Top Improvements）")
+        lines.append("### Effective Strategies (Top Improvements)")
         lines.append("")
-        lines.append("| strategy_id | 使用次数 | 正向次数 | 负向次数 |")
-        lines.append("|-------------|---------|---------|---------|")
+        lines.append("| strategy_id | Uses | Positive | Negative |")
+        lines.append("|-------------|------|----------|----------|")
         for sid, info in sorted_strats:
             if info["positive"] > 0:
                 lines.append(
@@ -229,43 +229,43 @@ def format_markdown_report(data):
         failed = [(sid, info) for sid, info in sorted_strats if info["positive"] == 0]
         if failed:
             lines.append("")
-            lines.append("### 失败策略（Failed Attempts）")
+            lines.append("### Failed Strategies")
             lines.append("")
-            lines.append("| strategy_id | 使用次数 | 负向次数 |")
-            lines.append("|-------------|---------|---------|")
+            lines.append("| strategy_id | Uses | Negative |")
+            lines.append("|-------------|------|----------|")
             for sid, info in failed:
                 lines.append(f"| {sid} | {info['uses']} | {info['negative']} |")
     else:
-        lines.append("（无策略使用记录）")
+        lines.append("(No strategy usage records)")
     lines.append("")
 
-    # 副作用
+    # Side effects
     lines.append("---")
     lines.append("")
-    lines.append("## 副作用记录")
+    lines.append("## Side Effects")
     lines.append("")
     effects = data["side_effects"]
     if effects:
         for e in effects:
             if isinstance(e, dict):
-                lines.append(f"- **{e.get('type', '未知')}**: {e.get('description', '—')}")
+                lines.append(f"- **{e.get('type', 'unknown')}**: {e.get('description', '—')}")
             else:
                 lines.append(f"- {e}")
     else:
-        lines.append("（无副作用记录）")
+        lines.append("(No side-effect records)")
     lines.append("")
 
-    # 关键发现摘要
+    # Key findings summary
     lines.append("---")
     lines.append("")
-    lines.append("## 关键发现")
+    lines.append("## Key Findings")
     lines.append("")
     findings = data["key_findings"]
     if findings:
-        for f in findings[:20]:  # 最多展示 20 条
+        for f in findings[:20]:  # Show at most 20 items
             lines.append(f"- **{f['dimension']}**: {f['summary']}")
     else:
-        lines.append("（无关键发现）")
+        lines.append("(No key findings)")
     lines.append("")
 
     return "\n".join(lines)
@@ -280,13 +280,13 @@ def main():
     json_output = "--json" in sys.argv
 
     if not os.path.isdir(work_dir):
-        print(f"ERROR: 工作目录不存在: {work_dir}", file=sys.stderr)
+        print(f"ERROR: Work directory does not exist: {work_dir}", file=sys.stderr)
         sys.exit(1)
 
     state = load_state(work_dir)
     if state is None:
         print(
-            f"ERROR: 未找到 autoloop-state.json: {work_dir}",
+            f"ERROR: autoloop-state.json not found: {work_dir}",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -297,11 +297,11 @@ def main():
         print(json.dumps(data, ensure_ascii=False, indent=2))
     else:
         report_md = format_markdown_report(data)
-        # 写入文件
+        # Write the report to disk
         report_path = os.path.join(work_dir, "autoloop-report.md")
         with open(report_path, "w", encoding="utf-8") as f:
             f.write(report_md)
-        print(f"OK: 报告已生成 → {report_path}")
+        print(f"OK: Report generated → {report_path}")
         print()
         print(report_md)
 

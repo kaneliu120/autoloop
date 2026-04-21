@@ -1,575 +1,575 @@
-# Loop Protocol — OODA 迭代循环规范
+# Loop Protocol — OODA Iteration Loop Specification
 
-**协议版本**：1.0.0
+**Protocol Version**: 1.0.0
 
-> 数据格式规范（参数词汇表、TSV Schema、文件命名、Bootstrap、SSOT）已移至 `references/loop-data-schema.md`。
-> 版本语义定义见 `references/loop-data-schema.md` 开头部分。
-
----
-
-## 概述
-
-每次 AutoLoop 执行都遵循标准的 8 阶段 OODA 循环。本文档定义每个阶段的具体行为、输入输出规范和状态机转换规则。
+> Data format rules (parameter glossary, TSV schema, file naming, Bootstrap, SSOT) have been moved to `references/loop-data-schema.md`.
+> Version semantics are defined at the beginning of `references/loop-data-schema.md`.
 
 ---
 
-## 三层架构职责定义
+## Overview
 
-| 层 | 身份 | 包含 | 不包含 | 依赖方向 |
+Every AutoLoop execution follows the standard 8-phase OODA loop. This document defines the concrete behavior, input/output rules, and state-machine transition rules for each phase.
+
+---
+
+## Responsibility Definition for the Three-layer Architecture
+
+| Layer | Identity | Includes | Excludes | Dependency direction |
 | -- | ---- | ---- | ------ | -------- |
-| Protocol（制度） | 规则/标准/枚举唯一真源 | 门禁阈值、流程参数、枚举、评分方法论 | 执行步骤、工单格式 | 无向上依赖（最上层） |
-| Command（编排） | 调度器/施工方案 | 流程步骤、工单生成、角色调度、结果收集 | 阈值数值、评判标准 | 读取 Protocol，输出到 Template |
-| Template（格式） | 报告格式/交付物 | 章节标题、表头、占位符 | 条件逻辑、bash 命令 | 被 Command 填充（最下层） |
+| Protocol | Single source of truth for rules / standards / enums | Gate thresholds, flow parameters, enums, scoring methodology | Execution steps, ticket format | No upward dependency (top layer) |
+| Command | Orchestration / execution plan | Workflow steps, ticket generation, role dispatching, result collection | Threshold values, evaluation standards | Reads Protocol, outputs to Template |
+| Template | Report format / deliverable | Section titles, table headers, placeholders | Conditional logic, bash commands | Filled by Command (bottom layer) |
 
-**边界判定**：制度变了(阈值/枚举) → protocol；做法变了(步骤顺序/工单) → command；格式变了(标题/表头) → template。
+**Boundary rule**: if the institution changes (thresholds / enums) → protocol; if the method changes (step order / tickets) → command; if the format changes (titles / headers) → template.
 
 ---
 
-## 状态机
+## State Machine
 
-```
-Bootstrap → OBSERVE → ORIENT → DECIDE → ACT → VERIFY → SYNTHESIZE → EVOLVE → REFLECT → OBSERVE(下一轮) / 已完成
+```text
+Bootstrap → OBSERVE → ORIENT → DECIDE → ACT → VERIFY → SYNTHESIZE → EVOLVE → REFLECT → OBSERVE (next round) / Completed
                                                                                           ↕
-                                                                                   [暂停等待确认]
+                                                                                   [Paused for confirmation]
 ```
 
-**核心规则**：
-- **不可逆**：ACT 开始后 DECIDE 锁定，需调整策略必须完成当轮后在下一轮 DECIDE 调整
-- **暂停点**：EVOLVE / Phase 5 可进入暂停等待确认状态，等待用户输入后恢复
-- **错误处理**：任何阶段错误 → 写入 progress.md → 尝试恢复 → 无法恢复则终止并说明原因
-- **阶段枚举**: `OBSERVE`, `ORIENT`, `DECIDE`, `ACT`, `VERIFY`, `SYNTHESIZE`, `EVOLVE`, `REFLECT`
-- **执行确定性**：`autoloop-controller.py --strict`（或 `AUTOLOOP_STRICT=1`）时，VERIFY 内评分 JSON / validate / variance check 任一失败则**不进入** SYNTHESIZE；`autoloop-validate.py --strict` 将门禁契约问题计为错误。
-- **切片执行（L1 Runner）**：`autoloop-controller.py <work_dir> --stop-after <PHASE>` 执行到该阶段结束、更新 `checkpoint.json` 后退出，便于无人值守宿主分段插入模型调用；约定与运维见 `docs/RUNNER.md`。
+**Core rules**:
+- **Irreversible**: once ACT starts, DECIDE is locked. To adjust strategy, finish the current round first and change it in the next round's DECIDE
+- **Pause points**: EVOLVE / Phase 5 may enter a paused-for-confirmation state and resume after user input
+- **Error handling**: any phase error → write to `progress.md` → attempt recovery → terminate with explanation if recovery fails
+- **Phase enum**: `OBSERVE`, `ORIENT`, `DECIDE`, `ACT`, `VERIFY`, `SYNTHESIZE`, `EVOLVE`, `REFLECT`
+- **Execution determinism**: when `autoloop-controller.py --strict` (or `AUTOLOOP_STRICT=1`) is enabled, if any of scoring JSON / validate / variance check fails in VERIFY, the loop **must not enter** SYNTHESIZE; `autoloop-validate.py --strict` counts gate-contract issues as errors.
+- **Sliced execution (L1 Runner)**: `autoloop-controller.py <work_dir> --stop-after <PHASE>` runs through the end of that phase, updates `checkpoint.json`, and exits, allowing an unattended host to insert model calls between slices; conventions and operations are documented in `docs/RUNNER.md`.
 
-### OBSERVE / ORIENT 表格中的「差距」列
+### The "Gap" column in OBSERVE / ORIENT tables
 
-该列为**启发式排序提示**（便于人工扫 CRITICAL/MODERATE），**不是**与 `gate-manifest` 等价的正式质量度量；正式判定以 `autoloop-score` 与 `check_gates_passed` 为准。
+This column is a **heuristic sorting hint** (helpful for manually scanning CRITICAL / MODERATE items). It is **not** the formal quality measure equivalent to `gate-manifest`; formal judgment is determined by `autoloop-score` and `check_gates_passed`.
 
-### EVOLVE 检测信号优先级（同维度）
+### Priority of EVOLVE detection signals (within the same dimension)
 
-当同一维度同时满足多类检测时，控制器侧优先级为：**回归（regressing）> 停滞（stagnating）> 振荡（oscillation）** — 已处于停滞/回归的维度不再重复报振荡。
+When the same dimension matches multiple detection types simultaneously, the controller uses the priority: **regressing > stagnating > oscillation**. A dimension already classified as stagnant / regressing does not also report oscillation.
 
-### T4：交付阶段与 OODA 轮次
+### T4: Delivery phases and OODA rounds
 
-| delivery-phases.md | OODA 轮次（概念） | 说明 |
-|--------------------|------------------|------|
-| Phase 1–5 | 常映射在多轮 `OBSERVE…REFLECT` 上完成 | 具体映射见 `references/delivery-phases.md` 文末 |
-| 每轮仍走完整 8 阶段 | `gate-manifest.json` 中 T4 默认 OODA 轮次为 5（与五段交付对齐） | `plan.budget.max_rounds` 可覆盖 |
+| delivery-phases.md | OODA rounds (conceptual) | Notes |
+|--------------------|--------------------------|------|
+| Phase 1–5 | Commonly mapped across multiple `OBSERVE…REFLECT` rounds | See the end of `references/delivery-phases.md` for the concrete mapping |
+| Each round still runs all 8 phases | The default T4 OODA round count in `gate-manifest.json` is 5 (aligned with five delivery phases) | `plan.budget.max_rounds` may override |
 
-## OBSERVE — 观察
+## OBSERVE — Observation
 
-### 输入
-- `autoloop-plan.md`（任务计划）
-- `autoloop-progress.md`（历史进度）
-- `autoloop-findings.md`（已有发现，包含上轮 REFLECT 记录）
-- 代码库当前状态（如果是工程类任务）
+### Inputs
+- `autoloop-plan.md` (task plan)
+- `autoloop-progress.md` (historical progress)
+- `autoloop-findings.md` (existing findings, including REFLECT records from the last round)
+- Current repository state (for engineering tasks)
 
-### OBSERVE Step 0: 读取上轮反思（Round 2+ 必执行）
+### OBSERVE Step 0: Read last-round reflection (mandatory from Round 2 onward)
 
-在扫描当前状态之前，先读取 `autoloop-findings.md` 中的反思章节（**4 层结构表**）：
+Before scanning the current state, first read the reflection section in `autoloop-findings.md` (the **4-layer structure table**):
 
-1. **遗留问题** → 本轮优先处理（状态为"待处理"或"跨轮遗留"的问题）
-2. **有效策略** → 本轮 DECIDE 优先选用（评价为"保持"的策略）
-3. **无效策略** → 本轮 DECIDE 排除，不重复尝试（评价为"避免"的策略）
-4. **已识别模式** → 如果有系统性根因，本轮需要改变方法论而非继续修补
-5. **瓶颈信息** → 如果某维度连续卡住，本轮尝试突破性策略
-6. **经验教训** → 调整本轮的方法和预期
+1. **Unresolved issues** → prioritize in this round (issues with status "Pending" or "Cross-round carryover")
+2. **Effective strategies** → prioritize for DECIDE in this round (strategies evaluated as "Maintain")
+3. **Ineffective strategies** → exclude in this round's DECIDE; do not retry (strategies evaluated as "Avoid")
+4. **Recognized patterns** → if there is a systemic root cause, this round must change methodology instead of continuing to patch
+5. **Bottleneck information** → if a dimension has been blocked across consecutive rounds, try a breakthrough strategy this round
+6. **Lessons learned** → adjust this round's method and expectations
 
-这确保每一轮都带着上轮的认知进入，而非从零开始。
+This ensures each round starts with the previous round's knowledge instead of starting from zero.
 
-**全局经验读取**：除读取当前任务的 findings.md 外，还须读取 `references/experience-registry.md` 全局策略效果库中同模板 + context_tags重叠 的推荐策略（按 success_rate 降序）。context_tags重叠 = 当前任务的标签与策略的context_tags至少有2个相同标签。无重叠标签的策略不推荐，避免跨上下文误迁移。首轮冷启动时，全局经验是唯一的策略参考来源。
+**Global experience read**: besides reading the current task's `findings.md`, also read the recommended strategies in the global strategy-effect library `references/experience-registry.md` for the same template + overlapping `context_tags` (sorted by `success_rate` descending). `context_tags` overlap means the current task tags and the strategy's `context_tags` share at least 2 tags. Strategies without overlapping tags are not recommended, avoiding incorrect cross-context migration. On first-round cold start, global experience is the only source of strategy reference.
 
-**协议版本检测**：OBSERVE 开始时检查当前 `protocol_version` 是否与上次任务的版本一致。如果不一致（minor/major变更），触发重基线流程（规则见 `references/evolution-rules.md` 重基线章节），以新基线作为本轮起点。
+**Protocol version check**: at OBSERVE start, check whether the current `protocol_version` matches the version from the previous task. If not (minor / major change), trigger the re-baselining flow (see the re-baselining section in `references/evolution-rules.md`) and use the new baseline as the starting point for this round.
 
-**T7/T8 的 OBSERVE Step 0 同样适用**：T7 和 T8 在 Round 2+ 执行 OBSERVE 时，必须首先读取 findings.md 的反思章节，获取遗留问题清单、无效修复模式和已识别的系统性根因，再制定本轮修复策略。
+**OBSERVE Step 0 also applies to T7/T8**: when T7 and T8 execute OBSERVE in Round 2+, they must first read the reflection section in `findings.md` to obtain the carryover issue list, ineffective repair patterns, and recognized systemic root causes before defining this round's repair strategy.
 
-**即时学习钩子**：如果 Step 0 读取 findings 时发现跨轮重复模式（同一问题连续 2+ 轮出现），立即写入 findings.md "模式识别" 部分，不等 REFLECT。这确保即使会话在 ACT→REFLECT 之间崩溃，已识别的重复模式不会丢失。
+**Immediate learning hook**: if Step 0 finds cross-round repeated patterns while reading findings (the same issue appears for 2+ consecutive rounds), write them immediately into the "Pattern Recognition" section of `findings.md` instead of waiting for REFLECT. This ensures recognized repeated patterns are not lost even if the session crashes between ACT and REFLECT.
 
-### 第1轮 Bootstrap 规则
+### Round 1 Bootstrap rule
 
-**第1轮 OBSERVE 没有上轮 VERIFY 的结果，必须执行基线采集（baseline collection）代替：**
+**Round 1 OBSERVE has no previous VERIFY result and must perform baseline collection instead:**
 
-- **知识类任务（T1/T2/T5/T6）**：当前发现数 = 0，已覆盖维度 = 0，所有质量门禁得分 = 0。将此作为 iteration 0 基线写入 progress.md。
-- **工程类任务（T4/T7/T8）**：运行初始检测命令获取基线分数（按 `syntax_check_cmd` 扫描所有文件、code-reviewer 全量扫描），将检测结果作为 iteration 0 基线写入 progress.md。
+- **Knowledge tasks (T1/T2/T5/T6)**: current findings = 0, covered dimensions = 0, all quality-gate scores = 0. Write this as the iteration 0 baseline to `progress.md`.
+- **Engineering tasks (T4/T7/T8)**: run the initial detection commands to get baseline scores (scan all files with `syntax_check_cmd`, run a full scan with `code-reviewer`) and write the detection results as the iteration 0 baseline to `progress.md`.
 
-基线写入格式：
+Baseline write format:
 ```markdown
-### 基线（Iteration 0）
-- 执行时间：{ISO 8601}
-- 基线来源：第1轮初始采集（无历史数据）
-- 各维度得分：{每个维度: 0 或初始检测值}
-- 说明：首轮无先验数据，以此基线作为第1轮 OBSERVE 的"上轮结果"
+### Baseline (Iteration 0)
+- Execution time: {ISO 8601}
+- Baseline source: initial collection for Round 1 (no historical data)
+- Scores by dimension: {each dimension: 0 or initial detection value}
+- Notes: Round 1 has no prior data; this baseline is treated as the "previous-round result" for Round 1 OBSERVE
 ```
 
-### 必须回答的问题
+### Questions that must be answered
 
-1. **目标状态是什么？** — 从 plan.md 读取质量门禁目标值
-2. **当前状态是什么？** — 最新的质量门禁实际值（上轮 VERIFY 的结果；第1轮使用 iteration 0 基线）
-3. **差距是什么？** — 目标值 - 当前值，每个维度
-4. **时间/预算剩余多少？** — 已用轮次 / 最大轮次，计算剩余百分比
-5. **上一轮有什么意外发现？** — 从 findings.md 读取上轮追加的内容（第1轮：无，填写"无历史发现"）
+1. **What is the target state?** — read the target quality-gate values from `plan.md`
+2. **What is the current state?** — the latest actual quality-gate values (VERIFY result from the previous round; use the iteration 0 baseline in Round 1)
+3. **What is the gap?** — target value - current value, per dimension
+4. **How much time / budget remains?** — rounds used / maximum rounds, calculate remaining percentage
+5. **What unexpected findings came from the last round?** — read the content appended in the last round from `findings.md` (Round 1: none, write "No historical findings")
 
-### 输出
-写入 progress.md：维度差距(当前/目标/差距) + 剩余预算% + 本轮重点(1-2维度) + 上轮遗留。
+### Output
+Write to `progress.md`: dimension gap (current / target / gap) + remaining budget % + this round's focus (1-2 dimensions) + carryover from the previous round.
 
 ---
 
-## ORIENT — 定向分析
+## ORIENT — Orientation Analysis
 
-### 目标
-将观察到的差距转化为可执行的分析结论：**为什么还有差距？怎么解决？**
+### Goal
+Turn the observed gaps into actionable analysis: **why does the gap remain, and how do we fix it?**
 
-### 分析框架
+### Analysis framework
 
-**差距成因分析**（选择适用的）：
-- 信息不足（未覆盖的维度/来源）
-- 质量不足（找到了但证据不够强）
-- 策略无效（方法对，但在这个领域没有信息）
-- 认知偏差（搜索关键词限制了结果）
-- 资源约束（时间/预算不足）
+**Gap cause analysis** (choose what applies):
+- Insufficient information (uncovered dimensions / sources)
+- Insufficient quality (information found, but evidence is not strong enough)
+- Ineffective strategy (the method is correct, but there is no information in this domain)
+- Cognitive bias (search keywords restricted the results)
+- Resource constraints (insufficient time / budget)
 
-**策略调整规则**：
+**Strategy adjustment rules**:
 
-| 场景 | 分析结论 |
+| Scenario | Analysis conclusion |
 |------|---------|
-| 同一维度连续 2 轮无进展（改善 < 模板停滞阈值，见 parameters.md）| 当前方法已到极限，需要换方向 |
-| 多个维度同时落后 | 先解决最高优先级的，不要分散 |
-| 发现计划外的重要维度 | 评估是否扩展范围（考虑预算） |
-| 发现紧急 P1 问题（数据丢失/安全漏洞）| 立即提升，暂停其他工作 |
-| **振荡检测**：同一维度连续 3 轮分数在 ±0.5 带宽内波动 **且呈非单调（方向交替）** | 报告振荡，切换到完全不同的策略方向（实现见 `autoloop-controller.py` `detect_oscillation`，与单纯单调漂移区分） |
-| **跨维度回归**：本轮改善维度 A 但维度 B 跌破门禁阈值 | 视为回归，下轮优先修复 B，策略标记为"有副作用" |
+| No progress for the same dimension across 2 consecutive rounds (improvement < template stagnation threshold; see `parameters.md`) | The current method has reached its limit and needs a new direction |
+| Multiple dimensions lag simultaneously | Solve the highest-priority one first; do not spread effort |
+| An important unplanned dimension is discovered | Evaluate whether to expand scope (consider the budget) |
+| A critical P1 issue is discovered (data loss / security vulnerability) | Escalate immediately and pause other work |
+| **Oscillation detection**: the same dimension fluctuates within a ±0.5 band for 3 consecutive rounds **and is non-monotonic (direction alternates)** | Report oscillation and switch to a completely different strategy direction (implemented in `autoloop-controller.py` `detect_oscillation`, distinct from simple monotonic drift) |
+| **Cross-dimension regression**: dimension A improves this round but dimension B drops below the gate threshold | Treat as regression; prioritize fixing B next round and mark the strategy as "has side effects" |
 
-### 输出
-写入 progress.md：主要差距原因 + 本轮策略(名称+说明) + 范围调整 + 预期改善分数。
-
----
-
-## DECIDE — 决策
-
-### 目标
-制定**具体可执行**的行动计划：谁做什么，用什么工具，期望什么结果。
-
-### 决策原则
-
-**并行优先**：能并行的任务一定并行。判断标准：
-- 任务 A 的输出不是任务 B 的输入 → 并行
-- 任务 A 和 B 操作不同文件 → 并行
-
-**最小化范围**：每轮只做本轮最重要的事，不要一次性做所有事。
-
-**有 fallback**：每个行动必须有备用策略（如果 subagent 找不到信息，下一步怎么办）。
-
-**优先选用"保持"策略**：本轮 DECIDE 优先使用 findings.md 反思章节中标记为"保持"的策略；排除标记为"避免"的策略。
-
-### 行动计划格式
-写入 progress.md 表格：行动编号 | 行动 | 执行者 | 输入 | 期望输出 | 可并行？ + 执行顺序(并行/串行) + Fallback 策略。
-
-**单策略隔离原则**：每轮 DECIDE 阶段只选择一个主策略执行，实现可归因的 A/B 验证。多策略并行无法归因分数变化，会导致策略效果库积累伪相关。
-
-**"策略"的精确定义**:
-- "策略" = DECIDE 阶段选择的方法论方向（如"多源交叉验证"、"option-analyzer 并行评估"），以 strategy_id 唯一标识
-- "策略" ≠ subagent 并发数量。一个策略内可调度多个 subagent 并行执行子任务
-- **判断标准**: 所有 subagent 的 TSV 行共享同一个 strategy_id → 单策略合规
-
-例外：当多个独立维度同时需要修复且互不影响时（如安全性和可维护性分属不同代码区域），可并行执行，但每个维度的策略必须独立记录和归因。并行轮次的 results.tsv strategy_id 填 `multi:{S01-xxx+S02-yyy}`（须为完整 `SNN-描述`，见 experience-registry P3-06），side_effect 标注"混合归因，不入策略效果库"。
-
-**strategy_id 命名规则**：每个策略在 DECIDE 阶段命名，格式为 `S{NN}-{简短描述}`（如 `S01-sql-param`、`S02-error-handler`）。此 ID 贯穿整个轮次的 results.tsv、findings.md、progress.md 和 plan.md，确保跨文件可追溯。
-
-**影响面分析（DECIDE阶段必执行）**：
-
-执行策略前必须分析跨维度依赖：
-1. 本轮策略的目标维度是什么？
-2. 该维度与哪些其他维度有依赖关系？常见依赖：
-   - 安全性 ↔ 可靠性（安全加固可能增加异常处理复杂度）
-   - 性能 ↔ 可维护性（性能优化可能降低代码可读性）
-   - 架构 ↔ 全部维度（架构变更影响面最广）
-3. 列出所有可能受影响的维度
-4. VERIFY阶段必须验证：目标维度 + 所有受影响维度
-5. 任何受影响维度跌破门禁阈值 → 视为回归，下轮优先修复
-
-**`plan.decide_act_handoff.impacted_dimensions`**：仍应在 DECIDE 显式列出可能受影响的维度，便于 VERIFY 与 TSV `side_effect` 交叉校验。若留空，`autoloop-controller.py` 在 EVOLVE 仍会根据 **分数历史** 对「上轮 hard 满足、本轮 hard 未满足」的维度做 **pass→fail 推断** 并触发跨维回归暂停（与仅 handoff 非空才检测的旧行为相比更不易漏刹）。
-
-side_effect字段使用强化：不允许未经验证直接填"无"，必须在VERIFY阶段实际测量受影响维度后才能确认为"无"。
+### Output
+Write to `progress.md`: main gap causes + this round's strategy (name + explanation) + scope adjustments + expected score improvement.
 
 ---
 
-## ACT — 行动
+## DECIDE — Decision
 
-### 目标
-按决策计划调度 subagents 执行，收集所有输出。
+### Goal
+Define a **concrete and executable** action plan: who does what, with which tools, expecting what result.
 
-### Subagent 调度规范
+### Decision principles
 
-每次调度必须提供完整上下文（详见 `references/agent-dispatch.md`）：
-1. 角色定义（你是 X subagent）
-2. 具体任务（可操作，不是方向）
-3. 输入（文件绝对路径、信息内容）
-4. 约束（不可做什么）
-5. 验收标准（完成的判断条件）
-6. 输出格式（明确的结构）
+**Parallel first**: if tasks can run in parallel, they must run in parallel. Criteria:
+- The output of task A is not the input of task B → parallel
+- Task A and task B operate on different files → parallel
 
-### 执行记录
-每个 subagent 完成后记录到 progress.md 表格：# | 执行者 | 任务 | 状态 | 结果摘要。
+**Minimize scope**: in each round, do only the most important work for that round; do not try to do everything at once.
 
-### 即时学习钩子
+**Always have a fallback**: every action must have a backup strategy (if the subagent cannot find the information, what happens next).
 
-subagent 返回中的 `discoveries`（环境事实、资源变化、工具发现）立即写入 findings.md 的"即时发现"区域，不等 REFLECT。策略评估（保持/避免）仍在 REFLECT 阶段进行。详见 `references/agent-dispatch.md`「即时发现」规范。
+**Prefer "Maintain" strategies**: DECIDE in this round should prioritize strategies marked "Maintain" in the reflection section of `findings.md`; exclude strategies marked "Avoid".
 
-controller 调用 `process_act_discoveries()` 处理：写入 findings.md + state.json `metadata.immediate_discoveries`。
+### Action plan format
+Write a table to `progress.md`: action ID | action | executor | input | expected output | parallel? + execution order (parallel / serial) + fallback strategy.
 
-### 统一重试上限规则
+**Single-strategy isolation principle**: in each DECIDE phase, select only one primary strategy for execution so A/B verification remains attributable. Running multiple strategies in parallel makes score changes non-attributable and causes spurious correlations in the strategy-effect library.
 
-**默认重试上限 = 2 次**（适用于所有模板和所有 subagent）。
+**Precise definition of "strategy"**:
+- "Strategy" = the methodological direction selected in DECIDE (for example, "multi-source cross-validation", "parallel option-analyzer evaluation"), uniquely identified by `strategy_id`
+- "Strategy" ≠ the number of concurrent subagents. Multiple subagents may run subtasks in parallel inside one strategy
+- **Compliance rule**: all TSV rows from all subagents share the same `strategy_id` → compliant with the single-strategy rule
 
-例外：delivery 模板（T4）因包含人工确认环节，允许 Phase 2 审查-修复循环最多 **3 轮**。所有其他模板遵守 2 次上限。
+Exception: when multiple independent dimensions need fixing simultaneously and do not affect each other (for example, security and maintainability belong to different code areas), parallel execution is allowed, but each dimension's strategy must be recorded and attributed independently. In `results.tsv`, the `strategy_id` for such a parallel round should be `multi:{S01-xxx+S02-yyy}` (must use the full `SNN-description` form; see experience-registry P3-06), and `side_effect` should say "mixed attribution, do not enter strategy-effect library."
 
-各协议文件中涉及重试/回退次数的描述均以本规则为准：
-- `agent-dispatch.md` 中 subagent 重试 → 最多 2 次
-- `delivery-phases.md` 中 Phase 2 修复-审查循环 → 最多 3 轮（仅 T4，因含人工确认）
-- `delivery-phases.md` 中其他阶段回退 → 最多 2 次（与本规则对齐）
+**`strategy_id` naming rule**: each strategy is named in DECIDE with the format `S{NN}-{short-description}` (for example, `S01-sql-param`, `S02-error-handler`). This ID propagates through the round's `results.tsv`, `findings.md`, `progress.md`, and `plan.md` to ensure cross-file traceability.
 
-### 失败处理
+**Impact-surface analysis (mandatory in DECIDE)**:
 
-subagent 失败时，controller 自动分类 `failure_type` 并选择差异化恢复策略：
+Before executing the strategy, analyze cross-dimension dependencies:
+1. What dimension is targeted by this round's strategy?
+2. Which other dimensions depend on it? Common dependencies:
+   - Security ↔ reliability (security hardening may increase exception-handling complexity)
+   - Performance ↔ maintainability (performance optimization may reduce readability)
+   - Architecture ↔ all dimensions (architecture changes have the broadest impact)
+3. List all potentially impacted dimensions
+4. VERIFY must validate: the target dimension + all impacted dimensions
+5. If any impacted dimension drops below its gate threshold → treat as regression and prioritize it next round
 
-| failure_type | 恢复策略 | 重试方式 |
+**`plan.decide_act_handoff.impacted_dimensions`**: DECIDE should still explicitly list possibly impacted dimensions so VERIFY and TSV `side_effect` can cross-check. If left empty, `autoloop-controller.py` in EVOLVE will still infer **pass→fail** from **score history** for dimensions that passed hard gates in the previous round but not in the current round, and trigger a cross-dimension regression pause. This is less likely to miss a brake than the old behavior that only detected regression when the handoff was non-empty.
+
+**Strengthened use of the `side_effect` field**: it is not allowed to write "none" without verification. "None" can only be confirmed after VERIFY actually measures the impacted dimensions.
+
+---
+
+## ACT — Action
+
+### Goal
+Dispatch subagents according to the decision plan and collect all outputs.
+
+### Subagent dispatch rules
+
+Each dispatch must provide full context (see `references/agent-dispatch.md` for details):
+1. Role definition (you are X subagent)
+2. Concrete task (actionable, not directional)
+3. Inputs (absolute file paths, information content)
+4. Constraints (what must not be done)
+5. Acceptance criteria (how completion is judged)
+6. Output format (explicit structure)
+
+### Execution log
+After each subagent completes, record a table in `progress.md`: # | executor | task | status | result summary.
+
+### Immediate learning hook
+
+`discoveries` returned by the subagent (environment facts, resource changes, tool discoveries) are written immediately to the "Immediate Discoveries" area of `findings.md` instead of waiting for REFLECT. Strategy evaluation (`Maintain` / `Avoid`) still belongs in REFLECT. See the "Immediate Discoveries" rule in `references/agent-dispatch.md`.
+
+The controller processes this with `process_act_discoveries()`: write to `findings.md` + `state.json` `metadata.immediate_discoveries`.
+
+### Unified retry-cap rule
+
+**Default retry cap = 2 attempts** (applies to all templates and all subagents).
+
+Exception: the delivery template (T4), because it includes human confirmation, allows the Phase 2 review-fix cycle to run up to **3 rounds**. All other templates must respect the cap of 2.
+
+Any retry / fallback counts described in protocol files must follow this rule:
+- Subagent retry in `agent-dispatch.md` → at most 2 attempts
+- Phase 2 fix-review cycle in `delivery-phases.md` → at most 3 rounds (T4 only, because it includes human confirmation)
+- Other phase rollbacks in `delivery-phases.md` → at most 2 attempts (aligned with this rule)
+
+### Failure handling
+
+When a subagent fails, the controller automatically classifies `failure_type` and selects a differentiated recovery strategy:
+
+| failure_type | Recovery strategy | Retry mode |
 |-------------|---------|---------|
-| `timeout` | 拆分任务（缩小范围/减少文件数）后重试 | 缩小范围重试（最多 2 次） |
-| `capability_gap` | 换角色或调整工具配置 | 换 subagent 角色重试（最多 2 次） |
-| `resource_missing` | 暂停并请求用户提供缺失资源 | 暂停等待用户输入 |
-| `external_error` | 指数退避重试（delay = min(base * 2^attempt, 300s)） | 自动退避重试（最多 2 次） |
-| `code_error` | 记录 bug，修复后重试 | 修复后重试（最多 2 次） |
-| `partial_success` | 从断点继续（保留已完成部分） | 继续未完成部分（最多 2 次） |
+| `timeout` | Retry after splitting the task (narrow scope / fewer files) | Retry with smaller scope (max 2 attempts) |
+| `capability_gap` | Change role or adjust tool configuration | Retry with a different subagent role (max 2 attempts) |
+| `resource_missing` | Pause and request the missing resource from the user | Pause and wait for user input |
+| `external_error` | Retry with exponential backoff (`delay = min(base * 2^attempt, 300s)`) | Automatic backoff retry (max 2 attempts) |
+| `code_error` | Record the bug, fix it, and retry | Retry after repair (max 2 attempts) |
+| `partial_success` | Continue from the breakpoint (keep completed parts) | Continue the unfinished part (max 2 attempts) |
 
-**处理流程**：
-1. 记录 `failure_type` + `failure_detail` + `completion_ratio` 到 `iterations[-1].act`
-2. 根据上表选择恢复策略执行（所有类型遵守统一重试上限 = 2 次，`resource_missing` 除外——需用户介入）
-3. 如恢复策略也失败 → 标记该任务为"部分完成"，继续其他任务
-4. 在 VERIFY 阶段说明影响
+**Handling flow**:
+1. Record `failure_type` + `failure_detail` + `completion_ratio` into `iterations[-1].act`
+2. Select and execute the recovery strategy based on the table above (all types respect the unified retry cap = 2, except `resource_missing`, which requires user involvement)
+3. If the recovery strategy also fails → mark the task as "Partially Completed" and continue other tasks
+4. Explain the impact in VERIFY
 
-**failure_type 自动分类规则**（controller 端，当 subagent 未显式返回 failure_type 时）：
-- exit_code=124 → `timeout`
-- 错误信息含 `timeout` / `timed out` / `context limit` → `timeout`
-- 错误信息含 `rate limit` / `429` / `503` / `network` → `external_error`
-- 错误信息含 `traceback` / `syntax error` / `import error` → `code_error`
-- 错误信息含 `not found` / `permission denied` / `no such file` → `resource_missing`
-- 以上均不匹配 → `capability_gap`（默认）
+**Automatic `failure_type` classification rules** (controller-side, when the subagent does not explicitly return `failure_type`):
+- `exit_code=124` → `timeout`
+- Error message contains `timeout` / `timed out` / `context limit` → `timeout`
+- Error message contains `rate limit` / `429` / `503` / `network` → `external_error`
+- Error message contains `traceback` / `syntax error` / `import error` → `code_error`
+- Error message contains `not found` / `permission denied` / `no such file` → `resource_missing`
+- None of the above match → `capability_gap` (default)
 
-### 跨平台安全管线（P3-04/05）
+### Cross-platform security pipeline (P3-04/05)
 
-非 Claude Code 环境中，ACT 阶段执行前会通过 `autoloop-security.py` 检查：
+Before ACT executes in non-Claude Code environments, `autoloop-security.py` checks:
 
-1. **工具白名单**：subagent 请求的工具必须在 TOOL_ALLOWLIST 中
-2. **敏感路径检测**：读写 .env/credentials/secrets 等路径会被拦截
-3. **写操作预审批**：修改 .py/.sh/配置文件 需要确认
+1. **Tool allowlist**: tools requested by the subagent must be in `TOOL_ALLOWLIST`
+2. **Sensitive-path detection**: reads / writes to paths such as `.env` / `credentials` / `secrets` are blocked
+3. **Pre-approval for writes**: modifying `.py` / `.sh` / config files requires confirmation
 
-Claude Code 环境中这些检查由宿主的权限系统处理，security.py 不激活。
-
----
-
-## VERIFY — 验证
-
-### 目标
-客观评估本轮执行结果的质量，更新所有维度的得分。
-
-### 验证规则
-
-**必须量化**：不接受"好多了"，只接受"从 6.2 提升到 7.8"。
-
-**不信任 subagent 自评**：每个 subagent 对自己工作的评价需要独立验证：
-- 代码类：运行 `{syntax_check_cmd}`（按 `syntax_check_file_arg` 决定是否附加文件参数）
-- 调研类：检查信息来源数量和质量
-- 修复类：重新运行受影响的 reviewer
-
-**回归检查**：本轮的修复是否引入了新问题？
-- 工程类：运行所有受影响文件的编译验证
-- 内容类：检查前几轮的结论是否仍然成立
-
-### 验证输出格式
-写入 progress.md：得分更新表(维度/上轮/本轮/变化/目标/状态) + 改进详情 + 新发现问题 + 验证结论。
+In Claude Code environments, these checks are handled by the host permission system and `security.py` is not activated.
 
 ---
 
-## SYNTHESIZE — 整合
+## VERIFY — Verification
 
-### 目标
-合并所有 subagent 的输出，解决矛盾，更新核心文件。
+### Goal
+Objectively evaluate the quality of this round's execution result and update scores for all dimensions.
 
-### 整合步骤
+### Verification rules
 
-1. **合并发现**：将本轮所有 subagent 的输出追加到 `autoloop-findings.md`
-2. **解决矛盾**：
-   - 同一事实不同说法 → 列出两者，说明依据
-   - 同一文件的不同问题 → 合并，避免重复
-   - 冲突的修复建议 → 选择更安全的（改动更小、影响更小）
-3. **更新结构化数据**：如果有 autoloop-results.tsv，同步更新
-4. **归档本轮**：将本轮产出标注轮次，便于后续追溯
+**Must quantify**: do not accept "much better"; accept only "improved from 6.2 to 7.8".
 
-### 矛盾解决规则
+**Do not trust subagent self-evaluation**: every subagent's evaluation of its own work must be independently verified:
+- Code tasks: run `{syntax_check_cmd}` (whether to append file arguments depends on `syntax_check_file_arg`)
+- Research tasks: check source count and source quality
+- Repair tasks: rerun the affected reviewer(s)
 
-| 矛盾类型 | 解决规则 |
+**Regression check**: did this round's fix introduce new problems?
+- Engineering tasks: run compile validation on all affected files
+- Content tasks: check whether conclusions from previous rounds still hold
+
+### Verification output format
+Write to `progress.md`: score update table (dimension / previous round / current round / change / target / status) + improvement details + newly discovered issues + verification conclusion.
+
+---
+
+## SYNTHESIZE — Synthesis
+
+### Goal
+Merge all subagent outputs, resolve contradictions, and update core files.
+
+### Synthesis steps
+
+1. **Merge findings**: append all subagent outputs from this round to `autoloop-findings.md`
+2. **Resolve contradictions**:
+   - Same fact, different wording → list both and explain the basis
+   - Different issues in the same file → merge them and avoid duplication
+   - Conflicting repair suggestions → choose the safer one (smaller change, smaller impact)
+3. **Update structured data**: if `autoloop-results.tsv` exists, update it in sync
+4. **Archive the round**: label this round's outputs with the round number for later traceability
+
+### Contradiction resolution rules
+
+| Contradiction type | Resolution rule |
 |---------|---------|
-| A 说"有问题"，B 说"没问题" | 以更保守的（有问题）为准，记录 B 的理由 |
-| 两个 subagent 对同一代码的评分差 > 2 | 运行第三次验证（或人工判断） |
-| 修复方案互相冲突 | 选择改动最小的，记录弃用的原因 |
+| A says "problem exists", B says "no problem" | Use the more conservative answer ("problem exists") and record B's reasoning |
+| Two subagents differ by > 2 in scoring the same code | Run a third verification (or use manual judgment) |
+| Repair plans conflict with each other | Choose the plan with the smallest change and record why the other was discarded |
 
 ---
 
-## EVOLVE — 进化
+## EVOLVE — Evolution
 
-### 目标
-基于本轮结果，决定下一轮策略（或终止）。
+### Goal
+Based on the result of this round, decide the next-round strategy (or termination).
 
-### 终止层级
+### Termination hierarchy
 
-AutoLoop 有四种终止路径，按优先级排列：
+AutoLoop has four termination paths, ordered by priority:
 
-1. **质量门禁全部达标** → 根据 `completion_authority` 决定终止方式（见下方）
-2. **用户中断** → 暂停终止 → 已完成（用户终止），保存进度，说明恢复方法
-3. **预算耗尽（达到最大轮次）** → 预算终止 → 已完成（预算耗尽），输出当前最优结果
-4. **无法继续（连续 2 轮无任何维度进展）** → 无法继续 → 已完成（无法继续），上报原因，列出所需用户输入
+1. **All quality gates met** → determine termination behavior according to `completion_authority` (see below)
+2. **User interruption** → paused termination → Completed (user terminated), save progress, explain how to resume
+3. **Budget exhausted (maximum rounds reached)** → budget termination → Completed (budget exhausted), output the current best result
+4. **Unable to continue (no progress in any dimension for 2 consecutive rounds)** → unable to continue → Completed (unable to continue), report the reason and list required user input
 
-**completion_authority（完成权威）** — 定义在 `gate-manifest.json` 中，按模板区分：
+**`completion_authority`** — defined in `gate-manifest.json`, differentiated by template:
 
-| 权威类型 | 适用模板 | 行为 |
+| Authority type | Applicable templates | Behavior |
 |---------|---------|------|
-| `internal` | T6/T7/T8 | score.py 门禁全部达标即自动终止（`decision=stop`） |
-| `human_review` | T1/T2/T3 | 门禁达标后暂停（`decision=pause`），等待 Kane 审查关键发现后确认完成 |
-| `external_validation` | T4/T5 | 门禁达标后暂停（`decision=pause`），需实际测试/部署验证通过后确认完成 |
+| `internal` | T6/T7/T8 | If all score.py gates pass, terminate automatically (`decision=stop`) |
+| `human_review` | T1/T2/T3 | Pause after gates pass (`decision=pause`) and wait for Kane to review key findings before confirming completion |
+| `external_validation` | T4/T5 | Pause after gates pass (`decision=pause`) and require actual testing / deployment validation before confirming completion |
 
-### 决策树
+### Decision tree
 
+```text
+Are all quality gates met?
+  └─ Yes → successful termination → Completed (terminated by meeting criteria)
+  └─ No →
+      Has the maximum round count been reached?
+        └─ Yes → budget termination → Completed (budget exhausted)
+        └─ No →
+            No progress in all dimensions for 2 consecutive rounds (all dimension improvements < template stagnation threshold; see parameters.md §Iteration Control Parameters)?
+              Template stagnation thresholds:
+              - T1/T2: < relative 3% (general default)
+              - T5: < relative 2% (precise KPI convergence)
+              - T7: < absolute 0.3 points (fine-grained engineering quality improvement)
+              - T8: < absolute 0.5 points (system optimization)
+              - T6/T4: not applicable (T6 retries by unit; T4 advances by phase)
+              └─ Yes → unable to continue → Completed (unable to continue), output the current best result and notify the user
+                        (list the reasons it cannot continue and the user input required; enter paused-for-confirmation)
+              └─ No →
+                  No progress in the same dimension for 2 consecutive rounds (improvement < template stagnation threshold; see parameters.md)?
+                    (Example: T1 current = 80%, threshold = 2.4%; T7 current = 7/10, threshold = 0.3 points)
+                    └─ Yes → change strategy (record attempted methods in strategy history)
+                    └─ No →
+                        Remaining budget < 20%?
+                          └─ Yes → focus on the highest-priority dimension
+                          └─ No → continue the standard strategy
+              → enter next-round OBSERVE
 ```
-所有质量门禁达标？
-  └─ 是 → 成功终止 → 已完成（达标终止）
-  └─ 否 →
-      达到最大轮次？
-        └─ 是 → 预算终止 → 已完成（预算耗尽）
-        └─ 否 →
-            连续 2 轮所有维度均无进展（所有维度改善均 < 模板停滞阈值，见 parameters.md §迭代控制参数）？
-              模板停滞阈值：
-              - T1/T2: < 相对 3%（通用默认）
-              - T5: < 相对 2%（KPI 精确收敛）
-              - T7: < 绝对 0.3 分（工程质量精修）
-              - T8: < 绝对 0.5 分（系统优化）
-              - T6/T4: 不适用（T6 按单元重试，T4 按阶段推进）
-              └─ 是 → 无法继续 → 已完成（无法继续），输出当前最优结果并通知用户
-                        （列出无法继续的原因和所需的用户输入，进入暂停等待确认）
-              └─ 否 →
-                  连续 2 轮同一维度无进展（改善 < 模板停滞阈值，见 parameters.md）？
-                    （示例：T1 当前 80%，阈值 = 2.4%；T7 当前 7/10 分，阈值 = 0.3 分）
-                    └─ 是 → 换策略（记录已尝试方法到策略历史）
-                    └─ 否 →
-                        剩余预算 < 20%？
-                          └─ 是 → 聚焦最高优先级维度
-                          └─ 否 → 继续标准策略
-              → 进入下一轮 OBSERVE
-```
 
-**实现注记（T5 单 KPI）**：`phase_evolve` 中「连续 2 轮**所有**可监控维度均无进展 → 无法继续」要求 **多于一个** 可监控维度（`len(eligible_stag_dims) > 1`），以避免单 KPI 任务被误停。单 KPI 场景下终止路径以 **KPI/门禁达标**、**预算耗尽**、**用户暂停** 为主；与上列决策树字面「所有维度」在单维时 intentionally 不完全一致，以代码为准。
+**Implementation note (single-KPI T5)**: in `phase_evolve`, the condition "2 consecutive rounds with **all** monitorable dimensions showing no progress → unable to continue" requires **more than one** monitorable dimension (`len(eligible_stag_dims) > 1`) to avoid incorrectly stopping single-KPI tasks. In single-KPI scenarios, termination is mainly driven by **KPI / gate met**, **budget exhausted**, and **user pause**. This intentionally does not fully match the literal reading of "all dimensions" in the decision tree above; the code is authoritative.
 
-**OBSERVE / findings.md**：控制器会探测 `autoloop-findings.md` 四层结构并将摘要写入 `metadata.observe_findings_snapshot`；`findings.md` 与 `metadata.protocol_version` 不一致时置 `metadata.rebaseline_required=true` 并 warn（自动暂停重基线为可选，未默认开启）。
+**OBSERVE / `findings.md`**: the controller detects the 4-layer structure in `autoloop-findings.md` and writes a summary to `metadata.observe_findings_snapshot`; when `findings.md` differs from `metadata.protocol_version`, it sets `metadata.rebaseline_required=true` and emits a warning (automatic pause for re-baselining is optional and not enabled by default).
 
-### 进化输出
-写入 **autoloop-progress.md**（与 `autoloop-state.json` 中 `plan.output_files.progress` 一致）：每轮 EVOLVE 结束时由 `autoloop-controller.py` **自动追加** Markdown 小节，含终止判断(继续/达标/预算/无法继续)、原因列表及门禁摘要表。可选关闭：`AUTOLOOP_SKIP_PROGRESS_LOG=1`。人工仍可补充：下轮重点、策略调整、范围变更、预计轮次等叙述。
+### Evolution output
+Write to **`autoloop-progress.md`** (consistent with `plan.output_files.progress` in `autoloop-state.json`): at the end of every EVOLVE phase, `autoloop-controller.py` **automatically appends** a Markdown subsection containing the termination decision (continue / criteria met / budget / unable to continue), reason list, and gate summary table. Optional disable: `AUTOLOOP_SKIP_PROGRESS_LOG=1`. Human writers may still add narrative about next-round focus, strategy adjustment, scope changes, expected round count, and so on.
 
 ---
 
-## REFLECT — 反思
+## REFLECT — Reflection
 
-### Phase 8: REFLECT（反思）
+### Phase 8: REFLECT (Reflection)
 
-> 每轮结束的认知沉淀。不是可选步骤，是强制环节。反思的价值在于被下一轮 OBSERVE Step 0 读取和使用。
+> The knowledge consolidation at the end of each round. This is not optional; it is mandatory. The value of reflection is that it is read and used by OBSERVE Step 0 in the next round.
 
-**输入**: 本轮所有阶段的执行结果、VERIFY 的质量分数、EVOLVE 的决策
+**Input**: execution results from all phases in this round, VERIFY quality scores, and EVOLVE decisions
 
-### iterations[-1].reflect（经验库 `autoloop-experience.py write`）
+### `iterations[-1].reflect` (experience library `autoloop-experience.py write`)
 
-供 REFLECT 阶段写入、控制器自动回传经验库时，建议在 `iterations` 最后一项使用 **JSON 对象**（勿仅用纯文本），并尽量包含：
+When REFLECT writes data and the controller automatically sends it back to the experience library, it is recommended that the last item in `iterations` use a **JSON object** (not plain text only), and include as much of the following as possible:
 
-| 键 | 类型 | 说明 |
+| Key | Type | Description |
 |----|------|------|
-| `strategy_id` | string | 与本轮 DECIDE 一致 |
-| `effect` | string | `保持` / `避免` / `待验证`（与 registry 枚举一致） |
-| `delta` | number | **写入经验库时传给 `autoloop-experience.py --score` 的唯一语义**：单轮分数/门禁变化量（非绝对分、非 Likert） |
-| `rating_1_to_5` | integer | 策略主观效果（1–5）；**仅**用于 findings/人工表；控制器**不会**将其当作 delta 写入经验库 |
-| `score` | number | **遗留键**：若值为整数且 ∈ [1,5]，控制器视为 Likert 并**跳过**经验库 delta 写入；否则按 delta 兼容传入 `--score` |
-| `dimension` | string | 主要影响维度（可选，与 plan.gates dim 对齐更佳） |
-| `lesson_learned` | string | 一句话可执行教训（可选） |
+| `strategy_id` | string | Must match this round's DECIDE |
+| `effect` | string | `Maintain` / `Avoid` / `Pending Validation` (aligned with the registry enum) |
+| `delta` | number | **The only meaning passed to `autoloop-experience.py --score` when writing to the experience library**: single-round score / gate delta (not an absolute score, not Likert) |
+| `rating_1_to_5` | integer | Subjective strategy effect (1–5); used **only** for findings / manual tables; the controller **does not** write it to the experience library as delta |
+| `score` | number | **Legacy key**: if it is an integer in `[1,5]`, the controller treats it as Likert and **skips** experience-library delta writing; otherwise it is passed to `--score` as a delta-compatible value |
+| `dimension` | string | Primary impacted dimension (optional; better if aligned with `plan.gates` `dim`) |
+| `lesson_learned` | string | One-sentence actionable lesson (optional) |
 
-示例（delta + Likert 分离，单行写入 state 时转义引号）：
-`{"strategy_id":"S01-latency","effect":"保持","delta":0.5,"rating_1_to_5":4,"dimension":"latency","lesson_learned":"缓存命中提升明显"}`
+Example (delta + Likert separated; escape quotes when written as a single line into state):
+`{"strategy_id":"S01-latency","effect":"Maintain","delta":0.5,"rating_1_to_5":4,"dimension":"latency","lesson_learned":"Cache hit rate improved significantly"}`
 
-**4 层反思（必须写入 findings.md 的 4 层结构表，不得只写 bullet points）：**
+**4-layer reflection (must be written into the 4-layer structure table in `findings.md`; bullet points alone are not allowed):**
 
-#### 第 1 层：问题登记（Problem Registry）
+#### Layer 1: Problem Registry
 
-写入 findings.md 的"问题清单（REFLECT 第 1 层）"表：
+Write to the "Problem List (REFLECT Layer 1)" table in `findings.md`:
 
-| 轮次 | 问题描述 | 来源 | 严重度 | 状态 | 根因分析 |
+| Round | Problem description | Source | Severity | Status | Root-cause analysis |
 |------|---------|------|--------|------|---------|
-| R{N} | {问题} | {subagent/验证步骤} | P1/P2/P3 | **新发现** / **已修复** / **待处理** / **跨轮遗留** | {为什么} |
+| R{N} | {problem} | {subagent / verification step} | P1/P2/P3 | **Newly Found** / **Fixed** / **Pending** / **Cross-round Carryover** | {why} |
 
-状态字段必须使用统一状态枚举（新发现 / 已修复 / 待处理 / 跨轮遗留）。
+The `status` field must use the unified enum values exactly (`Newly Found` / `Fixed` / `Pending` / `Cross-round Carryover`).
 
-#### 第 2 层：策略复盘（Strategy Review）
+#### Layer 2: Strategy Review
 
-写入 findings.md 的"策略评估（REFLECT 第 2 层）"表：
+Write to the "Strategy Evaluation (REFLECT Layer 2)" table in `findings.md`:
 
-| 轮次 | 策略 | 效果评分(1-5) | 分数变化 | 保持 \| 避免 \| 待验证 | 原因 |
+| Round | Strategy | Effect rating (1-5) | Score change | Maintain \| Avoid \| Pending Validation | Reason |
 |------|------|-------------|---------|---------------------|------|
-| R{N} | {策略描述} | {1-5} | {+/-分数} | **保持** / **避免** / **待验证** | {为什么有效/无效} |
+| R{N} | {strategy description} | {1-5} | {+/-score} | **Maintain** / **Avoid** / **Pending Validation** | {why it worked / did not work} |
 
-评价字段必须使用统一策略评价枚举（保持 / 避免 / 待验证）。
+The evaluation field must use the unified strategy-evaluation enum exactly (`Maintain` / `Avoid` / `Pending Validation`).
 
-#### 第 3 层：模式识别（Pattern Recognition）
+#### Layer 3: Pattern Recognition
 
-写入 findings.md 的"模式识别（REFLECT 第 3 层）"部分：
-- 反复出现的问题类型（系统性根因分析）
-- 收益递减信号（连续轮次改善幅度下降趋势）
-- 跨维度关联（改 A 导致 B 变化）
-- 瓶颈识别（哪个维度/领域一直卡住）
+Write to the "Pattern Recognition (REFLECT Layer 3)" section in `findings.md`:
+- Repeated issue types (systemic root-cause analysis)
+- Diminishing-return signals (trend of lower improvement across consecutive rounds)
+- Cross-dimension correlation (changing A caused B to change)
+- Bottleneck identification (which dimension / area remains stuck)
 
-#### 第 4 层：经验沉淀（Lessons Learned）
+#### Layer 4: Lessons Learned
 
-写入 findings.md 的"经验教训（REFLECT 第 4 层）"部分：
-- 本轮验证了什么假设（成立 / 推翻）
-- 可泛化的方法论（下次类似任务可直接复用）
-- 对 AutoLoop 自身流程的改进建议
+Write to the "Lessons Learned (REFLECT Layer 4)" section in `findings.md`:
+- What hypothesis was validated this round (confirmed / overturned)
+- What methodology generalizes (can be reused directly in similar tasks next time)
+- Suggestions for improving the AutoLoop process itself
 
-**经验提取与分发**：REFLECT 完成后，从本轮发现中提取可泛化的经验条目，按 `references/experience-registry.md` 定义的评估标准（类型、影响层级、置信度）评估后，分发到对应文件。低风险经验直接写入，高风险经验记录为待审批。
+**Experience extraction and distribution**: after REFLECT completes, extract generalizable experience items from this round's findings, evaluate them using the criteria defined in `references/experience-registry.md` (type, impact level, confidence), and distribute them to the corresponding files. Low-risk experience is written directly; high-risk experience is recorded pending approval.
 
-**关键规则**:
-- REFLECT 必须写入 `autoloop-findings.md` 的 4 层结构表，不能只在思考中完成
-- 每轮的反思记录是下一轮 OBSERVE Step 0 的必读输入
-- 问题清单是累积的（跨轮追踪状态变化）
-- 策略评估构建"策略效果知识库"供 DECIDE 使用
-- 状态和评价字段必须使用本文档定义的统一枚举值
-
----
-
-## 终止
-
-### 终止类型处理
-
-**达标终止**：
-1. 更新 plan.md 状态为"完成"
-2. 生成最终报告（文件名见本文档"统一输出文件命名规则"表）
-3. 清理临时文件（可选）
-
-**预算终止**：
-1. 更新 plan.md 状态为"预算耗尽"
-2. 生成"当前最优结果"报告
-3. 明确标注哪些目标未达成
-
-**用户中断**：
-1. 立即保存当前进度
-2. 生成中间报告（标注"用户中断"）
-3. 说明恢复方法（下次运行如何从当前状态继续）
-
-**无法继续**：
-1. 清楚说明无法继续的原因
-2. 列出需要用户提供的信息
-3. 说明提供后如何继续
+**Key rules**:
+- REFLECT must write to the 4-layer structure table in `autoloop-findings.md`; it cannot exist only in thought
+- Each round's reflection record is mandatory input for the next round's OBSERVE Step 0
+- The problem list is cumulative (track status changes across rounds)
+- Strategy evaluation builds the "strategy-effect knowledge library" for DECIDE
+- Status and evaluation fields must use the unified enum values defined in this document
 
 ---
 
-## 循环日志格式
+## Termination
 
-每次完整循环在 `autoloop-progress.md` 产生标准格式日志，包含：迭代编号、开始/结束时间、状态、以及各阶段输出（观察/定向/决策/行动记录/验证/整合/进化决策/反思）。反思部分须记录问题登记数、策略复盘评分、模式识别、经验教训、下轮指导，并标注已写入 findings.md 对应层。
+### Handling by termination type
+
+**Termination by meeting criteria**:
+1. Update the `plan.md` status to "Completed"
+2. Generate the final report (for the file name, see the "Unified Output File Naming Rules" table in this document)
+3. Clean temporary files (optional)
+
+**Budget termination**:
+1. Update the `plan.md` status to "Budget Exhausted"
+2. Generate the "Current Best Result" report
+3. Clearly mark which targets were not met
+
+**User interruption**:
+1. Save current progress immediately
+2. Generate an interim report (marked "User Interrupted")
+3. Explain the resume method (how to continue from the current state next time)
+
+**Unable to continue**:
+1. Clearly explain the reason it cannot continue
+2. List the information required from the user
+3. Explain how work will continue after that information is provided
 
 ---
 
-## Pipeline 并行执行（P3-01）
+## Loop Log Format
 
-### 并行条件判定
+Every complete loop produces a standard log in `autoloop-progress.md`, including: iteration number, start / end time, status, and outputs for each phase (observation / orientation / decision / action log / verification / synthesis / evolution decision / reflection). The reflection section must record problem-registry count, strategy-review rating, pattern recognition, lessons learned, and next-round guidance, and mark which corresponding layer in `findings.md` has been written.
 
-Pipeline 中的模板默认串行执行（T1→T2→T3→T4）。满足以下条件时可并行：
+---
 
-- 两个模板之间无数据依赖（模板 A 的输出不是模板 B 的输入）
-- 两个模板操作不同的文件集合（无写冲突）
+## Pipeline Parallel Execution (P3-01)
 
-### 并行隔离方式
+### Parallel-condition rules
 
-使用 Git Worktree 为每个并行模板创建独立工作空间：
+Templates in the pipeline run serially by default (`T1→T2→T3→T4`). They may run in parallel when all of the following are true:
 
-1. `git worktree add <path> -b autoloop-<template>-<timestamp>` 创建 worktree
-2. 每个模板在独立 worktree 中执行完整 OODA 循环
-3. 完成后合并结果：`git merge --no-ff autoloop-<template>-<timestamp>`
-4. 清理：`git worktree remove <path>` + `git branch -d autoloop-<template>-<timestamp>`
+- No data dependency exists between the two templates (the output of template A is not the input of template B)
+- The two templates operate on different file sets (no write conflict)
 
-### 冲突处理
+### Parallel isolation method
 
-- 合并时如有冲突 → 暂停，通知用户手动解决
-- 并行模板的 findings.md 合并策略：按时间戳交叉排序
+Use Git Worktree to create an isolated workspace for each parallel template:
 
-### 配置
+1. `git worktree add <path> -b autoloop-<template>-<timestamp>` creates a worktree
+2. Each template runs its full OODA loop in its own worktree
+3. After completion, merge results with: `git merge --no-ff autoloop-<template>-<timestamp>`
+4. Cleanup: `git worktree remove <path>` + `git branch -d autoloop-<template>-<timestamp>`
 
-pipeline 配置中增加可选的 `parallel_groups`：
+### Conflict handling
+
+- If a conflict occurs during merge → pause and notify the user for manual resolution
+- Merge strategy for parallel templates' `findings.md`: interleave-sort by timestamp
+
+### Configuration
+
+Add optional `parallel_groups` in the pipeline config:
 
 ```yaml
 pipeline:
   stages:
-    - [T1]           # 串行
-    - [T2]           # 串行（依赖 T1）
-    - [T7, T8]       # 并行组（无依赖）
+    - [T1]           # serial
+    - [T2]           # serial (depends on T1)
+    - [T7, T8]       # parallel group (no dependency)
 ```
 
 ---
 
-## 企业级治理（Governance）
+## Enterprise Governance
 
-企业环境下 AutoLoop 提供治理扩展点，通过 `scripts/autoloop-governance.py` 实现：
+In enterprise environments, AutoLoop provides governance extension points implemented through `scripts/autoloop-governance.py`:
 
-| 能力 | 说明 | 命令 |
+| Capability | Description | Command |
 | ------ | ------ | ------ |
-| **Secrets 检测** | 扫描输出文件中的 API Key、密码、Token 等敏感信息 | `scan-secrets <file>` |
-| **策略违规检测** | 检查 agent 操作是否违反组织策略（如部署需审批） | `check-policy <action>` |
-| **审批流审计** | 记录所有治理事件到 JSONL 审计日志 | `approval-log` |
-| **角色权限** | 基于 RBAC 的用户操作权限检查（admin/developer/reviewer/viewer） | `role-check <user> <action>` |
+| **Secrets detection** | Scan output files for sensitive information such as API keys, passwords, and tokens | `scan-secrets <file>` |
+| **Policy-violation detection** | Check whether agent operations violate organizational policy (for example, deployment requires approval) | `check-policy <action>` |
+| **Approval-flow audit** | Record all governance events into a JSONL audit log | `approval-log` |
+| **Role permissions** | RBAC-based permission checks for user actions (`admin` / `developer` / `reviewer` / `viewer`) | `role-check <user> <action>` |
 
-配置文件位于 `~/.autoloop/governance/`，包括 `policies.json`（策略覆盖）和 `roles.json`（用户角色映射）。单用户场景默认 admin 角色，无需额外配置。
+Config files are located at `~/.autoloop/governance/`, including `policies.json` (policy overrides) and `roles.json` (user-role mapping). In single-user scenarios, the default role is `admin` and no extra config is required.
 
 ---
 
-## Middleware 架构（P3-08）
+## Middleware Architecture (P3-08)
 
-controller 的核心 OODA 8 阶段管道保持不变。横切关注点通过独立的 Middleware 模块处理：
+The controller's core OODA 8-phase pipeline remains unchanged. Cross-cutting concerns are handled by independent Middleware modules:
 
-| Middleware | 职责 | 激活阶段 |
+| Middleware | Responsibility | Activation phase |
 | --------- | ---- | ------- |
-| logging | 统一阶段日志 | 所有阶段 |
-| cost_tracking | 成本累加 | ACT 后 |
-| evaluator_audit | 评分事件记录 | VERIFY 后 |
-| failure_classification | 失败自动分类 | ACT 后 |
-| security | 跨平台安全检查 | ACT 前 |
+| `logging` | Unified phase logging | All phases |
+| `cost_tracking` | Cost accumulation | After ACT |
+| `evaluator_audit` | Scoring-event recording | After VERIFY |
+| `failure_classification` | Automatic failure classification | After ACT |
+| `security` | Cross-platform security checks | Before ACT |
 
-每个 Middleware 可通过 `AUTOLOOP_MIDDLEWARE` 环境变量启用/禁用（逗号分隔列表）。
+Each Middleware can be enabled / disabled via the `AUTOLOOP_MIDDLEWARE` environment variable (comma-separated list).
 
-### Middleware 接口约定
+### Middleware interface contract
 
 ```python
 def middleware_name(phase: str, state: dict, work_dir: str, **kwargs) -> dict:
-    # 返回 {"proceed": True/False, "modifications": {...}}
+    # Returns {"proceed": True/False, "modifications": {...}}
 ```
 
-- `proceed=False` 时中断 Middleware 链，返回 `blocked_by` 标识
-- `modifications` 中的键值会被 controller 应用到 state（点号分隔的路径表示嵌套）
-- 实现位于 `scripts/middleware/` 目录，每个横切关注点一个模块文件
-- `__init__.py` 统一导出所有 Middleware 类
-- 模块列表：`logging_mw.py`, `cost_tracking.py`, `evaluator_audit.py`, `failure_classification.py`
-- 当前为接口定义+文档，实际逻辑仍在 `autoloop-controller.py` 中；未来重构时逐步迁移
+- When `proceed=False`, interrupt the Middleware chain and return a `blocked_by` identifier
+- Keys in `modifications` are applied by the controller to `state` (dot-separated paths indicate nesting)
+- Implementations live in the `scripts/middleware/` directory, one module file per cross-cutting concern
+- `__init__.py` re-exports all Middleware classes
+- Module list: `logging_mw.py`, `cost_tracking.py`, `evaluator_audit.py`, `failure_classification.py`
+- This is currently an interface definition + documentation; the actual logic still lives in `autoloop-controller.py` and will gradually migrate during future refactors
 
 ---
 
-## 多模型路由（P3-09）
+## Multi-model Routing (P3-09)
 
-配置文件：`references/model-routing.json`
+Config file: `references/model-routing.json`
 
-当前 Claude Code 会话内 subagent 共享模型，无法在运行时切换。P3-09 为未来 pipeline 多会话/多模型做基础设施预留：
+In the current Claude Code session, subagents share the same model and cannot switch models at runtime. P3-09 is reserved infrastructure for future pipeline execution across multiple sessions / models:
 
-- **template_models**: 每个模板（T1-T8）的推荐模型及 ACT 阶段覆盖（如 T1 调研用 Grok web_search）
-- **phase_models**: 每个阶段的默认模型策略（ACT 按模板选择，VERIFY 用脚本不需模型）
-- **multi_session_pipeline**: 预留接口，`enabled=false`。未来启用后 pipeline 可为每个模板启动独立会话
+- **`template_models`**: recommended model per template (`T1-T8`) and ACT-phase overrides (for example, T1 research uses Grok `web_search`)
+- **`phase_models`**: default model strategy per phase (ACT chooses by template; VERIFY uses scripts and does not need a model)
+- **`multi_session_pipeline`**: reserved interface, `enabled=false`. When enabled in the future, the pipeline can start an independent session for each template
 
-controller 在 ACT 阶段通过 `get_recommended_model()` 输出推荐模型信息（信息性，不自动切换）。操作者可据此手动选择会话模型。
+During ACT, the controller outputs recommended model information through `get_recommended_model()` (informational only; it does not switch automatically). The operator may choose the session model manually based on that output.

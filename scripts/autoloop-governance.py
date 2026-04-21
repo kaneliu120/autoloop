@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""AutoLoop Governance — 企业级治理
+"""AutoLoop Governance — enterprise governance
 
-提供企业环境下的治理能力：
-1. Secrets 检测：扫描输出中的敏感信息（API key、密码、token）
-2. 策略违规检测：检查 agent 行为是否违反组织策略
-3. 审批流：记录所有需要审批的操作及其状态
-4. 角色权限：定义不同用户角色的操作权限
+Provides governance capabilities for enterprise environments:
+1. Secrets detection: scan output for sensitive data (API keys, passwords, tokens)
+2. Policy violation detection: check whether agent behavior violates org policy
+3. Approval flow: record all operations that require approval and their status
+4. Role permissions: define operations allowed for each user role
 
-用法:
-  autoloop-governance.py scan-secrets <file>        # 扫描文件中的 secrets
-  autoloop-governance.py check-policy <action>      # 检查操作是否违反策略
-  autoloop-governance.py approval-log [--pending]   # 查看审批日志
-  autoloop-governance.py role-check <user> <action> # 检查用户权限
+Usage:
+  autoloop-governance.py scan-secrets <file>        # Scan a file for secrets
+  autoloop-governance.py check-policy <action>      # Check whether an action violates policy
+  autoloop-governance.py approval-log [--pending]   # View the approval log
+  autoloop-governance.py role-check <user> <action> # Check a user's permissions
 """
 import os
 import sys
@@ -19,7 +19,7 @@ import json
 import re
 import time
 
-# Secrets 检测模式
+# Secrets detection patterns
 SECRET_PATTERNS = [
     (r'(?i)(api[_-]?key|apikey)\s*[:=]\s*["\']?[\w\-]{20,}', "API Key"),
     (r'(?i)(secret|password|passwd|pwd)\s*[:=]\s*["\']?[^\s"\']{8,}', "Password/Secret"),
@@ -30,7 +30,7 @@ SECRET_PATTERNS = [
     (r'ghp_[a-zA-Z0-9]{36,}', "GitHub Token"),
 ]
 
-# 组织策略（可通过配置文件覆盖）
+# Org policy (overridable via config file)
 DEFAULT_POLICIES = {
     "max_cost_per_task_usd": 10.0,
     "require_approval_for_deploy": True,
@@ -39,7 +39,7 @@ DEFAULT_POLICIES = {
     "max_concurrent_tasks": 5,
 }
 
-# 角色权限矩阵
+# Role-permission matrix
 ROLE_PERMISSIONS = {
     "admin": {"read", "write", "execute", "deploy", "delete", "configure", "approve"},
     "developer": {"read", "write", "execute"},
@@ -49,7 +49,7 @@ ROLE_PERMISSIONS = {
 
 
 def scan_secrets(file_path):
-    """扫描文件中的 secrets"""
+    """Scan a file for secrets."""
     if not os.path.exists(file_path):
         print(json.dumps({"error": f"File not found: {file_path}"}))
         return []
@@ -80,14 +80,14 @@ def scan_secrets(file_path):
 
 
 def check_policy(action, context=None):
-    """检查操作是否违反组织策略"""
+    """Check whether an action violates org policy."""
     policies = _load_policies()
     violations = []
 
     if action == "deploy" and policies.get("require_approval_for_deploy"):
-        violations.append("部署操作需要审批（require_approval_for_deploy=true）")
+        violations.append("Deploy actions require approval (require_approval_for_deploy=true)")
     if action == "delete" and policies.get("require_approval_for_delete"):
-        violations.append("删除操作需要审批（require_approval_for_delete=true）")
+        violations.append("Delete actions require approval (require_approval_for_delete=true)")
 
     result = {"action": action, "violations": violations, "compliant": len(violations) == 0}
     if violations:
@@ -97,7 +97,7 @@ def check_policy(action, context=None):
 
 
 def role_check(user, action):
-    """检查用户角色权限"""
+    """Check a user's role permissions."""
     role = _get_user_role(user)
     permissions = ROLE_PERMISSIONS.get(role, set())
     allowed = action in permissions
@@ -109,7 +109,7 @@ def role_check(user, action):
 
 
 def _load_policies():
-    """加载组织策略（配置文件覆盖默认）"""
+    """Load org policy (config file overrides defaults)."""
     config_path = os.path.expanduser("~/.autoloop/governance/policies.json")
     if os.path.exists(config_path):
         with open(config_path) as f:
@@ -118,17 +118,17 @@ def _load_policies():
 
 
 def _get_user_role(user):
-    """获取用户角色（配置文件或默认 admin）"""
+    """Resolve a user's role (from config or default admin)."""
     roles_path = os.path.expanduser("~/.autoloop/governance/roles.json")
     if os.path.exists(roles_path):
         with open(roles_path) as f:
             roles = json.load(f)
             return roles.get(user, "viewer")
-    return "admin"  # 单用户默认 admin
+    return "admin"  # Single-user default is admin.
 
 
 def _log_governance_event(event_type, details):
-    """记录治理审计日志"""
+    """Record a governance audit log entry."""
     log_dir = os.path.expanduser("~/.autoloop/governance/")
     os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, "governance-audit.jsonl")

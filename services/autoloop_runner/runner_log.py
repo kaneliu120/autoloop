@@ -1,4 +1,4 @@
-"""P2-1：结构化日志（task_id / round / phase / request_id）。"""
+"""P2-1: Structured logging (task_id / round / phase / request_id)."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ def emit(
     latency_ms: float | None = None,
     extra: dict[str, Any] | None = None,
 ) -> None:
-    """输出一行 JSON 到 stderr 或 RUNNER_JSON_LOG_FILE（需 RUNNER_JSON_LOG=1）。"""
+    """Write one JSON line to stderr or RUNNER_JSON_LOG_FILE (requires RUNNER_JSON_LOG=1)."""
     if not _json_log_enabled():
         return
     row: dict[str, Any] = {

@@ -1,4 +1,4 @@
-"""P2-3：handoff.impacted_dimensions 时 VERIFY 后自动写 TSV 行（side_effect 非空）。"""
+"""P2-3: auto-write a TSV row after VERIFY when handoff.impacted_dimensions is set (side_effect must be non-empty)."""
 
 from __future__ import annotations
 
@@ -11,9 +11,7 @@ from autoloop_runner import stateutil
 
 log = logging.getLogger("autoloop_runner")
 
-_BAD_SIDE_EFFECT = frozenset(
-    {"", "无", "—", "-", "none", "n/a", "na"}
-)
+_BAD_SIDE_EFFECT = frozenset({"", "\u65e0", "—", "-", "none", "n/a", "na"})
 
 
 def _normalize_impacted(handoff: dict[str, Any]) -> list[str]:
@@ -31,7 +29,7 @@ def _normalize_impacted(handoff: dict[str, Any]) -> list[str]:
 
 
 def needs_auto_tsv_row(state: dict[str, Any]) -> bool:
-    """末行 TSV 的 side_effect 为空/无时需补写（与 autoloop-validate strict 对齐）。"""
+    """If the last TSV row has an empty/no side_effect, an additional row must be written (aligned with strict autoloop-validate)."""
     handoff = state.get("plan", {}).get("decide_act_handoff") or {}
     if not isinstance(handoff, dict):
         return False
@@ -64,13 +62,13 @@ def build_verify_tsv_row(state: dict[str, Any]) -> dict[str, Any] | None:
         dim = next(iter(scores.keys()))
     val = scores.get(dim, "—")
     sid = str(handoff.get("strategy_id", "") or "—")
-    side_effect = "跨维影响: {}".format(",".join(impacted))
+    side_effect = "Cross-dimension impact: {}".format(",".join(impacted))
     proto = str(state.get("metadata", {}).get("protocol_version", "1.0.0"))
     iteration = len(iters)
     return {
         "iteration": iteration,
         "phase": "VERIFY",
-        "status": "通过",
+        "status": "Pass",
         "dimension": dim,
         "metric_value": str(val),
         "delta": "—",
@@ -96,7 +94,7 @@ def apply_auto_tsv_after_verify(
     python_exe: str | None = None,
 ) -> tuple[bool, str]:
     """
-    VERIFY 成功后调用。strict 下 add-tsv-row 失败 → (False, reason)。
+    Call after VERIFY succeeds. Under strict mode, add-tsv-row failure returns (False, reason).
     """
     if os.environ.get("RUNNER_SKIP_AUTO_TSV", "").strip().lower() in (
         "1",

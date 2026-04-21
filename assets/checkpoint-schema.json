@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "AutoLoop Checkpoint",
-  "description": "Checkpoint 仅记录任务位点、轮次、阶段与暂停态。DECIDE→ACT 策略交接（strategy_id / hypothesis / planned_commands）的唯一事实源为工作目录下的 autoloop-state.json 之 plan.decide_act_handoff，不在本文件中重复。",
+  "description": "The checkpoint records only the task position, round, phase, and paused state. The single source of truth for the DECIDE→ACT strategy handoff (strategy_id / hypothesis / planned_commands) is plan.decide_act_handoff in autoloop-state.json under the work directory; it is not duplicated in this file.",
   "type": "object",
   "required": ["task_id", "current_round", "current_phase", "last_completed_phase", "timestamp"],
   "properties": {
-    "task_id": {"type": "string", "description": "任务ID，如 T1-RESEARCH-001"},
+    "task_id": {"type": "string", "description": "Task ID, e.g. T1-RESEARCH-001"},
     "current_round": {"type": "integer", "minimum": 0},
     "current_phase": {"type": "string", "enum": ["OBSERVE", "ORIENT", "DECIDE", "ACT", "VERIFY", "SYNTHESIZE", "EVOLVE", "REFLECT"]},
     "last_completed_phase": {"type": "string"},

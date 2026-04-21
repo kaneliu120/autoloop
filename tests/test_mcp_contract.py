@@ -1,4 +1,4 @@
-"""P2-09：MCP server JSON 契约（需安装 mcp 包；否则整模块跳过）。"""
+"""P2-09: MCP server JSON contract (skip the module if `mcp` is unavailable)."""
 
 import importlib.util
 import json
@@ -19,7 +19,7 @@ def _load_server():
 _SKIP = None
 try:
     _SERVER = _load_server()
-except Exception as exc:  # pragma: no cover - ImportError 等
+except Exception as exc:  # pragma: no cover - ImportError and similar
     _SERVER = None
     _SKIP = str(exc)
 

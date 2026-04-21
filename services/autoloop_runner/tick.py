@@ -1,4 +1,4 @@
-"""单步 tick：按 checkpoint.last_completed_phase 推进（实施手册 §5 策略 α + P1）。"""
+"""Single-step tick: advance according to checkpoint.last_completed_phase (implementation manual §5 strategy α + P1)."""
 
 from __future__ import annotations
 
@@ -102,12 +102,12 @@ def _build_decide_prompt(work_dir: str) -> tuple[str, str]:
         indent=2,
     )
     system = (
-        "你是 AutoLoop 策略编排助手。只输出一个 JSON 对象，键必须包含: "
-        "strategy_id（S加两位轮次-短名）, hypothesis, planned_commands（字符串数组）, "
-        "impacted_dimensions（字符串数组，勿为空列表时用具体维度如 syntax）。"
-        "不要 markdown，不要代码块。"
+        "You are the AutoLoop strategy orchestration assistant. Output only one JSON object, with keys: "
+        "strategy_id (S + two-digit round number + short name), hypothesis, planned_commands (string array), "
+        "impacted_dimensions (string array; do not use an empty list, and use a concrete dimension such as syntax). "
+        "Do not use markdown or code blocks."
     )
-    user = "任务上下文:\n{}\n\n请给出本轮 DECIDE 交接 JSON。".format(ctx)
+    user = "Task context:\n{}\n\nPlease provide the DECIDE handoff JSON for this round.".format(ctx)
     return system, user
 
 
@@ -119,13 +119,13 @@ def _build_reflect_prompt(work_dir: str, round_num: int) -> tuple[str, str]:
     sid = handoff.get("strategy_id", "S{:02d}-unknown".format(round_num))
     evolve = iters[-1].get("evolve", {}) if iters else {}
     system = (
-        "你是 AutoLoop REFLECT 助手。只输出一个 JSON 对象，键必须全部存在: "
-        "strategy_id（字符串）, effect（必须是 保持、避免、待验证 三者之一）, "
-        "score（字符串，如 +0.5 或 0）, dimension（字符串，如 syntax）, "
-        "context（字符串，一句复盘）。"
-        "不要 markdown，不要代码块。"
+        "You are the AutoLoop REFLECT assistant. Output only one JSON object; all of these keys must be present: "
+        "strategy_id (string), effect (must be one of \u4fdd\u6301, \u907f\u514d, \u5f85\u9a8c\u8bc1), "
+        "score (string, such as +0.5 or 0), dimension (string, such as syntax), "
+        "context (string, one-sentence retrospective). "
+        "Do not use markdown or code blocks."
     )
-    user = "本轮 strategy_id={} scores={} evolve={}".format(
+    user = "This round's strategy_id={} scores={} evolve={}".format(
         sid,
         json.dumps(last_scores, ensure_ascii=False),
         json.dumps(evolve, ensure_ascii=False),
@@ -134,7 +134,7 @@ def _build_reflect_prompt(work_dir: str, round_num: int) -> tuple[str, str]:
 
 
 def _sync_post_controller(work_dir: str, rc: int) -> None:
-    """P1-4：暂停/错误时写 metadata.runner_status、pause_reason。"""
+    """P1-4: write metadata.runner_status and pause_reason when paused or errored."""
     if rc == 0:
         stateutil.set_metadata(work_dir, runner_status="RUNNING", pause_reason="")
         return
@@ -162,8 +162,8 @@ def run_tick(
     lock_blocking: bool = True,
 ) -> int:
     """
-    执行恰好一段推进。返回：
-      0 成功，1 错误，10 需暂停，11 未获取锁，12 费用/预算上限（P1-5）。
+    Execute exactly one advancement slice. Returns:
+      0 success, 1 error, 10 pause required, 11 lock not acquired, 12 cost/budget cap (P1-5).
     """
     work_dir = os.path.abspath(work_dir)
     ok_budget, br = check_cost_budget(work_dir)
@@ -220,7 +220,7 @@ def _tick_unlocked(
         )
 
     def run_verify_with_retry() -> int:
-        """P1-1：不跳过 VERIFY；可选 RUNNER_VERIFY_RETRY 重试。"""
+        """P1-1: do not skip VERIFY; optional RUNNER_VERIFY_RETRY retries."""
         retries = max(0, int(os.environ.get("RUNNER_VERIFY_RETRY", "0")))
         delay = float(os.environ.get("RUNNER_VERIFY_RETRY_DELAY_SEC", "2"))
         last_rc = 1
@@ -272,7 +272,7 @@ def _tick_unlocked(
         return _map_controller_rc(rc_ctrl)
 
     if last == "ACT":
-        # P1-1：VERIFY 由 controller 完整执行（含 score/validate/variance）
+        # P1-1: VERIFY is executed fully by the controller (including score/validate/variance)
         rc_ctrl = run_verify_with_retry()
         _sync_post_controller(work_dir, rc_ctrl)
         if rc_ctrl == 0:
@@ -383,7 +383,7 @@ def _runner_decide(work_dir: str, python_exe: str | None) -> bool:
     else:
         key = (os.environ.get("OPENAI_API_KEY") or "").strip()
         if not key:
-            log.error("OPENAI_API_KEY 未设置且未 RUNNER_MOCK_LLM=1")
+            log.error("OPENAI_API_KEY is not set and RUNNER_MOCK_LLM=1 is not enabled")
             return False
         system, user = _build_decide_prompt(work_dir)
         user_hash = hashlib.sha256(user.encode("utf-8")).hexdigest()[:16]
@@ -488,7 +488,7 @@ def _runner_reflect(work_dir: str, python_exe: str | None) -> bool:
             "strategy_id": (st.get("plan", {}).get("decide_act_handoff") or {}).get(
                 "strategy_id", "S01-mock"
             ),
-            "effect": "待验证",
+            "effect": "\u5f85\u9a8c\u8bc1",
             "score": "0",
             "dimension": "syntax",
             "context": "mock reflect",

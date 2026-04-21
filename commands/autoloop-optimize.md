@@ -1,370 +1,370 @@
 ---
 name: autoloop-optimize
 description: >
-  AutoLoop T8: 架构/性能/稳定性优化模板。三维度并行全面诊断，
-  跨维度协同修复（一个修复改善多个维度），每 5 个修复 checkpoint 重新评分。
-  目标：达到 references/quality-gates.md T8 门禁矩阵要求。
-  触发：/autoloop:optimize 或任何需要系统级优化的任务。
+AutoLoop T8: Architecture/performance/stability optimization template. Three-dimensional parallel comprehensive diagnosis,
+Cross-dimensional collaborative repair (one repair improves multiple dimensions), rescoring every 5 repair checkpoints.
+Goal: Meet references/quality-gates.md T8 gate matrix requirements.
+Trigger: /autoloop:optimize or any task that requires system-level optimization.
 ---
 
-# AutoLoop T8: Optimize — 架构/性能/稳定性优化
+# AutoLoop T8: Optimize — Architecture/Performance/Stability Optimization
 
-## 执行前提
+## Prerequisites for execution
 
-读取 `autoloop-plan.md` 获取：
-- 系统/代码库路径（绝对路径）
-- 当前性能指标（如果有）
-- 优先优化方向（全部/指定方向）
-- 不可修改的部分（API 接口、数据库 schema 等）
-- 验证命令（`syntax_check_cmd`、`syntax_check_file_arg`，变量名见 `references/loop-protocol.md` 统一参数词汇表）
+Read `autoloop-plan.md` to get:
+- System/codebase path (absolute path)
+- Current performance metrics (if any)
+- Prioritize optimization directions (all/specified directions)
+- Unmodifiable parts (API interface, database schema, etc.)
+- Verification commands (`syntax_check_cmd`, `syntax_check_file_arg`, for variable names see `references/loop-protocol.md` Unified Parameter Glossary)
 
-**Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再制定本轮优化计划。详见 `references/loop-protocol.md` OBSERVE Step 0 章节。
+**Round 2+ OBSERVE starting point**: First read the `autoloop-findings.md` reflection chapter to obtain the remaining issues, effective/ineffective strategies, identified patterns, and lessons learned, and then formulate an optimization plan for this round. See the `references/loop-protocol.md` OBSERVE Step 0 chapter for details.
 
-- **经验库读取**: 读取 `references/experience-registry.md` 中与当前任务类型和目标维度匹配的条目，识别状态为「推荐」或「候选默认」的策略，传递到 DECIDE 阶段参考
+- **Experience database reading**: Read entries in `references/experience-registry.md` that match the current task type and target dimensions, identify strategies with status "recommended" or "candidate default", and pass them to the DECIDE stage for reference
 
 ---
 
-## 每轮 OBSERVE 执行规范（Round 2+ 强制）
+## OBSERVE execution specifications for each round (Round 2+ mandatory)
 
-每轮优化开始前，在执行任何诊断或修复行动之前，必须先完成 OBSERVE Step 0：
+Before each round of optimization begins, and before any diagnostic or repair actions can be performed, OBSERVE Step 0 must be completed:
 
 ```
-**Domain Pack 加载**：执行 domain pack 自动检测（见 domain-pack-spec.md §加载机制）。扫描工作目录技术栈特征自动加载匹配 pack；如 plan 中手动指定 `domain_pack` 则使用指定值；`domain_pack: none` 显式禁用。加载后用 pack 检测命令替换 enterprise-standard.md 的通用命令。
+**Domain Pack Loading**: Perform domain pack automatic detection (see domain-pack-spec.md §Loading mechanism). Scan the working directory technology stack features to automatically load the matching pack; if `domain_pack` is manually specified in the plan, the specified value is used; `domain_pack: none` is explicitly disabled. After loading, use the pack detection command to replace the common command of enterprise-standard.md.
 
-OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
-  读取 autoloop-findings.md 的反思章节（4层结构表）
-  获取：
-  - 问题清单：上轮遗留未修复的问题，哪些已修复但效果不佳
-  - 策略评估：上轮"保持"策略（本轮优先使用）、"避免"策略（本轮排除）、"待验证"策略（本轮谨慎使用并观察效果）
-  - 模式识别：反复出现的问题类型（架构级根因，优先处理）
-  - 经验教训：哪类优化最有效、哪些验证步骤能发现最多问题
+OBSERVE Step 0 (Required for Round 2+, skip baseline collection in Round 1):
+Read the reflection chapter of autoloop-findings.md (4-layer structure table)
+Get:
+- Issue list: Issues left unfixed in the previous round, which ones have been fixed but with poor effect
+- Strategy evaluation: "Keep" strategy in the previous round (used first in this round), "Avoid" strategy (excluded in this round), "To be verified" strategy (used with caution in this round and observe the effect)
+- Pattern recognition: recurring problem types (architectural-level root causes, prioritized)
+- Lessons learned: Which types of optimizations are most effective and which validation steps find the most problems
 
-  完成后再扫描当前系统状态并制定本轮优化策略
-  （完整规范见 references/loop-protocol.md OBSERVE Step 0 章节）
+After completion, scan the current system status and formulate an optimization strategy for this round.
+(For the complete specification, see references/loop-protocol.md OBSERVE Step 0 chapter)
 ```
 
 ---
 
-## 三维度评分标准
+## Three-dimensional scoring criteria
 
-> **评分标准和扣分规则完整定义见 `references/enterprise-standard.md`。**
-> T8 诊断和评分必须覆盖 enterprise-standard.md 中的所有检查项和扣分映射，不得自定义缩水版。
+> **See `references/enterprise-standard.md` for complete definitions of scoring criteria and deduction rules. **
+> T8 diagnosis and scoring must cover all inspection items and deduction mapping in enterprise-standard.md, and the shortened version cannot be customized.
 
-**目标分数**：质量门禁阈值见 `references/quality-gates.md` T8 行（架构、性能、稳定性各维度分数目标）。
+**Target score**: The quality gate threshold is shown in the `references/quality-gates.md` T8 line (score targets for each dimension of architecture, performance, and stability).
 
 ---
 
-## 第一轮：三维度并行全面诊断
+## Round 1: Three-dimensional parallel comprehensive diagnosis
 
-**同时运行 3 个 diagnostic subagents**（并行）：
+**Run 3 diagnostic subagents simultaneously** (parallel):
 
 ### Architecture Diagnostic Subagent
 
 ```
-你是 architecture-diagnostic subagent，负责全面的架构诊断。
+You are the architecture-diagnostic subagent, responsible for comprehensive architectural diagnostics.
 
-代码库路径：{绝对路径}
+Code library path: {absolute path}
 
-诊断步骤：
+Diagnostic steps:
 
-1. 分层分析
-   目标：识别是否有清晰的层次结构（路由层 → 服务层 → 数据层）
+1. Stratified analysis
+Goal: Identify whether there is a clear hierarchy (routing layer → service layer → data layer)
 
-   检查：
-   - 路由文件是否直接操作数据库（应该通过 service 层）
-   - 是否有 service 层？还是业务逻辑直接在路由中？
-   - 数据模型是否混杂了业务逻辑？
+examine:
+- Whether the routing file directly operates the database (should pass the service layer)
+- Is there a service layer? Or is the business logic directly in the routing?
+- Is the data model mixed with business logic?
 
-   ### 技术栈适配（分层检查命令）
-   - Python/FastAPI: grep -rn "from.*db\|session.execute" {路由目录，如 backend/api/}
-   - Node.js: grep -rn "prisma\.\|sequelize\.\|mongoose\." {路由目录，如 src/routes/}
-   - 其他: 根据项目结构，在路由目录中搜索直接数据库调用
+### Technology stack adaptation (layered check command)
+- Python/FastAPI: grep -rn "from.*db\|session.execute" {routing directory, such as backend/api/}
+- Node.js: grep -rn "prisma\.\|sequelize\.\|mongoose\." {routing directory, such as src/routes/}
+- Others: Search the routing directory for direct database calls based on the project structure
 
-2. 耦合分析
-   检查：
-   - 模块 A 是否直接 import 了模块 B 的内部实现（非 public API）
-   - 是否有双向依赖（A import B，B import A）
+2. Coupling analysis
+examine:
+- Whether module A directly imports the internal implementation of module B (non-public API)
+- Is there a two-way dependency (A import B, B import A)
 
-   工具：读取每个模块的 import 列表，绘制依赖图
+Tool: Read the import list of each module and draw the dependency graph
 
-3. API 设计一致性
-   检查：
-   - 路由命名是否统一（RESTful vs RPC 混用）
-   - 响应格式是否统一（有的返回 {data:...}，有的直接返回 list）
-   - 错误响应格式是否统一
-   - 分页实现是否统一
+3. API design consistency
+examine:
+- Is the route naming consistent (RESTful vs RPC mixed)
+- Is the response format uniform (some return {data:...}, some directly return list)
+- Is the error response format uniform?
+- Is the paging implementation unified?
 
-4. 配置管理
-   检查：
-   - 是否所有配置都通过 settings 获取
-   - 是否有硬编码的 URL / 数字 / 路径
+4. Configuration management
+examine:
+- Whether all configurations are obtained through settings
+- Are there hardcoded URLs/numbers/paths?
 
-5. 代码复用
-   检查：
-   - 是否有相同功能在多处实现
-   - 是否有重复的 CRUD 代码可以抽象
+5. Code reuse
+examine:
+- Whether the same function is implemented in multiple places
+- Is there duplicate CRUD code that can be abstracted
 
-输出：
-## 架构诊断报告
+Output:
+## Architecture Diagnostic Report
 
-### 分层分析结果
-{描述当前分层状态}
+### Stratified analysis results
+{describe the current layering state}
 
-### 发现的架构问题
+### Architectural issues discovered
 
-| ID | 类型 | 影响文件 | 严重度 | 描述 | 修复建议 | 影响维度 |
+| ID | Type | Impact Files | Severity | Description | Remediation Suggestions | Impact Dimensions |
 |----|------|---------|--------|------|---------|---------|
-| A001 | 跨层访问 | {路径} | 高 | {描述} | {建议} | 架构 |
+| A001 | Cross-layer access | {path} | High | {description} | {suggestion} | Architecture |
 
-### 架构评分
+### Architecture Rating
 
-初始分：10
-扣分项：...
-架构得分：{N}/10
+Initial score: 10
+Deduction items:...
+Architecture score: {N}/10
 
-### 跨维度影响
-（哪些架构问题同时影响性能或稳定性）
+### Cross-dimensional impact
+(Which architectural issues affect both performance and stability)
 ```
 
 ### Performance Diagnostic Subagent
 
 ```
-你是 performance-diagnostic subagent，负责全面的性能诊断。
+You are the performance-diagnostic subagent, responsible for comprehensive performance diagnostics.
 
-代码库路径：{绝对路径}
+Code library path: {absolute path}
 
-诊断步骤：
+Diagnostic steps:
 
-1. N+1 查询检测
-   查找：在循环中执行数据库查询
-   工具：
-   grep -rn "for.*in.*:" backend/  # 找循环
-   然后检查循环体内是否有 session.execute / session.get 等
+1. N+1 query detection
+Find: Execute a database query in a loop
+tool:
+grep -rn "for.*in.*:" backend/ # Find loops
+Then check whether there is session.execute / session.get etc. in the loop body
 
-2. 连接池检查
-   查找：数据库/Redis 连接配置
-   检查：
-   - SQLAlchemy pool_size 是否配置（默认 5，生产应更大）
-   - Redis 连接是否复用（ConnectionPool）
-   - 是否每次请求都新建连接
+2. Connection pool check
+Find: Database/Redis connection configuration
+examine:
+- Whether SQLAlchemy pool_size is configured (default 5, production should be larger)
+- Whether Redis connections are reused (ConnectionPool)
+- Whether to create a new connection for each request
 
-3. 缓存覆盖分析
-   识别：哪些数据是热读（频繁查询、变化少）
-   检查：这些数据是否有 Redis 缓存
-   工具：grep -rn "redis\|cache" backend/
+3. Cache coverage analysis
+Identification: Which data are hot reads (frequent queries, few changes)
+Check: Is this data cached by Redis
+Tool: grep -rn "redis\|cache" backend/
 
-4. 同步混用检测
-   查找：在 async 函数中调用同步 I/O
-   工具：
-   grep -rn "def " backend/  # 找 sync def（非 async）
-   检查是否在 async 路由中被直接调用（应用 asyncio.run_in_executor）
-   查找：time.sleep() 在 async 函数中
+4. Synchronous mixed detection
+Find: Calling synchronous I/O in an async function
+tool:
+grep -rn "def " backend/ # Find sync def (non-async)
+Check if called directly in async route (apply asyncio.run_in_executor)
+Find: time.sleep() in async function
 
-5. 查询效率
-   查找：SELECT * 没有 LIMIT 的查询
-   查找：在列表 API 中返回所有数据（应该分页）
-   查找：缺少索引的高频查询字段
+5. Query efficiency
+Find: SELECT * Query without LIMIT
+Find: Return all data in list API (should be paginated)
+Find: Missing indexed frequently queried fields
 
-6. 前端性能（如有）
-   检查：
-   - next.config.js 是否有图片优化配置
-   - 是否有代码分割（dynamic import）
-   - Bundle 大小是否合理
+6. Front-end performance (if any)
+examine:
+- whether next.config.js has image optimization configuration
+- Whether there is code splitting (dynamic import)
+- Is the Bundle size reasonable?
 
-输出：
-## 性能诊断报告
+Output:
+## Performance diagnostic report
 
-### 发现的性能问题
+### Performance issues found
 
-| ID | 类型 | 影响文件 | 严重度 | 描述 | 预期收益 | 修复建议 |
+| ID | Type | Impact Files | Severity | Description | Expected Benefit | Remediation Recommendations |
 |----|------|---------|--------|------|---------|---------|
-| P001 | N+1查询 | {路径} | 高 | {描述} | {减少X次查询/请求} | {建议} |
+| P001 | N+1 query | {path} | High | {description} | {reduce X queries/requests} | {suggestion} |
 
-### 性能评分
+### Performance Rating
 
-初始分：10
-扣分项：...
-性能得分：{N}/10
+Initial score: 10
+Deduction items:...
+Performance Score: {N}/10
 
-### 最高收益修复（TOP 3）
-（预期改善最大的 3 个问题）
+### Highest profit repair (TOP 3)
+(3 issues expected to improve the most)
 ```
 
 ### Stability Diagnostic Subagent
 
 ```
-你是 stability-diagnostic subagent，负责全面的稳定性诊断。
+You are the stability-diagnostic subagent, responsible for comprehensive stability diagnostics.
 
-代码库路径：{绝对路径}
+Code library path: {absolute path}
 
-诊断步骤：
+Diagnostic steps:
 
-1. 外部依赖降级检查
-   识别所有外部依赖：Redis / 第三方 API / 邮件服务 / 文件存储
-   对每个依赖检查：
-   - 超时是否配置
-   - 失败是否有降级（返回降级数据 vs 崩溃）
-   - 是否有重试逻辑
+1. External dependency downgrade check
+Identify all external dependencies: Redis / third-party API / mail service / file storage
+Check each dependency:
+- Whether timeout is configured
+- Failure with or without degradation (returning degraded data vs crash)
+- Is there retry logic?
 
-2. 错误处理完整性
-   查找：只有 except Exception as e: 但没有 logger.error(e, exc_info=True)
-   查找：捕获了异常但返回了不准确的状态码（200 但实际失败）
-   工具：grep -rn "except" backend/ | grep -v "logger"
+2. Error handling integrity
+Find: only except Exception as e: but not logger.error(e, exc_info=True)
+Find: Exception caught but inaccurate status code returned (200 but actually failed)
+Tools: grep -rn "except" backend/ | grep -v "logger"
 
-3. 健康检查
-   检查：是否有 /health 端点
-   检查：健康检查是否验证关键依赖（DB 连通性、Redis 连通性）
-   检查：是否有 /ready（就绪检查）区别于 /health（存活检查）
+3. Health Checkup
+Check: Is there a /health endpoint
+Check: Whether the health check verifies key dependencies (DB connectivity, Redis connectivity)
+Check: whether /ready (readiness check) is different from /health (liveness check)
 
-4. 超时配置
-   查找：httpx / requests / aiohttp 调用是否有 timeout
-   查找：Redis 操作是否有 socket_timeout
-   查找：数据库查询是否有 statement_timeout（PostgreSQL 参数）
+4. Timeout configuration
+Find if: httpx/requests/aiohttp calls have timeout
+Find: Whether the Redis operation has socket_timeout
+Find: Whether the database query has statement_timeout (PostgreSQL parameter)
 
-5. 日志完整性
-   检查：关键操作是否有 info 日志（请求开始/完成）
-   检查：错误是否有足够的上下文（请求 ID、相关数据）
-   检查：是否有结构化日志（JSON 格式，便于搜索）
+5. Log integrity
+Check: Is there an info log for key operations (request start/completion)
+Check: Does the error have enough context (request ID, related data)
+Check: Whether there are structured logs (JSON format for easy search)
 
-6. 自动恢复
-   检查：worker 进程崩溃是否会自动重启（systemd / supervisor）
-   检查：数据库连接断开是否会自动重连（SQLAlchemy pool_pre_ping）
+6. Automatic recovery
+Check: whether the worker process crashes and will automatically restart (systemd/supervisor)
+Check: Whether the database connection will be automatically reconnected if it is disconnected (SQLAlchemy pool_pre_ping)
 
-输出：
-## 稳定性诊断报告
+Output:
+## Stability diagnostic report
 
-### 外部依赖清单
+### External dependency list
 
-| 依赖 | 有超时 | 有降级 | 有重试 | 风险评估 |
+| Dependencies | Timeouts | Downgrades | Retries | Risk Assessment |
 |------|--------|--------|--------|---------|
-| Redis | 是/否 | 是/否 | 是/否 | P1/P2/P3 |
+| Redis | Yes/No | Yes/No | Yes/No | P1/P2/P3 |
 
-### 发现的稳定性问题
+### Stability issues discovered
 
-| ID | 类型 | 影响文件 | 严重度 | 描述 | 影响场景 | 修复建议 |
+| ID | Type | Impact Files | Severity | Description | Impact Scenarios | Remediation Recommendations |
 |----|------|---------|--------|------|---------|---------|
 
-### 稳定性评分
+### Stability score
 
-初始分：10
-扣分项：...
-稳定性得分：{N}/10
+Initial score: 10
+Deduction items:...
+Stability score: {N}/10
 ```
 
 ---
 
-## 跨维度协同修复规则
+## Cross-dimensional collaborative repair rules
 
-第一轮诊断完成后，建立跨维度影响矩阵：
+After the first round of diagnosis is completed, a cross-dimensional impact matrix is ​​established:
 
 ```markdown
-## 跨维度影响矩阵
+## Cross-dimensional influence matrix
 
-| 问题 ID | 描述 | 架构影响 | 性能影响 | 稳定性影响 | 综合优先级 |
+| Issue ID | Description | Architectural Impact | Performance Impact | Stability Impact | Synthesis Priority |
 |---------|------|---------|---------|-----------|----------|
-| A001 | 路由层直接访问 DB | 高 | 中（无 ORM 优化）| 中（无统一错误处理）| P1 |
-| P001 | N+1 查询 | 低 | 高 | 低 | P1 |
-| S001 | Redis 无超时 | 低 | 低 | 高 | P1 |
+| A001 | The routing layer directly accesses the DB | High | Medium (no ORM optimization) | Medium (no unified error handling) | P1 |
+| P001 | N+1 Query | Low | High | Low | P1 |
+| S001 | Redis no timeout | Low | Low | High | P1 |
 ```
 
-**综合优先级规则**：
-- 影响 3 个维度 → 最高优先级（先修复）
-- 影响 2 个维度 → 高优先级
-- 影响 1 个维度 → 按各维度优先级处理
+**Comprehensive Priority Rules**:
+- Affects 3 dimensions → highest priority (fix first)
+- Affects 2 dimensions → high priority
+- Affects 1 dimension → processed according to priority of each dimension
 
 ---
 
-## 第 2-N 轮：协同修复循环
+## Round 2-N: Collaborative Repair Cycle
 
-### 修复 subagent 指令（按优先级）
+### Fix subagent directive (by priority)
 
-- **工单生成**: 按 `references/agent-dispatch.md` 对应角色模板生成委派工单，填充任务目标、输入数据、输出格式、质量标准、范围限制、当前轮次、上下文摘要
+- **Work order generation**: Generate a delegation work order according to the corresponding role template of `references/agent-dispatch.md`, fill in the task goal, input data, output format, quality standard, scope limit, current round, and context summary
 
 ```
-你是 optimization-fix subagent，负责以下性能/架构/稳定性问题修复。
+You are the optimization-fix subagent, responsible for fixing the following performance/architecture/stability issues.
 
-问题 ID：{ID}
-类型：{架构/性能/稳定性}
-描述：{问题描述}
-影响文件：{绝对路径列表}
-修复建议：{具体建议}
+Question ID: {ID}
+Type: {architecture/performance/stability}
+Description: {issue description}
+Affected files: {list of absolute paths}
+Repair suggestion: {specific suggestion}
 
-约束（不可违反）：
-- 不改变 public API 签名（路由路径、请求/响应格式）
-- 不改变数据库 schema（除非方案中明确说明）
-- 修改后必须通过语法验证（使用 autoloop-plan.md 中的 {syntax_check_cmd}）
+Constraints (cannot be violated):
+- No changes to public API signature (routing path, request/response format)
+- Do not change the database schema (unless explicitly stated in the schema)
+- The modification must pass syntax verification (use {syntax_check_cmd} in autoloop-plan.md)
 
-### 语法验证命令（来自 autoloop-plan.md）
-使用 plan 阶段收集的 `syntax_check_cmd` 和 `syntax_check_file_arg`（变量名见 `references/loop-protocol.md` 统一参数词汇表）：
-- `syntax_check_file_arg=true`：`{syntax_check_cmd} {修改的文件}`
-- `syntax_check_file_arg=false`：`{syntax_check_cmd}`（不附加文件参数）
-- 不同技术栈对应的默认值由 plan 阶段收集，不在此处硬编码
+### Syntax verification command (from autoloop-plan.md)
+Use `syntax_check_cmd` and `syntax_check_file_arg` collected in the plan phase (see the `references/loop-protocol.md` unified parameter vocabulary for variable names):
+- `syntax_check_file_arg=true`: `{syntax_check_cmd} {modified file}`
+- `syntax_check_file_arg=false`: `{syntax_check_cmd}` (no file parameters appended)
+- The default values ​​corresponding to different technology stacks are collected in the plan stage and are not hard-coded here.
 
-执行步骤：
-1. 读取相关文件（读全，不要猜）
-2. 分析影响范围（修改这个会影响哪些调用者）
-3. 实施最小化修复
-4. 运行 {syntax_check_cmd}（按 syntax_check_file_arg 决定是否附加文件参数）
-5. 报告修改内容
+Execution steps:
+1. Read related files (read all, don’t guess)
+2. Analyze the impact scope (which callers are affected by this change)
+3. Implement minimal fixes
+4. Run {syntax_check_cmd} (press syntax_check_file_arg to determine whether to append file parameters)
+5. Report modifications
 
-输出：
-- 修改文件列表
-- 每个文件的关键修改说明
-- 验证结果
-- 预期对三维度评分的影响
-- 是否需要测试关联功能
+Output:
+- Modify file list
+- Key modification instructions for each file
+- Verification results
+- Expected impact on three-dimensional scoring
+- Whether it is necessary to test the associated function
 ```
 
-### 常见优化方案模板（示例，以实际技术栈为准）
+### Common optimization solution templates (examples, subject to actual technology stack)
 
-**N+1 查询修复**（示例使用 Python/SQLAlchemy，其他 ORM 按等效方式修复）：
+**N+1 query fix** (example uses Python/SQLAlchemy, other ORMs are fixed equivalently):
 
 ```python
-# 修复前（N+1）
+# Before repair (N+1)
 companies = await session.execute(select(Company))
 for company in companies:
-    contacts = await session.execute(  # N 次额外查询
+contacts = await session.execute( # N additional queries
         select(Contact).where(Contact.company_id == company.id)
     )
 
-# 修复后（JOIN 或 selectinload）
+# After repair (JOIN or selectinload)
 from sqlalchemy.orm import selectinload
 
 companies = await session.execute(
     select(Company).options(selectinload(Company.contacts))
 )
-# Node.js/Prisma 等效：include: { contacts: true }
-# 其他 ORM：使用对应的 eager loading / JOIN 机制
+# Node.js/Prisma equivalent: include: { contacts: true }
+# Other ORM: use the corresponding eager loading / JOIN mechanism
 ```
 
-**缓存降级回退修复**（示例使用 Python/Redis，其他缓存层按等效方式修复）：
+**Cache downgrade fallback fix** (example uses Python/Redis, other cache layers are fixed in equivalent ways):
 
 ```python
-# 修复前（缓存失败直接崩溃）
+# Before repair (cache failure and direct crash)
 async def get_cached_data(key: str) -> dict:
-    return await redis.get(key)  # 异常会导致 500
+return await redis.get(key) #Exception will result in 500
 
-# 修复后（有降级）
+# After repair (with downgrade)
 async def get_cached_data(key: str) -> dict | None:
     try:
         result = await redis.get(key)
         return result
     except Exception as e:
         logger.warning(f"Cache miss for {key}: {e}")
-        return None  # 降级到数据库查询
-# Node.js 等效：同样的 try/catch 模式
+return None #Downgrade to database query
+# Node.js equivalent: same try/catch pattern
 ```
 
-**服务层提取修复**（示例使用 Python/FastAPI，其他框架按等效分层方式修复）：
+**Service layer extraction fix** (the example uses Python/FastAPI, other frameworks are fixed in an equivalent layered manner):
 
 ```python
-# 修复前（路由层直接操作 DB）
+# Before repair (routing layer directly operates DB)
 @router.get("/companies")
 async def list_companies(session: AsyncSession = Depends(get_session)):
-    result = await session.execute(select(Company))  # 路由层直接查库
+result = await session.execute(select(Company)) # The routing layer directly checks the database
     return result.scalars().all()
 
-# 修复后（通过 service 层）
+# After repair (through service layer)
 # backend/services/company_service.py
 async def list_companies(session: AsyncSession) -> list[Company]:
     result = await session.execute(select(Company))
@@ -374,147 +374,147 @@ async def list_companies(session: AsyncSession) -> list[Company]:
 @router.get("/companies")
 async def list_companies_route(session: AsyncSession = Depends(get_session)):
     return await company_service.list_companies(session)
-# Node.js/Express 等效：controller 调用 service，service 操作 repository
+# Node.js/Express equivalent: controller calls service, service operates repository
 ```
 
 ---
 
-## 每 5 个修复后 Checkpoint
+## Checkpoint after every 5 repairs
 
-每个 Checkpoint 必须重新运行对应维度的验证命令，不允许仅凭代码审查更新分数。
+Each Checkpoint must re-run the verification command of the corresponding dimension, and score updates based solely on code review are not allowed.
 
-### 架构维度验证（架构相关修复后必须执行）
+### Architecture dimension verification (must be performed after architecture-related repairs)
 
 ```bash
-# 依赖分析（如工具可用）
-import-linter --config .importlinter   # 或 dep-tree src/
-# 备选：手动 grep 循环依赖
+# Dependency analysis (if tools are available)
+import-linter --config .importlinter # or dep-tree src/
+# Alternative: Manually grep circular dependencies
 python3 -c "
 import sys, importlib
-# 尝试导入关键模块，捕获循环 import 错误
-try: import {主模块}; print('OK')
-except ImportError as e: print('循环依赖:', e)
+# Try to import key modules and catch circular import errors
+try: import {main module}; print('OK')
+except ImportError as e: print('Circular dependency:', e)
 "
-# 跨层访问检测
-grep -rn "from.*db\|session.execute" {路由层目录} | grep -v "Depends\|get_session"
+# Cross-layer access detection
+grep -rn "from.*db\|session.execute" {routing layer directory} | grep -v "Depends\|get_session"
 ```
 
-### 性能维度验证（性能相关修复后必须执行）
+### Performance dimension verification (must be performed after performance-related repairs)
 
 ```bash
-# 关键查询 EXPLAIN ANALYZE（如有数据库）
-# psql -c "EXPLAIN ANALYZE {关键查询语句}"
+# Key query EXPLAIN ANALYZE (if there is a database)
+# psql -c "EXPLAIN ANALYZE {key query statement}"
 
-# API 响应时间采样（如服务在运行）
+# API response time sampling (if the service is running)
 for i in 1 2 3 4 5; do
-  curl -o /dev/null -s -w "%{time_total}s\n" {health_url 或关键 API endpoint}
+curl -o /dev/null -s -w "%{time_total}s\n" {health_url or key API endpoint}
 done
 
-# 前端 bundle 分析（如有前端，且工具可用）
+# Front-end bundle analysis (if there is a front-end and the tool is available)
 # npx next build --profile 2>&1 | grep "First Load JS"
 ```
 
-### 稳定性维度验证（稳定性相关修复后必须执行）
+### Stability dimension verification (must be performed after stability-related repairs)
 
 ```bash
-# error handling 覆盖率统计
-TOTAL=$(grep -rn "def \|async def " {代码目录} | wc -l)
-WITH_TRY=$(grep -rn -A5 "def \|async def " {代码目录} | grep -c "try:")
-echo "函数总数: $TOTAL，有 try/except 的: $WITH_TRY"
+# error handling coverage statistics
+TOTAL=$(grep -rn "def \|async def " {code directory} | wc -l)
+WITH_TRY=$(grep -rn -A5 "def \|async def " {code directory} | grep -c "try:")
+echo "Total number of functions: $TOTAL, with try/except: $WITH_TRY"
 
-# 静默失败检测
-grep -rn "except.*pass\|except:$" {代码目录}
+# Silent failure detection
+grep -rn "except.*pass\|except:$" {code directory}
 
-# 服务状态检查（如有容器部署）
+# Service status check (if there is container deployment)
 # docker ps --format "table {{.Names}}\t{{.Status}}"
 ```
 
 ```
-Checkpoint（已完成 {N} 个修复）
+Checkpoint ({N} fixes completed)
 
-验证结果（必须基于上方实际运行的命令输出）：
-  架构验证: {循环依赖检测结果 / 跨层访问数量}
-  性能验证: {API平均响应时间 / 查询耗时}
-  稳定性验证: {error handling覆盖率 / 静默失败数量}
+Verification results (must be based on the output of the actual command run above):
+Architecture verification: {circular dependency detection result / cross-layer access count}
+Performance verification: {average API response time / query duration}
+Stability verification: {error handling coverage / silent failure count}
 
-得分更新（基于验证结果重新计算，非估算）：
-  架构：{旧} → {新}（{+/-}，依据：{验证命令输出摘要}）
-  性能：{旧} → {新}（{+/-}，依据：{验证命令输出摘要}）
-  稳定性：{旧} → {新}（{+/-}，依据：{验证命令输出摘要}）
+Score update (recalculated based on verification results, not estimated):
+Architecture: {old} → {new} ({+/-}, based on: {verification command output summary})
+Performance: {old} → {new} ({+/-}, based on: {verification command output summary})
+Stability: {old} → {new} ({+/-}, based on: {verification command output summary})
 
-剩余问题：{N}（P1:{N} P2:{N} P3:{N}）
+Remaining questions: {N} (P1: {N} P2: {N} P3: {N})
 
-新增问题（修复引入的）：{N 个，描述}
+New problem (introduced by fix): {N items, description}
 
-继续优化计划：
-  下 5 个修复：{列表}
+Continue to optimize the plan:
+Next 5 fixes: {list}
 ```
 
 ---
 
-## 终止条件
+## Termination condition
 
-达标判定见 `references/quality-gates.md` T8 行。
+See line `references/quality-gates.md` T8 for compliance judgment.
 
 ```
-全部达标（目标值以 quality-gates-engineering.md T8 行为准）：
-  架构 {N}/10 ≥ 目标 ✓
-  性能 {N}/10 ≥ 目标 ✓
-  稳定性 {N}/10 ≥ 目标 ✓
+All standards are met (the target value is based on quality-gates-engineering.md T8 behavior):
+Architecture {N}/10 ≥ Target ✓
+Performance {N}/10 ≥ Target ✓
+Stability {N}/10 ≥ Target ✓
 
-→ 终止，生成优化报告
+→ Terminate and generate optimization report
 ```
 
 ---
 
-## 每轮 REFLECT 执行规范
+## Each round of REFLECT execution specifications
 
-每个 checkpoint（5 个修复后）完成后，在 EVOLVE 判断之后执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `references/loop-protocol.md` REFLECT 章节）：
+After each checkpoint (every 5 fixes), execute this after the EVOLVE decision. REFLECT must be written to a file and cannot be done only in thought (see the `references/loop-protocol.md` REFLECT chapter for details):
 
-写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `assets/findings-template.md`：
+Write a 4-layer reflection structure table (problem registration/strategy review/pattern recognition/lessons learned) written into `autoloop-findings.md`. The format is shown in `assets/findings-template.md`:
 
-- **问题登记**：记录本轮发现的架构/性能/稳定性问题、修复是否引入新问题、诊断遗漏、未能修复的遗留项
-- **策略复盘**：修复策略/优化方法/验证命令的效果评估（保持 | 避免 | 待验证），实际改进量 vs 预期改进量（策略评价枚举见 references/loop-data-schema.md 统一状态枚举）
-- **模式识别**：反复出现的问题类型（说明有架构级根因）、修复→新问题的因果链、哪些问题有跨维度联动效应
-- **经验教训**：哪类优化最有效、哪些验证步骤能发现最多问题、架构/性能/稳定性三维度的系统性教训
-- **经验写回**: 将本轮策略效果写入 `references/experience-registry.md`（策略ID、适用场景、效果评分、执行上下文，遵循效果记录表格式）
+- **Issue Registration**: Record the architecture/performance/stability issues discovered in this round, whether the repair introduces new issues, diagnosis omissions, and remaining items that cannot be repaired.
+- **Strategy review**: Effect evaluation of repair strategy/optimization method/verification command (keep | avoid | to be verified), actual improvement vs. expected improvement (for strategy evaluation enumeration, see references/loop-data-schema.md unified status enumeration)
+- **Pattern Recognition**: Recurring problem types (indicating architectural-level root causes), repair → causal chain of new problems, which problems have cross-dimensional linkage effects
+- **Lessons learned**: Which type of optimization is most effective, which verification steps can find the most problems, and systematic lessons from the three dimensions of architecture/performance/stability
+- **Experience write back**: Write the current round of strategy effects into `references/experience-registry.md` (strategy ID, applicable scenarios, effect score, execution context, follow the effect record table format)
 
 ---
 
-## 最终优化报告
+## Final optimization report
 
 ```markdown
-# 系统优化报告
+# System optimization report
 
-## 评分总览
+## Rating overview
 
-| 维度 | 优化前 | 优化后 | 目标 | 状态 |
+| Dimensions | Before optimization | After optimization | Goal | Status |
 |------|--------|--------|------|------|
-| 架构 | {N}/10 | {N}/10 | ≥8/10 | 达标 |
-| 性能 | {N}/10 | {N}/10 | ≥8/10 | 达标 |
-| 稳定性 | {N}/10 | {N}/10 | ≥8/10 | 达标 |
+| Architecture | {N}/10 | {N}/10 | ≥8/10 | Compliance |
+| Performance | {N}/10 | {N}/10 | ≥8/10 | Compliance |
+| Stability | {N}/10 | {N}/10 | ≥8/10 | Compliance |
 
-## 关键改进
+## Key improvements
 
-### 架构
-{TOP 3 改进，各一句话}
+### Architecture
+{top 3 improvements, one sentence each}
 
-### 性能
-{TOP 3 改进，含量化数据如可用}
+### Performance
+{top 3 improvements, with quantitative data if available}
 
-### 稳定性
-{TOP 3 改进}
+### Stability
+{top 3 improvements}
 
-## 完整修复清单
+## Complete fix list
 
-| 编号 | 问题 | 类型 | 修复方案 | 影响维度 |
+| Number | Problem | Type | Fix | Impact Dimension |
 |------|------|------|---------|---------|
 
-## 遗留问题（P3 未处理）
+## Remaining issues (not handled by P3)
 
-{列表，说明为何未处理}
+{list, with reasons it was not handled}
 
-## 监控建议
+## Monitoring suggestions
 
-{建议添加的监控指标，便于持续验证优化效果}
+{suggested monitoring metrics to support ongoing verification of optimization results}
 ```

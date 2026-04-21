@@ -1,336 +1,336 @@
-# Loop Data Schema — 数据格式与词汇规范
+# Loop Data Schema — data format and vocabulary specifications
 
-> 从 loop-protocol.md 分离的数据层规范。状态机和 OODA 阶段定义见 `loop-protocol.md`。
+> Data layer specification separated from loop-protocol.md. See `loop-protocol.md` for state machine and OODA phase definitions.
 
-### 版本语义定义（唯一权威）
+### Version semantic definition (only authoritative)
 
-| 级别 | 触发条件 | 示例 | 方向 |
+| Level | Trigger Condition | Example | Direction |
 |------|---------|------|------|
-| major (X.0.0) | 循环流程结构变更 | 阶段增减、阶段顺序调整 | 仅递增 |
-| minor (0.X.0) | 门禁/维度/参数变更 | 新增评分维度、修改阈值、调整权重 | 仅递增 |
-| patch (0.0.X) | 校准数据变更 | 锚点样本、策略经验、评分校准 | 仅递增 |
+| major (X.0.0) | Changes to the cycle process structure | Addition or deletion of stages, adjustment of stage order | Incremental only |
+| minor (0.X.0) | Access control/dimension/parameter changes | Add scoring dimensions, modify thresholds, adjust weights | Incremental only |
+| patch (0.0.X) | Calibration data changes | Anchor samples, strategy experience, score calibration | Incremental only |
 
-**不可递减规则**: 版本号只能递增，不可递减。回滚通过递增版本号实现（如 1.2.3 回滚 → 1.3.0）。
-回滚记录格式: `{新版本号} (rollback from {旧版本号}, reason: {原因})`
+**Non-decreasing rule**: The version number can only be incremented, not decremented. Rollback is implemented by incrementing the version number (for example, 1.2.3 rollback → 1.3.0).
+Rollback record format: `{new_version} (rollback from {old_version}, reason: {reason})`
 
-> 变更记录见 evolution-rules.md。
+> See evolution-rules.md for change history.
 
-## 统一参数词汇表
+## Unified parameter vocabulary
 
-**规则**：所有 AutoLoop 文件（commands/、references/、assets/）中涉及下列概念时，必须使用下表中的变量名，不得自行发明同义词。
+**Rule**: When the following concepts are involved in all AutoLoop files (commands/, references/, assets/), the variable names in the table below must be used, and synonyms are not allowed to be invented.
 
-| 变量名 | 类型 | 用途 | 收集时机 | 适用模板 |
+| Variable name | Type | Purpose | Collection timing | Applicable templates |
 |--------|------|------|---------|---------|
-| deploy_target | string | 部署目标主机/环境（如 sip-server、prod-01）| plan | T4 |
-| deploy_command | string | 部署执行命令（完整命令，如 gcloud compute ssh ...）| plan | T4 |
-| service_list | string[] | 服务名称列表（如 [sip-backend, sip-worker]）| plan | T4 |
-| service_count | int | 服务数量（自动计算 = len(service_list)，不手动填写）| 自动 | T4 |
-| health_check_url | string | 健康检查 URL（如 https://example.com/api/health）| plan | T4 |
-| acceptance_url | string | 线上验收 URL（如 https://example.com）| plan | T4 |
-| doc_output_path | string | 方案文档输出目录（绝对路径）| plan | T4 |
-| syntax_check_cmd | string | 语法检查命令（如 python3 -m py_compile {file} 或 npx tsc --noEmit）| plan | T4/T7/T8 |
-| syntax_check_file_arg | boolean | 语法检查命令是否接受单文件参数（python3 -m py_compile → true；npx tsc --noEmit → false）| plan | T4/T7/T8 |
-| new_router_name | string | 本次新增的 router 变量名（如 comments_router；无新路由填 N/A）| plan | T4 |
-| main_entry_file | string | 主入口文件绝对路径（如 /project/backend/main.py 或 /project/src/app.ts）| plan | T4/T7 |
-| output_path | string | 输出目录绝对路径（默认 {工作目录}/autoloop-output/）| plan | T6 |
-| naming_pattern | string | 文件命名规则（如 {template_name}-{index}.md）| plan | T6 |
-| key_assumptions | list[{name, current_value, unit}] | T2 对比中的关键假设（结构化列表，每项含名称+当前值+单位，用于敏感性分析）| plan | T2 |
-| migration_check_cmd | string | 数据库迁移状态验证命令（如 python -m alembic current && python -m alembic check；无迁移填 N/A）| plan | T4 |
-| frontend_dir | string | 前端代码目录绝对路径（如 /project/frontend）| plan | T4 |
+| deploy_target | string | Deployment target host/environment (such as sip-server, prod-01) | plan | T4 |
+| deploy_command | string | Deployment execution command (complete command, such as gcloud compute ssh...) | plan | T4 |
+| service_list | string[] | Service name list (such as [sip-backend, sip-worker]) | plan | T4 |
+| service_count | int | Number of services (automatically calculated = len(service_list), do not fill in manually) | Automatic | T4 |
+| health_check_url | string | Health check URL (such as https://example.com/api/health) | plan | T4 |
+| acceptance_url | string | Online acceptance URL (such as https://example.com) | plan | T4 |
+| doc_output_path | string | Plan document output directory (absolute path) | plan | T4 |
+| syntax_check_cmd | string | Syntax check command (such as python3 -m py_compile {file} or npx tsc --noEmit) | plan | T4/T7/T8 |
+| syntax_check_file_arg | boolean | Whether the syntax check command accepts single file arguments (python3 -m py_compile → true; npx tsc --noEmit → false) | plan | T4/T7/T8 |
+| new_router_name | string | The name of the new router variable this time (such as comments_router; fill in N/A if there is no new route) | plan | T4 |
+| main_entry_file | string | Absolute path of the main entry file (such as /project/backend/main.py or /project/src/app.ts) | plan | T4/T7 |
+| output_path | string | Absolute path to the output directory (default `{work_dir}/autoloop-output/`) | plan | T6 |
+| naming_pattern | string | File naming rules (such as {template_name}-{index}.md) | plan | T6 |
+| key_assumptions | list[{name, current_value, unit}] | Key assumptions in T2 comparison (structured list, each item contains name + current value + unit, used for sensitivity analysis) | plan | T2 |
+| migration_check_cmd | string | Database migration status verification command (such as python -m alembic current && python -m alembic check; fill in N/A if there is no migration) | plan | T4 |
+| frontend_dir | string | Absolute path to the front-end code directory (such as /project/frontend) | plan | T4 |
 
 ---
 
-## 统一状态枚举
+## Unified status enumeration
 
-所有文件中涉及问题状态和策略评价时，必须使用下列枚举值，不得使用其他说法。
+All documents referring to issue status and policy evaluation must use the following enumeration values ​​and no other terms may be used.
 
-**问题状态（Problem Status）**：
+**Problem Status**:
 ```
-新发现 | 已修复 | 待处理 | 跨轮遗留
+Newly discovered | Fixed | Pending | Cross-round carryover
 ```
 
-**策略评价（Strategy Rating）**：
+**Strategy Rating**:
 ```
-保持 | 避免 | 待验证
+Keep | Avoid | Pending Verification
 ```
 
 ---
 
-## 统一输出文件命名规则（规范来源）
+## Unified output file naming rules (standard source)
 
-所有文件在引用最终报告文件名时，必须引用本表，不得在其他文件中重新定义。
+All documents must reference this table when citing the final report file name and may not redefine it in other documents.
 
-| 模板 | 最终报告文件名 | 过程文件 |
+| Template | Final report file name | Process file |
 |------|--------------|---------|
 | T1 Research | `autoloop-report-{topic}-{date}.md` | plan + findings + progress + results.tsv |
-| T2 Compare | `autoloop-report-{topic}-{date}.md` | 同上 |
-| T5 Iterate | `autoloop-report-{topic}-{date}.md` | 同上 |
-| T6 Generate | `{output_path}/{naming_pattern}` (生成内容) + `autoloop-report-{topic}-{date}.md` (汇总报告) | 同上 |
-| T4 Deliver | `autoloop-delivery-{feature}-{date}.md` | 同上 |
-| T7 Quality | `autoloop-audit-{date}.md` | 同上 |
-| T8 Optimize | `autoloop-audit-{date}.md` | 同上 |
+| T2 Compare | `autoloop-report-{topic}-{date}.md` | Same as above |
+| T5 Iterate | `autoloop-report-{topic}-{date}.md` | Same as above |
+| T6 Generate | `{output_path}/{naming_pattern}` (generated content) + `autoloop-report-{topic}-{date}.md` (summary report) | Same as above |
+| T4 Deliver | `autoloop-delivery-{feature}-{date}.md` | Same as above |
+| T7 Quality | `autoloop-audit-{date}.md` | Same as above |
+| T8 Optimize | `autoloop-audit-{date}.md` | Same as above |
 
-其中 `{date}` = `YYYYMMDD`，`{topic}` / `{feature}` 从 plan 的一句话目标中提取（空格替换为 `-`，小写）。
+where `{date}` = `YYYYMMDD`, `{topic}` / `{feature}` are extracted from the one-sentence target of plan (spaces replaced with `-`, lowercase).
 
 ---
 
-## 统一 TSV Schema（规范来源）
+## Unified TSV Schema (standard source)
 
-所有模板写入 `autoloop-results.tsv` 时必须使用以下统一列结构，不得在其他文件中重新定义。
+All templates written to `autoloop-results.tsv` must use the following uniform column structure and must not be redefined in other files.
 
 ```
 iteration	phase	status	dimension	metric_value	delta	strategy_id	action_summary	side_effect	evidence_ref	unit_id	protocol_version	score_variance	confidence	details
 ```
 
-| 列 | 说明 | 示例 |
+| Column | Description | Example |
 |---|---|---|
-| iteration | 轮次编号（从 1 开始） | 1 |
-| phase | 阶段或子步骤标识 | scan / generate / compare |
-| status | 状态（检查结果枚举）：通过 / 未通过 / 待检查 / 待审查 | 通过 |
-| dimension | 评分维度名 | 安全性 / 覆盖率 / score |
-| metric_value | 指标值（数字或百分比） | 8.5 / 85% |
-| delta | 与上轮的变化（首轮填 — ） | +1.2 |
-| strategy_id | 本轮使用的策略标识（与 findings.md 策略评估表一致） | S01-sql-scan |
-| action_summary | 具体执行动作摘要 | 扫描全部SQL拼接并替换为参数化 |
-| side_effect | 对其他维度的影响（无副作用填"无"） | 可维护性-0.5 |
-| evidence_ref | 证据引用（findings.md 中的问题ID） | S001, R003 |
-| unit_id | T2选项名/T6单元编号（其他模板填 —） | 选项A / 001 / — |
-| protocol_version | 当前协议版本号 | 1.0.0 |
-| score_variance | 多evaluator评分方差（单evaluator填0） | 0.5 |
-| confidence | 评分置信度百分比 | 85% |
-| details | 补充说明 | 首轮基线采集 |
+| iteration | iteration number (starting from 1) | 1 |
+| phase | Phase or substep identifier | scan / generate / compare |
+| status | Status (inspection result enumeration): passed / failed / pending inspection / pending review | passed |
+| dimension | score dimension name | security / coverage / score |
+| metric_value | Metric value (number or percentage) | 8.5 / 85% |
+| delta | Changes from the previous round (fill in — in the first round) | +1.2 |
+| strategy_id | The strategy identifier used in this round (consistent with the findings.md strategy evaluation table) | S01-sql-scan |
+| action_summary | Summary of specific execution actions | Scan all SQL splices and replace them with parameterization |
+| side_effect | Impact on other dimensions (if there are no side effects, fill in "None") | Maintainability-0.5 |
+| evidence_ref | Evidence reference (issue ID in findings.md) | S001, R003 |
+| unit_id | T2 option name/T6 unit number (fill in — for other templates) | option A / 001 / — |
+| protocol_version | Current protocol version number | 1.0.0 |
+| score_variance | Multiple evaluator score variance (fill in 0 for single evaluator) | 0.5 |
+| confidence | Rating confidence percentage | 85% |
+| details | Supplementary instructions | First round of baseline collection |
 
-**使用约定（各模板行粒度）**：
+**Usage convention (at each template row granularity)**:
 
-- T1/T5/T4/T7/T8：每轮**每维度**一行，确保每个维度的分数变化和策略归因都可追踪
-- T2 Compare：每轮每选项每维度一行，`unit_id` = 选项名
-- T6 Generate：每生成单元一行，`unit_id` = 生成单元 ID（001/002/...），`dimension` = `score`
-- strategy_id 必须与 findings.md 中策略评估表的策略名一致
-- side_effect 字段强制填写（无副作用填"无"）
-- 首轮基线采集时，strategy_id 填"baseline"，action_summary 填"基线测量"
+- T1/T5/T4/T7/T8: **one row per dimension** per round, ensuring that score changes and strategic attribution of each dimension can be tracked
+- T2 Compare: One row per dimension per option in each round, `unit_id` = option name
+- T6 Generate: One row per generation unit, `unit_id` = generation unit ID (001/002/...), `dimension` = `score`
+- strategy_id must be consistent with the strategy name in the strategy evaluation table in findings.md
+- The side_effect field is mandatory (if there is no side effect, fill in "None")
+- During the first round of baseline collection, fill in "baseline" for strategy_id and "baseline measurement" for action_summary
 
-额外的原始数据（变量值、证据来源等）写入 `autoloop-findings.md`，不放在 results.tsv。
+Additional raw data (variable values, evidence sources, etc.) is written to `autoloop-findings.md` and not placed in results.tsv.
 
-### 跨文件主键规范
+### Cross-file primary key specification
 
-所有AutoLoop输出文件（results.tsv、findings.md、progress.md、plan.md）共享以下主键体系，确保跨文件可追溯、可join：
+All AutoLoop output files (results.tsv, findings.md, progress.md, plan.md) share the following primary key system to ensure cross-file traceability and joinability:
 
-| 主键 | 格式 | 定义时机 | 贯穿文件 |
+| Primary Key | Format | Definition Timing | Through File |
 |------|------|---------|---------|
-| iteration | 整数（从1递增） | 每轮开始时自动递增 | 全部四文件 |
-| strategy_id | S{NN}-{简短描述} | DECIDE阶段命名 | 全部四文件 |
-| problem_id | {维度缩写}{NNN}（如S001） | findings发现时命名 | findings + results.tsv |
-| dimension | 与quality-gates.md维度名完全一致 | quality-gates.md定义 | results.tsv + findings |
+| iteration | integer (incrementing from 1) | auto-increment at the start of each round | all four files |
+| strategy_id | `S{NN}-{short-description}` | named in the DECIDE stage | All four files |
+| problem_id | `{dimension_abbrev}{NNN}` (such as `S001`) | named when the finding is created | findings + results.tsv |
+| dimension | exactly the same as quality-gates.md dimension name | quality-gates.md definition | results.tsv + findings |
 
-**引用规则**：
-- results.tsv 的 evidence_ref 必须引用 findings.md 中已定义的 problem_id
-- progress.md 每轮记录必须在标题中注明 iteration 编号
-- plan.md 策略历史的 strategy_id 必须与 findings.md 策略评估表一致
-- 任何文件中出现的 dimension 名称必须与 quality-gates.md 完全匹配，不得使用同义词
+**Quotation Rules**:
+- the evidence_ref of results.tsv must refer to the problem_id defined in findings.md
+- progress.md Each round of records must have the iteration number in the title
+- The strategy_id of plan.md strategy history must be consistent with the findings.md strategy evaluation table
+- Dimension names appearing in any file must match quality-gates.md exactly, no synonyms are allowed
 
 ---
 
-## Bootstrap 规则（plan 完成后立即执行）
+## Bootstrap rules (executed immediately after plan is completed)
 
-**plan 向导完成后，立即创建以下文件（不等待第 1 轮 OBSERVE）：**
+**As soon as the plan wizard completes, the following files are created (without waiting for round 1 of OBSERVE):**
 
 ```
-1. autoloop-plan.md         （已由向导创建）
-2. autoloop-findings.md     （包含：执行摘要、每轮发现记录、工程问题清单、信息缺口汇总、拓展方向、策略评估、模式识别、经验教训）
-3. autoloop-progress.md     （包含：质量门禁总览、基线记录、每轮 8 阶段迭代循环、任务完成记录、策略历史）
-4. autoloop-results.tsv     （写入表头行：iteration\tphase\tstatus\tdimension\tmetric_value\tdelta\tstrategy_id\taction_summary\tside_effect\tevidence_ref\tunit_id\tprotocol_version\tscore_variance\tconfidence\tdetails）
+1. autoloop-plan.md (created by the wizard)
+2. autoloop-findings.md (includes: executive summary, discovery record of each round, engineering problem list, information gap summary, expansion direction, strategy evaluation, pattern recognition, lessons learned)
+3. autoloop-progress.md (includes: quality access control overview, baseline record, 8-stage iteration loop for each round, task completion record, strategy history)
+4. autoloop-results.tsv (write the header line: iteration\tphase\tstatus\tdimension\tmetric_value\tdelta\tstrategy_id\taction_summary\tside_effect\tevidence_ref\tunit_id\tprotocol_version\tscore_variance\tconfidence\tdetails)
 ```
 
-所有 4 个文件必须在第 1 轮 OBSERVE 开始前存在。创建后在 autoloop-plan.md 的"输出文件"表中将状态从"待创建"更新为"已创建"。
+All 4 files must exist before round 1 of OBSERVE begins. After creation, update the status from "To be created" to "Created" in the "Output files" table of autoloop-plan.md.
 
-### SSOT 可选模式
+### SSOT optional mode
 
-当 `autoloop-plan.md` 设置 `ssot_mode: true` 时，启用结构化单一事实源模式：
+When `autoloop-plan.md` is set to `ssot_mode: true` , structured single source of truth mode is enabled:
 
-- **数据源**：`autoloop-state.json`（JSON 格式），包含 plan/iterations/findings/results 全部数据
-- **写操作**：所有状态变更通过 `scripts/autoloop-state.py` 写入 JSON，不直接编辑 MD 文件
-- **渲染**：每轮结束时运行 `scripts/autoloop-render.py` 从 JSON 生成 4 个可读 MD 文件
-- **读操作**：OBSERVE 阶段仍可读取 MD 文件（渲染后与 JSON 同步）
-- **向后兼容**：未设置 `ssot_mode` 时，行为完全不变，直接读写 4 个 MD 文件
-- **优势**：消除跨文件信息重复和不一致，支持 `query` 命令快速检索任意字段
-- **初始化**：使用 `autoloop-state.py init` 替代 `autoloop-init.py`，自动创建 JSON + 4 个 MD
-
----
-
-## autoloop-state.json 迁移（plan.gates 与 scorer 对齐）
-
-**背景**：`autoloop-score.py` 使用与 `gate-manifest.json` 一致的内部维度键（如 `syntax_errors` → `syntax`）。`plan.gates[].dim` 必须与评分 JSON 的 `dimension` 一致；每条 gate 建议包含 `manifest_dimension`（manifest 原始名）供 comparator 反查。
-
-**若你的 state 早于上述约定**（`plan.gates` 为空、缺少 `manifest_dimension`、或 `dim` 仍写 `syntax_errors` / `p1_count` 等 manifest 原名）：
-
-1. **推荐**：在工作目录删除 `autoloop-state.json`（及按需清理 checkpoint）后重新执行  
-   `python3 scripts/autoloop-state.py init <工作目录> <模板T1-T8> "<目标>"`  
-   将自动写入与 scorer 对齐的 `plan.gates`。
-2. **保留历史**：手工将每条 gate 的 `dim` 改为与 `gate-manifest.json` 经 `_MANIFEST_DIM_MAP` 映射后的内部键，并补上 `manifest_dimension`；可参考新生成 state 中的结构。
-3. **校验**：`python3 scripts/autoloop-validate.py <工作目录>` 对旧约约会给出 **warning**（非致命）；`--strict` 或 `AUTOLOOP_VALIDATE_STRICT=1` 时升级为 **error**。
-4. **预览迁移**：`python3 scripts/autoloop-state.py migrate <工作目录> --dry-run` 打印当前模板下 SSOT 建议的 `plan.gates` JSON（不修改文件）。
+- **Data source**: `autoloop-state.json` (JSON format), contains all data of plan/iterations/findings/results
+- **Write operation**: All status changes are written to JSON through `scripts/autoloop-state.py`, and the MD file is not edited directly.
+- **Rendering**: Run `scripts/autoloop-render.py` at the end of each round to generate 4 readable MD files from JSON
+- **Read operation**: MD files can still be read in the OBSERVE stage (synchronized with JSON after rendering)
+- **Backward Compatibility**: When `ssot_mode` is not set, the behavior is completely unchanged and 4 MD files are read and written directly.
+- **Advantages**: Eliminate duplication and inconsistency of information across files, support `query` command to quickly retrieve any field
+- **Initialization**: Use `autoloop-state.py init` instead of `autoloop-init.py`, automatically create JSON + 4 MDs
 
 ---
 
-## plan.gates 字段约定（canonical）
+## autoloop-state.json migration (plan.gates aligned with scorer)
 
-| 字段 | 必填 | 说明 |
+**Background**: `autoloop-score.py` uses the same internal dimension key as `gate-manifest.json` (such as `syntax_errors` → `syntax`). `plan.gates[].dim` must be consistent with `dimension` of the scoring JSON; each gate suggestion contains `manifest_dimension` (manifest original name) for comparator to check back.
+
+**If your state is earlier than the above convention** (`plan.gates` is empty, `manifest_dimension` is missing, or `dim` still writes `syntax_errors` / `p1_count` and other manifest original names):
+
+1. **Recommendation**: Delete `autoloop-state.json` in the working directory (and clean the checkpoint as needed) and re-execute it.
+`python3 scripts/autoloop-state.py init <work_dir> <template T1-T8> "<goal>"`
+Will automatically write to `plan.gates` aligned with scorer.
+2. **Keep history**: Manually change the `dim` of each gate to the internal key mapped with `gate-manifest.json` through `_MANIFEST_DIM_MAP`, and add `manifest_dimension`; you can refer to the structure in the newly generated state.
+3. **Check**: `python3 scripts/autoloop-validate.py <work_dir>` reports a **warning** (non-fatal) for legacy conventions; this is upgraded to **error** when `--strict` or `AUTOLOOP_VALIDATE_STRICT=1` is used.
+4. **Preview migration**: `python3 scripts/autoloop-state.py migrate <work_dir> --dry-run` prints the `plan.gates` JSON recommended by SSOT for the current template (do not modify the file).
+
+---
+
+## plan.gates field convention (canonical)
+
+| Field | Required | Description |
 |------|------|------|
-| `dim` | 是 | 与 `autoloop-score` 输出的 `dimension` 一致（内部键） |
-| `manifest_dimension` | 强烈建议 | `gate-manifest.json` 中该条的原始 `dimension` 字符串 |
-| `threshold` / `target` | 视模板 | T5 等可为 `threshold: null` + `target` |
-| `gate` / `label` / `comparator` / `unit` | 视模板 | 与 manifest 一致 |
+| `dim` | Yes | Consistent with `dimension` output by `autoloop-score` (internal key) |
+| `manifest_dimension` | Strongly recommended | The original `dimension` string of the entry in `gate-manifest.json` |
+| `threshold` / `target` | Depending on the template | T5, etc. can be `threshold: null` + `target` |
+| `gate` / `label` / `comparator` / `unit` | View template | Consistent with manifest |
 
-**废弃**：仅写 `dimension` 而不写 `dim` — validate strict 模式下报错。
+**Deprecated**: Only write `dimension` instead of `dim` — an error will be reported in validate strict mode.
 
 ---
 
-## 阶段产物（供 validate / 自动化核对）
+## Stage products (for validate/automated verification)
 
-| 当前末轮 `iterations[-1].phase` | 最小产物（SSOT） | validate 行为 |
+| Current last round `iterations[-1].phase` | Minimum product (SSOT) | validate behavior |
 |--------------------------------|------------------|----------------|
-| `OBSERVE` … `DECIDE` | 无额外强制（首轮可无 scores） | — |
-| `ACT` 及之后 | `plan.decide_act_handoff.strategy_id` **或** `iterations[-1].strategy.strategy_id`（`SNN-描述`） | strict→error，否则 warn |
-| `SYNTHESIZE` / `EVOLVE` / `REFLECT`（已进入 VERIFY 之后） | `iterations[-1].scores` 非空 | strict→error，否则 warn |
-| `REFLECT` | `iterations[-1].reflect` 为结构化 JSON（含 `strategy_id` / `effect` / `lesson_learned` 等至少一项有效值） | strict→error，否则 warn |
+| `OBSERVE` … `DECIDE` | No additional compulsory (no scores in the first round) | — |
+| `ACT` and later | `plan.decide_act_handoff.strategy_id` **or** `iterations[-1].strategy.strategy_id` (`SNN-description`) | strict → error, otherwise warn |
+| `SYNTHESIZE` / `EVOLVE` / `REFLECT` (after entering VERIFY) | `iterations[-1].scores` is not empty | strict→error, otherwise warn |
+| `REFLECT` | `iterations[-1].reflect` is structured JSON (including at least one valid value such as `strategy_id` / `effect` / `lesson_learned`) | strict→error, otherwise warn |
 
-| 其他 | 说明 |
+| Others | Description |
 |------|------|
-| DECIDE | `plan.decide_act_handoff`（`strategy_id`、`hypothesis`、`planned_commands`） |
-| VERIFY | `iterations[-1].scores`；`plan.gates[].current` / `status` |
-| checkpoint | 若存在 `checkpoint.json`，`current_phase` 应与 `iterations[-1].phase` 一致 |
+| DECIDE | `plan.decide_act_handoff` (`strategy_id`, `hypothesis`, `planned_commands`) |
+| VERIFY | `iterations[-1].scores`; `plan.gates[].current` / `status` |
+| checkpoint | If `checkpoint.json` exists, `current_phase` should be consistent with `iterations[-1].phase` |
 
-**DECIDE→ACT 交接 SSOT**：策略交接字段**仅**写在 `autoloop-state.json` 的 `plan.decide_act_handoff`（及迭代内 `strategy` 镜像）；`checkpoint.json` **不**承载 `hypothesis` / `planned_commands`，避免双源。校验与自动化应以 state 为准。
+**DECIDE→ACT handover SSOT**: The policy handover field is **only** written in `plan.decide_act_handoff` of `autoloop-state.json` (and the `strategy` mirror within the iteration); `checkpoint.json` **does not** carry `hypothesis` / `planned_commands` to avoid double sources. Validation and automation should be based on state.
 
-`autoloop-validate.py --strict` 将上表中 strict 行升级为 error。
+`autoloop-validate.py --strict` upgrades the strict row in the above table to error.
 
 ---
 
-## metadata 字段（SSOT）
+## metadata field (SSOT)
 
 ### `metadata.last_error`
 
-子进程失败或超时由 `scripts/autoloop-controller.py` 的 `run_tool` 写入（存在 `autoloop-state.json` 且调用方传入 `work_dir` 时）。
+Child process failure or timeout is written by `run_tool` of `scripts/autoloop-controller.py` (when `autoloop-state.json` is present and the caller passes in `work_dir`).
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |------|------|------|
-| `time` | string (ISO8601) | 记录时间 |
-| `script` | string | 脚本文件名（如 `autoloop-validate.py`） |
-| `returncode` | int | 退出码；超时为 `124` |
-| `stderr` | string | 截取后的标准错误（最多约 500 字符） |
+| `time` | string (ISO8601) | recording time |
+| `script` | string | Script file name (such as `autoloop-validate.py`) |
+| `returncode` | int | Exit code; timeout is `124` |
+| `stderr` | string | Truncated standard error (up to about 500 characters) |
 
 ### `metadata.audit[]`
 
-按时间追加的审计行，元素为对象，**至少**含 `time`、`event`。
+Audit rows appended by time, the elements are objects, **at least** contain `time`, `event`.
 
-| `event` | 说明 | 典型附加字段 |
+| `event` | Description | Typical additional fields |
 |---------|------|----------------|
-| `phase_complete` | 阶段推进 | `detail`（字符串，兼容旧格式） |
-| `tool_start` | 子工具即将执行 | `script`、`argv`（字符串列表）、`work_dir` |
-| `tool_finish` | 子工具已结束（含非零退出） | `returncode`、`timeout`（bool）、`stderr`（截取） |
-| `tool_timeout` | 子工具超时 | `returncode`（124）、`timeout`（true） |
+| `phase_complete` | Stage advancement | `detail` (string, compatible with old format) |
+| `tool_start` | Subtool is about to be executed | `script`, `argv` (string list), `work_dir` |
+| `tool_finish` | The subtool has ended (including non-zero exit) | `returncode`, `timeout` (bool), `stderr` (interception) |
+| `tool_timeout` | Subtool timeout | `returncode`(124), `timeout`(true) |
 
 ---
 
-## plan.template_mode 与 T4 交付（P2-04）
+## plan.template_mode delivered with T4 (P2-04)
 
-| 字段 | 类型 | 默认 | 说明 |
+| Field | Type | Default | Description |
 |------|------|------|------|
-| `plan.template_mode` | string | `ooda_rounds` | `ooda_rounds`：终止条件与 manifest `default_rounds` 一致。`linear_phases`：T4 下预算耗尽时若 `linear_delivery_complete` 仍为 false，控制器 EVOLVE **暂停**而非成功终止，避免仅靠 OODA 轮次误停。 |
-| `plan.linear_delivery_complete` | boolean | `false` | 人工在交付 Phase 1–5 全部完成后设为 `true`（见 `references/delivery-phases.md`）。 |
+| `plan.template_mode` | string | `ooda_rounds` | `ooda_rounds`: The termination condition is consistent with manifest `default_rounds`. `linear_phases`: When the budget under T4 is exhausted, if `linear_delivery_complete` is still false, the controller EVOLVE **pauses** instead of successfully terminating to avoid accidental stopping based on OODA rounds alone. |
+| `plan.linear_delivery_complete` | boolean | `false` | Manually set to `true` after all delivery phases 1-5 are complete (see `references/delivery-phases.md`). |
 
 ---
 
-## findings 条目 canonical 字段（P3-07）
+## findings entry canonical field (P3-07)
 
-| 字段 | 角色 |
+| Field | Role |
 |------|------|
-| `summary` | **推荐**：短摘要（列表/渲染优先展示） |
-| `content` | 详述正文（可选） |
-| `description` | 与 `content` 二选一兼容旧数据 |
+| `summary` | **Recommendation**: short summary (list/rendering is displayed first) |
+| `content` | Detailed text (optional) |
+| `description` | Compatible with `content` alternative old data |
 
-- 三者皆空：`autoloop-validate` **warn**（`render`/`score` 可能跳过该条）。
-- 同时含 `summary` 与 `content`：**warn**（建议 summary 为 canonical 短句、content 为长文）。
-- `autoloop-score` 对可信度/完整性等统计时，URL 与来源扫描会合并 `source` 与上述正文（`summary`→`content`→`description`）。
+- All three are empty: `autoloop-validate` **warn** (`render`/`score` may skip this item).
+- Contains both `summary` and `content`: **warn** (it is recommended that summary be a short canonical sentence and content be long text).
+- `autoloop-score` When counting credibility/completeness, URL and source scanning will merge `source` with the above text (`summary`→`content`→`description`).
 
 ---
 
-## 评分置信度分层（P1-05 Scoring Confidence）
+## Scoring Confidence Stratification (P1-05 Scoring Confidence)
 
-`autoloop-score.py` 每个维度的评分结果现在包含 `confidence` 和 `margin` 字段，表示该评分的可信程度。
+`autoloop-score.py` Rating results for each dimension now include `confidence` and `margin` fields, indicating how trustworthy the rating is.
 
-### 门禁结果扩展字段
+### Access control result extension field
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |------|------|------|
-| `confidence` | string | 置信度等级：`empirical` / `heuristic` / `binary` |
-| `margin` | float \| null | 误差范围（绝对值）；`binary` 时为 `null` |
+| `confidence` | string | Confidence level: `empirical` / `heuristic` / `binary` |
+| `margin` | float \| null | Error range (absolute value); `null` for `binary` |
 
-### 三级置信度规则
+### Three-level confidence rules
 
-| 等级 | margin | 触发条件 | 典型维度 |
+| Level | Margin | Trigger conditions | Typical dimensions |
 |------|--------|----------|----------|
-| `empirical` | ≤ 0.3 | 评分基于工具实际输出（syntax_check_cmd 结果、测试通过率、lint 错误数、健康检查 URL 响应等） | `syntax`、`p1_p2_issues`、`service_health`、`p1_all`、`security_p2`、`reliability_p2`、`maintainability_p2` |
-| `heuristic` | ≤ 1.5 | 评分基于内容分析模式匹配（来源计数、关键词覆盖率、文本模式匹配、评审打分等） | `coverage`、`credibility`、`consistency`、`completeness`、T7/T8 评审分、T3 设计类 |
-| `binary` | null | 只能判通过/不通过，无量化工具支持 | `bias_check`、`user_acceptance` |
+| `empirical` | ≤ 0.3 | Rating based on actual tool output (syntax_check_cmd results, test pass rate, lint error count, health check URL responses, etc.) | `syntax`, `p1_p2_issues`, `service_health`, `p1_all`, `security_p2`, `reliability_p2`, `maintainability_p2` |
+| `heuristic` | ≤ 1.5 | Scoring based on content analysis pattern matching (source count, keyword coverage, text pattern matching, review score, etc.) | `coverage`, `credibility`, `consistency`, `completeness`, T7/T8 review score, T3 design category |
+| `binary` | null | Can only pass/fail, no quantitative tool support | `bias_check`, `user_acceptance` |
 
-### 停滞检测适配
+### Stasis detection adaptation
 
-`autoloop-controller.py` 的 `detect_stagnation` 使用 margin 调整停滞阈值：
+`autoloop-controller.py` of `detect_stagnation` uses margin to adjust the stall threshold:
 
-- **empirical** (margin=0.3): 保留现有固定阈值（通常 ≥ 0.3）
-- **heuristic** (margin=1.5): 阈值放大到 `max(固定阈值, margin)`，避免误差范围内的微小波动被误判为停滞
-- **binary** (margin=null): 只看方向（整体改善/恶化），不做数值比较
+- **empirical** (margin=0.3): retain existing fixed threshold (usually ≥ 0.3)
+- **heuristic** (margin=1.5): The threshold is enlarged to `max(fixed_threshold, margin)` to prevent small fluctuations within the error range from being misjudged as stagnation.
+- **binary** (margin=null): only look at the direction (overall improvement/deterioration), without numerical comparison
 
-### 任务终止质量摘要
+### Task termination quality summary
 
-任务终止时（`stop` 或 `pause`），EVOLVE 阶段输出每个维度的质量评估摘要：
+When the task terminates (`stop` or `pause`), the EVOLVE stage outputs a summary of the quality assessment for each dimension:
 
 ```text
-维度 | 当前 | 目标 | 置信度 | 误差 | 可信度说明
+Dimensions | Current | Goal | Confidence | Error | Confidence Statement
 ```
 
-`heuristic` 和 `binary` 维度会标注"建议人工复核"，帮助 Kane 快速判断哪些评分可信、哪些需要额外验证。
+The `heuristic` and `binary` dimensions will be marked with "Manual review recommended" to help Kane quickly determine which scores are credible and which require additional verification.
 
 ---
 
-## OODA 阶段输出 Schema（P2-17）
+## OODA stage output Schema (P2-17)
 
-每个 OODA 阶段必须输出以下字段。控制器在阶段 prompt 中提示必需字段，`autoloop-validate.py --phase-output <phase>` 可验证。
+Each OODA stage must output the following fields. The controller prompts for required fields in the stage prompt, `autoloop-validate.py --phase-output <phase>` can be verified.
 
-### OBSERVE 输出（写入 progress.md）
+### OBSERVE output (write to progress.md)
 
-| 字段 | 类型 | 必需 | 说明 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| current_scores | dict[str, float] | 是 | 各维度当前分数 |
-| target_scores | dict[str, float] | 是 | 各维度目标分数 |
-| remaining_budget_pct | float | 是 | 剩余预算百分比 |
-| focus_dimensions | list[str] | 是 | 本轮重点维度 |
-| carry_over_issues | list[str] | 否 | 跨轮遗留问题 |
+| current_scores | dict[str, float] | Yes | Current scores of each dimension |
+| target_scores | dict[str, float] | Yes | Target scores for each dimension |
+| remaining_budget_pct | float | yes | remaining budget percentage |
+| focus_dimensions | list[str] | Yes | Focus dimensions of this round |
+| carry_over_issues | list[str] | No | carryover issues |
 
-### DECIDE 输出（写入 progress.md）
+### DECIDE output (write to progress.md)
 
-| 字段 | 类型 | 必需 | 说明 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| strategy_id | str | 是 | S{NN}-{描述} 格式 |
-| action_plan | list[str] | 是 | 具体行动列表 |
-| fallback | str | 是 | 备用策略 |
-| impacted_dimensions | list[str] | 是 | 可能受影响的维度 |
+| strategy_id | str | yes | `S{NN}-{description}` format |
+| action_plan | list[str] | Yes | Specific action list |
+| fallback | str | yes | fallback strategy |
+| impacted_dimensions | list[str] | yes | Dimensions that may be affected |
 
-### ACT 输出（写入 state.json iterations[-1].act）
+### ACT output (write state.json iterations[-1].act)
 
-| 字段 | 类型 | 必需 | 说明 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| subagent_results | list | 是 | subagent 执行结果 |
-| completion_ratio | int | 是 | 完成百分比 0-100（P2-10） |
-| failure_type | str | 否 | 失败类型枚举（P2-12） |
-| discoveries | list[str] | 否 | 即时发现（P2-15） |
+| subagent_results | list | yes | subagent execution results |
+| completion_ratio | int | yes | completion percentage 0-100 (P2-10) |
+| failure_type | str | no | failure type enumeration (P2-12) |
+| discoveries | list[str] | No | Instant discovery (P2-15) |
 
-### VERIFY 输出（写入 state.json iterations[-1].scores）
+### VERIFY output (write state.json iterations[-1].scores)
 
-| 字段 | 类型 | 必需 | 说明 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| scores | dict[str, ScoreResult] | 是 | 含 confidence（P1-05） |
-| regression_detected | bool | 是 | 是否检测到回归 |
+| scores | dict[str, ScoreResult] | Yes | Contains confidence (P1-05) |
+| regression_detected | bool | yes | whether regression is detected |
 
 ---

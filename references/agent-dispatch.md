@@ -1,486 +1,486 @@
-# Agent Dispatch — Subagent 调度规范
+# Agent Dispatch — Subagent Dispatch Specification
 
-## 概述
+## Overview
 
-本文档定义 AutoLoop 调度 subagent 的规则：什么情况并行，什么情况串行，每次调度必须提供什么上下文。
+This document defines the rules for AutoLoop to dispatch subagents: which scenarios should run in parallel, which should run serially, and what context must be included in every dispatch.
 
-**核心原则**：每个 subagent 必须能够独立工作，不依赖你告诉它"上下文在哪儿"——你必须把上下文直接放在指令里。
+**Core Principle**: Each subagent must be able to work independently and must not rely on being told "where the context is" later. You must put the context directly into the instruction.
 
 ---
 
-## 任务类型标签（Task-Aware Dispatch）
+## Task-type Labels (Task-Aware Dispatch)
 
-每个模板+阶段组合有对应的 task_type 和 prefer_tools 标签，用于引导 subagent 优先选择合适的工具和行为模式。
+Each template + phase combination has a corresponding `task_type` and `prefer_tools` tag used to guide the subagent toward appropriate tools and behavior patterns.
 
-| 模板+阶段 | task_type | prefer_tools | 行为导向 |
+| template + phase | task_type | prefer_tools | behavior orientation |
 | ---------- | ----------- | ------------- | --------- |
-| T1 ACT | research | web_search, read_file | 优先使用搜索工具，广泛收集信息 |
-| T2 ACT | analysis | read_file, grep | 优先使用对比分析工具 |
-| T3 ACT | design | read_file, write_file | 优先使用文档编写工具 |
-| T4 ACT | coding | edit_file, bash, grep | 优先使用代码编辑和执行工具 |
-| T5 ACT | iteration | read_file, web_search | 混合使用，数据驱动 |
-| T6 ACT | generation | write_file | 优先使用批量生成工具 |
-| T7 ACT | review | grep, read_file | 优先使用代码搜索和阅读工具 |
-| T8 ACT | optimization | edit_file, bash | 优先使用重构和测试工具 |
+| T1 ACT | research | web_search, read_file | Prioritize search tools to collect broad information |
+| T2 ACT | analysis | read_file, grep | Prioritize comparative analysis tools |
+| T3 ACT | design | read_file, write_file | Prefer document-writing tools |
+| T4 ACT | coding | edit_file, bash, grep | Prioritize code editing and execution tools |
+| T5 ACT | iteration | read_file, web_search | Mixed use, data-driven |
+| T6 ACT | generation | write_file | Prioritize batch generation tools |
+| T7 ACT | review | grep, read_file | Prioritize code search and reading tools |
+| T8 ACT | optimization | edit_file, bash | Prioritize refactoring and testing tools |
 
-controller 在 ACT 阶段根据当前模板自动注入 `[任务类型: {task_type}] {behavior_hint}`，见 `scripts/autoloop-controller.py` 的 `TASK_TYPE_MAP`。
+The controller automatically injects `[Task type: {task_type}] {behavior_hint}` according to the current template during ACT. See `TASK_TYPE_MAP` in `scripts/autoloop-controller.py`.
 
 ---
 
-## 并行 vs 串行判断规则
+## Parallel vs. Serial Decision Rules
 
-### 必须并行（同时调度）
+### Must run in parallel (dispatch simultaneously)
 
-满足以下任一条件即可并行：
+Parallelism is allowed when any of the following conditions are true:
 
-1. **输出独立**：subagent A 的输出不是 subagent B 的输入
-2. **文件独立**：两个 subagent 操作完全不同的文件集合
-3. **维度独立**：调研不同维度/检查不同模块
-4. **层次独立**：backend-dev 操作后端文件，frontend-dev 操作前端文件
+1. **Output independence**: the output of subagent A is not the input of subagent B
+2. **File independence**: two subagents operate on completely different file sets
+3. **Dimension independence**: they investigate different dimensions / check different modules
+4. **Layer independence**: `backend-dev` works on backend files, `frontend-dev` works on frontend files
 
-**强制并行场景**：
+**Forced parallel scenarios**:
 
 ```text
-T1 Research：多个 researcher 搜索不同维度 → 必须并行
-T2 Compare：多个 analyzer 分析不同选项 → 必须并行
-T7 Quality：安全审查 + 可靠性审查 + 可维护性审查 → 必须并行（三者均通过 code-reviewer 角色化实现，见下方说明）
-T8 Optimize：架构诊断 + 性能诊断 + 稳定性诊断 → 必须并行（同上）
+T1 Research: multiple researchers search different dimensions → must be parallel
+T2 Compare: multiple analyzers analyze different options → must be parallel
+T7 Quality: security review + reliability review + maintainability review → must run in parallel (all three use the code-reviewer role; see explanation below)
+T8 Optimize: architecture diagnosis + performance diagnosis + stability diagnosis → must run in parallel (same pattern as above)
 ```
 
-**T7/T8 专业审查角色说明**：
+**T7/T8 specialized review role notes**:
 
-security-reviewer、reliability-reviewer、maintainability-reviewer 等**不是独立的 agent 定义文件**，而是通过 Agent tool 的 `prompt` 参数向通用 code-reviewer 传递角色化指令实现的。调度示例：
+`security-reviewer`, `reliability-reviewer`, `maintainability-reviewer`, and similar roles are not independent agent-definition files. They are implemented by passing role-specific instructions to the generic `code-reviewer` through the Agent tool `prompt` parameter. Example dispatch:
 
 ```python
-# 安全审查
+# Security review
 Agent(
   subagent_type='code-reviewer',
-  prompt='你是安全审查专家，只关注安全维度（SQL注入/命令注入/XSS/路径穿越/敏感数据暴露）。
-          使用 quality-gates.md 的安全性门禁评分规则（P1/P2/P3）。
-          忽略可靠性和可维护性维度。'
+  prompt='You are a security review expert and focus only on security dimensions (SQL injection / command injection / XSS / path traversal / sensitive data exposure).
+Use the security gate scoring rules (P1/P2/P3) from quality-gates.md.
+Ignore reliability and maintainability dimensions.'
 )
 
-# 可靠性审查
+# Reliability review
 Agent(
   subagent_type='code-reviewer',
-  prompt='你是可靠性审查专家，只关注可靠性维度（静默失败/缺少异常处理/无超时配置/缺少降级回退）。
-          使用 quality-gates.md 的可靠性门禁评分规则。
-          忽略安全性和可维护性维度。'
+  prompt='You are a reliability review expert and focus only on reliability dimensions (silent failure / missing exception handling / no timeout configuration / missing degradation fallback).
+Use the reliability gate scoring rules from quality-gates.md.
+Ignore security and maintainability dimensions.'
 )
 
-# 可维护性审查
+# Maintainability review
 Agent(
   subagent_type='code-reviewer',
-  prompt='你是可维护性审查专家，只关注可维护性维度（路由注册/模块导出/类型规范/代码重复）。
-          使用 quality-gates.md 的可维护性门禁评分规则。
-          忽略安全性和可靠性维度。'
+  prompt='You are a maintainability review expert and focus only on maintainability dimensions (route registration / module exports / type specifications / code duplication).
+Use the maintainability gate scoring rules from quality-gates.md.
+Ignore security and reliability dimensions.'
 )
 ```
 
-verifier（T4 Phase 5 线上验收）同理：通过 prompt 参数角色化为线上验收专家，不需要独立定义文件。调度时统一使用 verifier 角色名，不使用 "browse subagent" 旧称谓。
+The same applies to `verifier` (T4 Phase 5 online acceptance): the `prompt` parameter is used to assume the online-acceptance role, and no independent definition file is required. When dispatching, always use the role name `verifier`; do not use the old name "browse subagent".
 
-### 必须串行（按顺序调度）
+### Must run serially (dispatch in order)
 
-满足以下任一条件必须串行：
+Serial execution is required when any of the following conditions are true:
 
-1. **输出依赖**：B 需要 A 的输出才能开始
-2. **文件冲突**：A 和 B 修改同一个文件
-3. **状态依赖**：B 的结果取决于 A 修改后的系统状态
-4. **优先级依赖**：P1 问题修复完成前，不开始 P2 问题修复
+1. **Output dependency**: B needs A's output before it can start
+2. **File conflict**: A and B modify the same file
+3. **State dependency**: B depends on the system state modified by A
+4. **Priority dependency**: do not start P2 repairs before P1 repairs are complete
 
-**强制串行场景**：
+**Forced serial scenarios**:
 
 ```text
-T3 Product Design：
-  Phase 1（需求分析）→ Phase 2（方案设计）→ Phase 3（可行性评审）
-  （方案设计依赖需求分析输出；评审依赖完整方案文档）
+T3 Product Design:
+Phase 1 (Requirements Analysis) → Phase 2 (Solution Design) → Phase 3 (Feasibility Review)
+(Solution design depends on the output of requirements analysis; review depends on the complete solution document)
 
-T4 Deliver：
-  开发（Phase 1）→ 审查（2）→ 测试（3）→ 部署（4）→ 验收（5）
-  （每个阶段依赖上一阶段的输出）
+T4 Deliver:
+Development (Phase 1) → Review (2) → Test (3) → Deploy (4) → Acceptance (5)
+(Each stage depends on the output of the previous stage)
 
-T7 Quality（单文件）：
-  problem-1 修复 → 验证通过 → problem-2 修复
-  （同一文件不能并行修复，防止冲突）
+T7 Quality (single file):
+problem-1 repair → verification passes → problem-2 repair
+(The same file cannot be repaired in parallel; avoid conflicts)
 
-数据库迁移（T4）：
-  db-migrator 先完成 → 实现层 subagent 开始开发
-  （代码依赖新的数据库结构）
+Database migration (T4):
+db-migrator completes first → implementation-layer subagent starts development
+(code depends on the new database structure)
 ```
 
 ---
 
-## Subagent 角色定义
+## Subagent Role Definitions
 
-### 角色 Profile 引用
+### Role profile reference
 
-每个 agent 角色有对应的可进化 profile 文件（`assets/agent-profiles/{role}.md`）。
-ACT 阶段 subagent 工单中应注入当前 profile 的"进化区域"内容（如果文件存在）。
+Each agent role has a corresponding evolvable profile file (`assets/agent-profiles/{role}.md`).
+During ACT, the "evolution area" content of the current profile should be injected into the subagent work order (if the file exists).
 
-Profile 更新规则：
+Profile update rules:
 
-- 固定区域：仅人工修改（git 审计）
-- 进化区域：REFLECT 阶段可建议更新，写入 pending_evolution 队列
-- pending_evolution 队列由 `autoloop-experience.py evolve-profile` 子命令管理
-
----
-
-### researcher
-
-**职责**：信息收集、网络调研、竞品分析
-
-**触发场景**：T1 全程，T2 选项分析，T3 Phase 1（如有信息缺口需补充背景知识或技术约束）
-
-**模板**：指令含调研主题/维度/目标/来源要求(≥3独立源)/输出格式(关键发现+数据点+信息缺口+相关发现)。可信度计算引用 quality-gates.md。
+- Fixed area: manual modification only (git-audited)
+- Evolution area: REFLECT may propose updates and write them into the `pending_evolution` queue
+- The `pending_evolution` queue is managed by the `autoloop-experience.py evolve-profile` subcommand
 
 ---
 
-### planner
+### `researcher`
 
-**职责**：任务分解、架构设计、方案制定
+**Responsibilities**: information gathering, online research, competitive analysis
 
-**触发场景**：复杂任务开始前（技术方案设计），T3 Phase 1（需求提炼与 JTBD 定义），T3 Phase 2（技术方案设计，兼任 technical-architect 职责）
+**Trigger scenarios**: T1 full workflow, T2 option analysis, T3 Phase 1 (when information gaps, background knowledge, or technical constraints need to be filled)
 
-**模板**：指令含功能需求/代码库路径/技术栈，读取 main_entry_file + 相关模块。输出：影响范围(修改/新建文件+DB变更+新端点) + 接口定义 + 实施顺序与依赖 + 风险识别。
-
----
-
-### backend-dev
-
-**职责**：后端/服务端代码实现
-
-**触发场景**：T4 阶段 1，T7/T8 修复时
-
-**模板**：指令含修改/新建文件(绝对路径)+改动说明、tech_constraints、约束(不可修改项)、syntax_check_cmd。输出：文件内容 + 语法验证结果 + 入口注册确认。
+**Template**: instructions include research topic / dimensions / goals / source requirements (>= 3 independent sources) / output format (key findings + data points + information gaps + related findings). Confidence calculation follows `quality-gates.md`.
 
 ---
 
-### frontend-dev
+### `planner`
 
-**职责**：前端实现
+**Responsibilities**: task decomposition, architecture design, plan formulation
 
-**触发场景**：T4 阶段 1，T7/T8 修复时（前端部分）
+**Trigger scenarios**: before complex tasks begin (technical solution design), T3 Phase 1 (requirements extraction and JTBD definition), T3 Phase 2 (technical solution design, also serving as technical architect)
 
-**模板**：同 backend-dev 结构，额外含前端目录路径。输出：文件内容 + 语法验证结果。
-
----
-
-### db-migrator
-
-**职责**：数据库迁移脚本创建和验证
-
-**触发场景**：T4 阶段 1（有数据库变更时），T8（数据库结构优化时）
-
-**模板**：指令含 codebase_path、migration_check_cmd、DDL 变更描述。必须实现 upgrade(IF NOT EXISTS) + downgrade(回滚)。输出：迁移文件路径 + 实现 + 验证结果。
+**Template**: instructions include functional requirements / repository path / technology stack, and read `main_entry_file` + related modules. Output: impact scope (modified / new files + DB changes + new endpoints) + interface definitions + implementation order and dependencies + risk identification.
 
 ---
 
-### code-reviewer
+### `backend-dev`
 
-**职责**：安全+质量审查
+**Responsibilities**: backend / server code implementation
 
-**触发场景**：T4 阶段 2，T7 每轮扫描，T8 checkpoint
+**Trigger scenarios**: T4 Phase 1, during T7/T8 repair
 
-**模板**：指令含审查类型(安全/可靠性/可维护性/全量)、代码库路径、重点文件列表。审查清单引用 quality-gates.md，评分规则引用 enterprise-standard.md。输出：问题清单(ID/文件/行号/类型/P级别/描述/修复建议) + 维度评分 + P1/P2/P3 统计。
-
----
-
-### generator
-
-**职责**：批量内容生成
-
-**触发场景**：T6 全程
-
-**模板**：指令含完整模板(变量用 {{name}} 标记)、本单元变量值、质量标准(N/10)、常见错误。输出格式：`---UNIT-START-{unit_id}---` 内容 `---UNIT-END---` + `---QUALITY---` 评分 `---QUALITY-END---`。
+**Template**: instructions include files to modify / create (absolute paths) + modification guidance, `tech_constraints`, constraints (what must not change), and `syntax_check_cmd`. Output: file content + syntax-validation results + route registration confirmation.
 
 ---
 
-### verifier
+### `frontend-dev`
 
-**职责**：语法验证、路由注册验证、线上验收（T4 Phase 5 统一使用此角色，不使用 "browse subagent" 旧称谓）
+**Responsibilities**: frontend implementation
 
-**触发场景**：T4 阶段 3+5，T7/T8 每次修复后
+**Trigger scenarios**: T4 Phase 1, and frontend-side repair in T7/T8
 
-**调用方式**：`Agent(subagent_type="code-reviewer", prompt="你是 verifier subagent...")`
-
-注意：verifier 不是独立角色，是 code-reviewer 的角色化调用。T4 Phase 5 线上验收时可选用 Chrome DevTools MCP 工具（如已配置）。
-
-**模板**：指令含验证类型(编译/路由/线上验收)、代码库路径、验证步骤+期望结果。输出：每步通过/失败 + 总体结论。
-
-**T4 Phase 5 线上验收**：输入 acceptance_url + 验收标准列表，输出每项通过/失败 + 截图证据。最终确认须等待用户输入 `用户确认（线上验收）`。
+**Template**: same structure as `backend-dev`, plus the frontend directory path. Output: file content + syntax-validation results.
 
 ---
 
-### cross-verifier（交叉验证者）
+### `db-migrator`
 
-**职责**：对多个 researcher subagent 的发现进行矛盾检查与多源验证
+**Responsibilities**: database migration script creation and verification
 
-**触发场景**：T1 每轮结束后，T2 选项分析完成后
+**Trigger scenarios**: T4 Phase 1 (when database changes exist), T8 (when database structure is being optimized)
 
-**调用方式**：`Agent(subagent_type="researcher", prompt="你是 cross-verifier subagent...")`
-
-**适用模板**：T1, T2
-
-**模板**：输入 findings.md 发现列表。任务：识别矛盾点 → 分析原因(时间/场景/方法论/真实争议) → 处理建议。输出：矛盾报告表(编号/维度/说法A+B/分析/建议) + 验证状态汇总(已确认/矛盾/未验证数)。
+**Template**: instructions include `codebase_path`, `migration_check_cmd`, and DDL change description. `upgrade` (`IF NOT EXISTS`) + `downgrade` (rollback) must both be implemented. Output: migration file path + implementation + verification results.
 
 ---
 
-### option-analyzer（选项分析者）
+### `code-reviewer`
 
-**职责**：对对比任务中的单个候选方案进行深度分析
+**Responsibilities**: security + quality review
 
-**触发场景**：T2 第一轮，为每个候选选项并行分配
+**Trigger scenarios**: T4 Phase 2, each T7 scan round, T8 checkpoints
 
-**调用方式**：`Agent(subagent_type="researcher", prompt="你是 option-analyzer subagent...")`
-
-**适用模板**：T2
-
-**模板**：指令含选项名/对比主题/评估维度/分析角度(正向或批判性，同一选项分配两角度确保偏见检查)。每维度需证据支撑，识别核心优势/劣势(各≤3) + 适用场景。输出：维度评分表 + 综合得分 + 置信度(引用 quality-gates.md)。
+**Template**: instructions include review type (`security` / `reliability` / `maintainability` / `full`), repository path, and key file list. The review checklist follows `quality-gates.md`, and scoring follows `enterprise-standard.md`. Output: issue list (`id` / file / line / type / P-level / description / repair suggestion) + dimension score + P1/P2/P3 statistics.
 
 ---
 
-### neutral-reviewer（中立审查者）
+### `generator`
 
-**职责**：检查选项分析结果是否存在评分偏见
+**Responsibilities**: batch content generation
 
-**触发场景**：T2 所有选项分析完成后
+**Trigger scenarios**: full T6 workflow
 
-**调用方式**：`Agent(subagent_type="researcher", prompt="你是 neutral-reviewer subagent...")`
-
-**适用模板**：T2
-
-**模板**：输入所有 option-analyzer 输出。检查：评分异常(全≥9或≤3) / 证据质量均衡性 / 选择性引用 / 评分标准一致性。输出：偏见风险(低/中/高) + 需重评维度 + 增补建议 + 结论(通过/需补充)。
+**Template**: instructions include the complete template (variables marked with `{{name}}`), the variable values for the current unit, quality standard (`N/10`), and common errors. Output format: `---UNIT-START-{unit_id}---` content `---UNIT-END---` + `---QUALITY---` score `---QUALITY-END---`.
 
 ---
 
-### template-extractor（模板提取者）
+### `verifier`
 
-**职责**：从用户提供的示例中提取可复用的生成模板
+**Responsibilities**: syntax verification, route-registration verification, online acceptance (`T4 Phase 5` uses this role name uniformly; do not use the old name "browse subagent")
 
-**触发场景**：T6 第一步，批量生成前的模板标准化
+**Trigger scenarios**: T4 Phase 3 + Phase 5, and after every T7/T8 repair
 
-**调用方式**：`Agent(subagent_type="planner", prompt="你是 template-extractor subagent...")`
+**Invocation**: `Agent(subagent_type="code-reviewer", prompt="You are the verifier subagent...")`
 
-**适用模板**：T6
+Note: `verifier` is not an independent role. It is a role-based invocation of `code-reviewer`. The Chrome DevTools MCP tool may be used for T4 Phase 5 online acceptance (if configured).
 
-**模板**：输入用户示例。任务：识别固定/变量部分(用 {{name}} 标记) + 提取质量标准(1-10分) + 识别常见错误。输出：模板结构 + 变量定义表 + 质量标准 + 常见错误。
+**Template**: instructions include verification type (`build` / `routing` / `online acceptance`), repository path, verification steps, and expected results. Output: Pass / Fail for each step + overall conclusion.
 
----
-
-### quality-checker（质量检查者）
-
-**职责**：对批量生成的内容单元进行独立质量评分
-
-**触发场景**：T6 每个生成单元完成后
-
-**调用方式**：`Agent(subagent_type="code-reviewer", prompt="你是 quality-checker subagent...")`
-
-**适用模板**：T6
-
-**模板**：输入生成内容 + 质量标准。评分规则：8-10通过 / 7及格标注改进 / 5-6需改进 / 1-4重生成。独立于生成者自评，分歧>2分以 checker 为准。输出：得分 + 主要问题 + 改进建议。
+**T4 Phase 5 online acceptance**: provide `acceptance_url` + acceptance-criteria list, and output pass / fail per criterion + screenshot evidence. Final confirmation must wait for user input `User confirmation (online acceptance)`.
 
 ---
 
-### 独立评分器角色（全模板适用）
+### `cross-verifier`
 
-**原则**：executor（执行者）和evaluator（评分者）必须是不同的subagent实例。evaluator只接收产出物，不接收执行过程信息（盲评），按 quality-gates.md 的锚点和证据要求打分。
+**Responsibilities**: perform conflict checks and multi-source verification on findings from multiple `researcher` subagents
 
-| 模板 | executor | evaluator | 评分维度 |
+**Trigger scenarios**: after each T1 round; after T2 option analysis completes
+
+**Invocation**: `Agent(subagent_type="researcher", prompt="You are the cross-verifier subagent...")`
+
+**Applicable templates**: T1, T2
+
+**Template**: input the findings list from `findings.md`. Task: identify contradictions → analyze causes (time / scenario / methodology / genuine dispute) → provide handling suggestions. Output: contradiction report table (number / dimension / statement A+B / analysis / suggestion) + verification-status summary (confirmed / contradictory / unverified counts).
+
+---
+
+### `option-analyzer`
+
+**Responsibilities**: conduct in-depth analysis of individual candidate options in comparison tasks
+
+**Trigger scenarios**: T2 first round, one option per parallel allocation
+
+**Invocation**: `Agent(subagent_type="researcher", prompt="You are the option-analyzer subagent...")`
+
+**Applicable template**: T2
+
+**Template**: instructions include option name / comparison subject / evaluation dimensions / analysis angle (positive or critical; the same option is assigned both angles to ensure bias checking). Every dimension must be supported by evidence and identify core strengths / weaknesses (<= 3 each) + applicable scenarios. Output: dimension score table + overall score + confidence (quoted from `quality-gates.md`).
+
+---
+
+### `neutral-reviewer`
+
+**Responsibilities**: check option-analysis results for scoring bias
+
+**Trigger scenarios**: after all T2 option analyses are complete
+
+**Invocation**: `Agent(subagent_type="researcher", prompt="You are the neutral-reviewer subagent...")`
+
+**Applicable template**: T2
+
+**Template**: input all `option-analyzer` outputs. Check: abnormal scores (all >= 9 or <= 3) / balance of evidence quality / selective citation / consistency of scoring standards. Output: bias risk (`low` / `medium` / `high`) + dimensions that need re-evaluation + additional suggestions + conclusion (`passed` / `needs supplementation`).
+
+---
+
+### `template-extractor`
+
+**Responsibilities**: extract reusable generation templates from user-provided examples
+
+**Trigger scenarios**: T6 Step 1, template normalization before batch generation
+
+**Invocation**: `Agent(subagent_type="planner", prompt="You are the template-extractor subagent...")`
+
+**Applicable template**: T6
+
+**Template**: input the user example. Tasks: identify fixed / variable parts (mark variables with `{{name}}`) + extract quality criteria (1-10 points) + identify common errors. Output: template structure + variable-definition table + quality standards + common errors.
+
+---
+
+### `quality-checker`
+
+**Responsibilities**: independently score the quality of batch-generated content units
+
+**Trigger scenarios**: after completion of each generated unit in T6
+
+**Invocation**: `Agent(subagent_type="code-reviewer", prompt="You are the quality-checker subagent...")`
+
+**Applicable template**: T6
+
+**Template**: input generated content + quality standards. Scoring rules: `8-10 pass` / `7 borderline pass, improve` / `5-6 needs improvement` / `1-4 regenerate`. The check is independent from the generator's self-evaluation; any difference > 2 points is decided by the checker. Output: score + main issues + improvement suggestions.
+
+---
+
+### Independent grader roles (applicable to all templates)
+
+**Principle**: the executor and evaluator must be different subagent instances. The evaluator receives only the output, not the execution process information (blind evaluation), and scores according to the anchor points and evidence requirements in `quality-gates.md`.
+
+| template | executor | evaluator | scoring dimensions |
 |------|----------|-----------|---------|
-| T1 Research | researcher | research-evaluator | 覆盖率/可信度/一致性 |
-| T2 Compare | option-analyzer | compare-evaluator | 偏见/覆盖/一致性 |
-| T3 Design | planner | feasibility-reviewer | 设计完整度/可行性/需求覆盖/范围精度/验证证据 |
-| T5 Iterate | optimizer | kpi-evaluator | KPI达成/策略有效性/副作用 |
-| T6 Generate | generator | quality-checker | 内容质量/格式规范/变量覆盖 |
-| T4 Deliver | implementer | code-reviewer | 安全性/可靠性/可维护性 |
-| T7 Quality | code-reviewer(修复) | security/reliability/maintainability-reviewer | 同T4 |
-| T8 Optimize | optimizer | architecture/performance/stability-reviewer | 架构/性能/稳定性 |
+| T1 Research | researcher | research-evaluator | coverage / credibility / consistency |
+| T2 Compare | option-analyzer | compare-evaluator | bias / coverage / consistency |
+| T3 Design | planner | feasibility-reviewer | design completeness / feasibility / requirements coverage / scope accuracy / validation evidence |
+| T5 Iterate | optimizer | kpi-evaluator | KPI attainment / strategy effectiveness / side effects |
+| T6 Generate | generator | quality-checker | content quality / format compliance / variable coverage |
+| T4 Deliver | implementer | code-reviewer | security / reliability / maintainability |
+| T7 Quality | code-reviewer (fix) | security / reliability / maintainability-reviewer | same as T4 |
+| T8 Optimize | optimizer | architecture / performance / stability-reviewer | architecture / performance / stability |
 
-**evaluator盲评约束**：
-- evaluator的prompt只包含：产出物内容 + 评分标准（quality-gates.md）
-- 不包含：本轮策略名称、执行过程、预期改善目标
-- 目的：避免确认偏误，确保评分基于产出物本身质量
-
----
-
-### feasibility-reviewer（可行性评审者）
-
-**职责**：对 T3 产品设计方案进行独立可行性评审，覆盖 5 个质量门禁维度
-
-**触发场景**：T3 Phase 3（独立可行性评审，在方案文档完成后执行）
-
-**调用方式**：`Agent(subagent_type="planner", prompt="你是 feasibility-reviewer subagent...")`
-
-**适用模板**：T3
-
-**模板**：输入完整的方案文档（PRD/spec）+ 质量门禁标准（gate-manifest.json T3 段）。评分维度：
-
-- `design_completeness`（7/10）：需求条目与设计方案的对应覆盖比例
-- `feasibility_score`（7/10）：技术架构、依赖、风险是否可行
-- `requirement_coverage`（7/10）：每条需求是否可追溯到文档章节
-- `scope_precision`（7/10）：IN/OUT 范围是否明确、依赖是否已识别
-- `validation_evidence`（7/10）：可行性检查 + 风险评估是否已完成
-
-输出：5 个维度评分（0-10）+ 主要问题清单 + 通过/未通过总判定。
+**Evaluator blind-review constraints**:
+- The evaluator prompt contains only: output content + scoring criteria (`quality-gates.md`)
+- It must not include: this round's strategy name, execution process, expected improvement goals
+- Purpose: avoid confirmation bias and ensure scoring is based on output quality itself
 
 ---
 
-### T7 审查角色（三个并行，均通过 code-reviewer 角色化实现）
+### `feasibility-reviewer`
 
-| 角色 | 职责 | 调用方式 |
+**Responsibilities**: perform an independent feasibility review of the T3 product-design plan, covering 5 quality-gate dimensions
+
+**Trigger scenarios**: T3 Phase 3 (independent feasibility review, after the solution document is complete)
+
+**Invocation**: `Agent(subagent_type="planner", prompt="You are the feasibility-reviewer subagent...")`
+
+**Applicable template**: T3
+
+**Template**: input the complete solution document (`PRD` / `spec`) + quality-gate standard (T3 section of `gate-manifest.json`). Scoring dimensions:
+
+- `design_completeness` (7/10): coverage ratio between requirement items and design solutions
+- `feasibility_score` (7/10): whether the technical architecture, dependencies, and risks are feasible
+- `requirement_coverage` (7/10): whether each requirement traces back to a document section
+- `scope_precision` (7/10): whether IN / OUT scope is clear and dependencies are identified
+- `validation_evidence` (7/10): whether feasibility checks + risk assessment are complete
+
+Output: 5 dimension scores (0-10) + major issue list + overall pass / fail verdict.
+
+---
+
+### T7 review roles (three parallel reviewers, all implemented through `code-reviewer`)
+
+| Role | Responsibilities | Invocation |
 | ---- | ---- | -------- |
-| security-reviewer | 注入/XSS/路径穿越/敏感数据暴露 | `Agent(subagent_type="code-reviewer", prompt="你是 security-reviewer...")` |
-| reliability-reviewer | 静默失败/异常处理/超时/降级回退 | `Agent(subagent_type="code-reviewer", prompt="你是 reliability-reviewer...")` |
-| maintainability-reviewer | 入口注册/模块导出/类型规范/代码重复 | `Agent(subagent_type="code-reviewer", prompt="你是 maintainability-reviewer...")` |
+| `security-reviewer` | injection / XSS / path traversal / sensitive data exposure | `Agent(subagent_type="code-reviewer", prompt="You are security-reviewer...")` |
+| `reliability-reviewer` | silent failure / exception handling / timeout / degradation fallback | `Agent(subagent_type="code-reviewer", prompt="You are reliability-reviewer...")` |
+| `maintainability-reviewer` | entry registration / module export / type specifications / code duplication | `Agent(subagent_type="code-reviewer", prompt="You are maintainability-reviewer...")` |
 
-**触发场景**：T7 第一轮并行扫描。完整指令模板见 `commands/autoloop-quality.md`。
+**Trigger scenarios**: T7 first round parallel scan. See `commands/autoloop-quality.md` for the full command template.
 
-### T7 统一评审框架
+### T7 unified review framework
 
-三个reviewer收到相同文件列表，输出统一格式：`| problem_id | 文件 | 行号 | 类型 | 优先级(P1/P2/P3) | 描述 | 修复建议 |`
+All three reviewers receive the same file list and output this unified format: `| problem_id | file | line | type | priority (P1/P2/P3) | description | repair suggestion |`
 
-**聚合**：合并去重(同文件+行号+类型) → 重复取最高优先级 → 按 `quality-gates.md` T7复合判定。
-**冲突仲裁**：不同优先级取最高；修复建议冲突安全优先(记录trade-off)；分数差>2分触发第三方仲裁。
-
----
-
-### fix-{type}（质量问题修复者）
-
-**职责**：针对 T7 扫描发现的具体问题执行最小化修复
-
-**触发场景**：T7 第 2-N 轮，按 P1→P2→P3 顺序为每个问题分配
-
-**调用方式**：`Agent(subagent_type="backend-dev" 或 "frontend-dev", prompt="你是 fix-{类型} subagent...")`
-
-后端/服务端问题使用 `backend-dev`；前端/客户端问题使用 `frontend-dev`。
-
-**适用模板**：T7
-
-**模板**：指令含问题ID/文件/行号/描述/建议/轮次/上下文摘要。约束：只改标注问题、不改函数签名/API、修改后立即 syntax_check_cmd。输出：diff + 验证结果 + 是否引入新问题。
+**Aggregation**: merge + deduplicate (`same file + line + type`) → keep the highest priority among duplicates → decide by T7 composite rules in `quality-gates.md`.  
+**Conflict arbitration**: where priorities differ, take the highest; where repair suggestions conflict, prefer the safer repair (record the trade-off); score difference > 2 points triggers third-party arbitration.
 
 ---
 
-### T8 诊断角色（三个并行，均通过 code-reviewer 角色化实现）
+### `fix-{type}` (quality issue fixer)
 
-| 角色 | 职责 | 调用方式 |
+**Responsibilities**: perform minimal fixes for specific issues found by T7 scans
+
+**Trigger scenarios**: T7 Round 2-N, assign issues in order P1 → P2 → P3
+
+**Invocation**: `Agent(subagent_type="backend-dev" or "frontend-dev", prompt="You are the fix-{type} subagent...")`
+
+Use `backend-dev` for backend / server issues; use `frontend-dev` for frontend / client issues.
+
+**Applicable template**: T7
+
+**Template**: instructions include issue ID / file / line / description / suggestion / round / context summary. Constraints: only change the annotated issue, do not change function signatures / APIs, run `syntax_check_cmd` immediately after the modification. Output: diff + verification result + whether new issues were introduced.
+
+---
+
+### T8 diagnostic roles (three parallel reviewers, all implemented through `code-reviewer`)
+
+| Role | Responsibilities | Invocation |
 | ---- | ---- | -------- |
-| architecture-diagnostic | 分层/耦合/API一致性/配置管理/代码复用 | `Agent(subagent_type="code-reviewer", prompt="你是 architecture-diagnostic...")` |
-| performance-diagnostic | N+1查询/连接池/缓存/同步混用/查询效率 | `Agent(subagent_type="code-reviewer", prompt="你是 performance-diagnostic...")` |
-| stability-diagnostic | 外部依赖降级/错误处理/健康检查/超时 | `Agent(subagent_type="code-reviewer", prompt="你是 stability-diagnostic...")` |
+| `architecture-diagnostic` | layering / coupling / API consistency / configuration management / code reuse | `Agent(subagent_type="code-reviewer", prompt="You are architecture-diagnostic...")` |
+| `performance-diagnostic` | N+1 queries / connection pool / cache / sync mixing / query efficiency | `Agent(subagent_type="code-reviewer", prompt="You are performance-diagnostic...")` |
+| `stability-diagnostic` | external dependency fallback / error handling / health checks / timeout | `Agent(subagent_type="code-reviewer", prompt="You are stability-diagnostic...")` |
 
-**触发场景**：T8 第一轮并行诊断。完整指令模板见 `commands/autoloop-optimize.md`。
-
----
-
-### optimization-fix（优化修复执行者）
-
-**职责**：执行 T8 诊断发现的架构/性能/稳定性问题修复
-
-**触发场景**：T8 第 2-N 轮，按综合优先级顺序执行
-
-**调用方式**：`Agent(subagent_type="backend-dev" 或 "frontend-dev", prompt="你是 optimization-fix subagent...")`
-
-后端/服务端修复使用 `backend-dev`；前端/客户端修复使用 `frontend-dev`。
-
-**适用模板**：T8
-
-**模板**：指令含问题ID/类型(架构/性能/稳定性)/描述/影响文件/建议/轮次/上下文摘要。约束：不改 public API 签名、不改 DB schema(除非方案明确)、修改后 syntax_check_cmd。执行：读文件 → 分析影响 → 最小化修复 → 验证。输出：修改列表 + 说明 + 验证结果 + 三维度影响预估。
+**Trigger scenarios**: T8 first round parallel diagnosis. See `commands/autoloop-optimize.md` for the full command template.
 
 ---
 
-## 文档类 Subagent 产出规范
+### `optimization-fix` (optimization fix executor)
 
-当 subagent 的任务是生成文档内容（PRD、报告、分析等），必须将产出写入文件：
+**Responsibilities**: fix architecture / performance / stability issues found by T8 diagnostics
 
-- **文件路径**: `{work_dir}/output-{agent_name}.md`（如 `output-prd-part1.md`）
-- **禁止**: 仅在 task output 中返回文本而不写文件
-- **合并约定**: SYNTHESIZE 阶段按文件名排序拼接（`output-01-*.md`, `output-02-*.md`）
-- **适用模板**: T1 Research, T2 Compare, T3 Product Design
+**Trigger scenarios**: T8 Round 2-N, executed in overall priority order
 
-非文档类 subagent（code-reviewer、backend-dev 等）不受此约束，可通过 task output 返回结构化结果。
+**Invocation**: `Agent(subagent_type="backend-dev" or "frontend-dev", prompt="You are the optimization-fix subagent...")`
+
+Use `backend-dev` for backend / server repairs; use `frontend-dev` for frontend / client repairs.
+
+**Applicable template**: T8
+
+**Template**: instructions include issue ID / type (`architecture` / `performance` / `stability`) / description / impacted file / recommendation / round / context summary. Constraints: do not change public API signatures; do not change DB schema (unless explicitly planned); run `syntax_check_cmd` after modifications. Execution steps: read file → analyze impact → minimal repair → verify. Output: change list + description + verification results + three-dimension impact estimate.
 
 ---
 
-## Subagent 即时发现（可选返回字段）
+## Output Rules for Document-oriented Subagents
 
-如果 subagent 在执行过程中发现了与当前任务无直接关系、但对未来轮次或其他任务有价值的信息，在返回中包含 `discoveries` 列表。
+When a subagent is asked to generate document content (`PRD`, report, analysis, etc.), the output must be written to a file:
 
-**适用类型**（不等 REFLECT，立即记录）：
+- **File path**: `{work_dir}/output-{agent_name}.md` (for example `output-prd-part1.md`)
+- **Forbidden**: returning only task-output text without writing the file
+- **Merge convention**: the SYNTHESIZE phase sorts and stitches by file name (`output-01-*.md`, `output-02-*.md`)
+- **Applicable templates**: T1 Research, T2 Compare, T3 Product Design
 
-- 环境事实：API 限速、数据源状态、工具兼容性
-- 资源变化：文件路径变更、依赖版本更新、服务迁移
-- 工具发现：某工具在特定场景下不可用或有特殊行为
+Non-document subagents (`code-reviewer`, `backend-dev`, etc.) are not bound by this rule and may return structured results directly in task output.
 
-**不适用**（仍在 REFLECT 阶段处理）：
+---
 
-- 策略评估（保持/避免）——需要 VERIFY 结果才能判断
-- 质量评分——需要独立验证
+## Subagent Immediate Discoveries (optional return field)
 
-**返回示例**：
+If the subagent discovers information during execution that is not directly related to the current task but is valuable for future rounds or other tasks, include a `discoveries` list in the return value.
+
+**Applicable types** (not the same as REFLECT; record immediately):
+
+- Environmental facts: API rate limits, data-source status, tool compatibility
+- Resource changes: file-path changes, dependency version updates, service migrations
+- Tool discoveries: a tool is unavailable or behaves specially in certain scenarios
+
+**Not applicable** (these still belong in REFLECT):
+
+- Strategy evaluation (`Maintain` / `Avoid`) — requires VERIFY results before judgment
+- Quality score — requires independent verification
+
+**Return example**:
 
 ```json
 {
   "result": "...",
   "discoveries": [
-    "xAI Grok API 限速 60 次/分钟，建议批量任务间隔 2 秒",
-    "目标网站已启用 Cloudflare 防护，需要使用 headless browser"
+    "xAI Grok API rate limit is 60 requests per minute; recommended interval for batch tasks is 2 seconds",
+    "The target website is protected by Cloudflare and requires a headless browser"
   ]
 }
 ```
 
-controller 在 ACT 阶段收到 discoveries 后，立即写入 `autoloop-findings.md` 的"即时发现"区域和 `state.json` 的 `metadata.immediate_discoveries`，不等 REFLECT。
+After the controller receives `discoveries` during ACT, it immediately writes them into the "Immediate Discoveries" area of `autoloop-findings.md` and into `metadata.immediate_discoveries` in `state.json`, without waiting for REFLECT.
 
 ---
 
-## MCP 工具可用性（跨平台）
+## MCP Tool Availability (cross-platform)
 
-- **Claude Code**: subagent 自动继承所有已安装 MCP 工具，无需额外配置
-- **Gemini CLI / Codex CLI**: 使用 `autoloop-mcp-bridge.py discover` 检查可用工具
-- **无 MCP 环境**: subagent 应使用内置工具（read_file, grep, bash 等）完成任务
+- **Claude Code**: the subagent automatically inherits all installed MCP tools without additional configuration
+- **Gemini CLI / Codex CLI**: use `autoloop-mcp-bridge.py discover` to inspect available tools
+- **Environment without MCP**: the subagent should use built-in tools (`read_file`, `grep`, `bash`, etc.) to complete the task
 
-controller 在 ACT 阶段会检测平台并在工单中注明 MCP 可用性。
-
----
-
-## 上下文完整性检查清单
-
-每次调度前，确认以下内容已包含在指令中：
-
-- [ ] 角色定义（"你是 X subagent"）
-- [ ] 具体任务（可操作的指令，不是模糊方向）
-- [ ] 所有相关文件的**绝对路径**（不是相对路径）
-- [ ] 必须遵守的约束（什么不能改）
-- [ ] 验收标准（完成的判断条件）
-- [ ] 输出格式（结构化，便于整合）
-- [ ] 当前迭代轮次（让 subagent 知道这是第几轮）
-- [ ] 上下文摘要（包含上轮反思记录）:
-  - 遗留问题清单（待处理状态的问题）
-  - 有效/无效策略（避免重复无效方法）
-  - 已识别模式（让 subagent 知道系统性问题）
-  - 相关经验教训
-
-**缺少任一项 → 重写指令再调度。**
+The controller detects the platform during ACT and notes MCP availability in the work order.
 
 ---
 
-## Subagent 失败返回规范
+## Context Integrity Checklist
 
-如果 subagent 无法完成任务，**必须**返回以下结构化信息（写入 `iterations[-1].act`）：
+Before each dispatch, ensure the following content is included in the instruction:
 
-- `failure_type`: 失败类型枚举（见下表）
-- `failure_detail`: 具体描述（一句话说明什么失败了）
-- `completion_ratio`: 完成百分比（0-100，部分完成时填写）
+- [ ] Role definition ("You are X subagent")
+- [ ] Concrete task (actionable instructions, not vague direction)
+- [ ] **Absolute paths** to all related files (not relative paths)
+- [ ] Constraints that must be respected (what cannot be changed)
+- [ ] Acceptance criteria (how completion is judged)
+- [ ] Output format (structured for easy integration)
+- [ ] Current iteration round (so the subagent knows which round it is)
+- [ ] Context summary (including the previous round's reflection record):
+- Carryover issue list (problems in `Pending` status)
+- Effective / ineffective strategies (avoid repeating ineffective methods)
+- Recognized patterns (make the subagent aware of systemic problems)
+- Relevant lessons learned
 
-| failure_type | 含义 | 典型场景 |
+**If any item is missing → rewrite the instruction and dispatch again.**
+
+---
+
+## Subagent Failure Return Specification
+
+If the subagent cannot complete the task, it **MUST** return the following structured information (written into `iterations[-1].act`):
+
+- `failure_type`: failure-type enum (see table below)
+- `failure_detail`: concrete description (one sentence describing what failed)
+- `completion_ratio`: completion percentage (0-100; fill it in for partial completion)
+
+| failure_type | Meaning | Typical scenarios |
 |-------------|------|---------|
-| `timeout` | 任务太大，上下文不够 | 需要分析的文件太多、搜索范围太广 |
-| `capability_gap` | 当前角色/工具无法完成 | 需要特定领域知识、需要的工具不可用 |
-| `resource_missing` | 缺少必要信息或权限 | 文件不存在、API 无权限、依赖未安装 |
-| `external_error` | 外部服务故障 | API 限流、网络超时、第三方服务宕机 |
-| `code_error` | 脚本/工具自身报错 | 语法错误、依赖缺失、版本不兼容 |
-| `partial_success` | 部分完成 | 5 个子任务完成了 3 个 |
+| `timeout` | The task is too large and the context is insufficient | Too many files to analyze; search scope too broad |
+| `capability_gap` | The current role / tools cannot complete the task | Specific domain knowledge is required; required tools are unavailable |
+| `resource_missing` | Necessary information or permissions are missing | File does not exist, API lacks permissions, dependencies are not installed |
+| `external_error` | External service failure | API rate limit, network timeout, third-party service outage |
+| `code_error` | Script / tool error | Syntax error, missing dependency, version incompatibility |
+| `partial_success` | Partially completed | 3 of 5 subtasks completed |
 
-**示例返回**：
+**Example return**:
 ```json
 {
   "failure_type": "external_error",
@@ -489,44 +489,44 @@ controller 在 ACT 阶段会检测平台并在工单中注明 MCP 可用性。
 }
 ```
 
-controller 会根据 `failure_type` 自动选择差异化恢复策略（详见 `loop-protocol.md` ACT 失败处理章节）。
+The controller automatically selects a differentiated recovery strategy based on `failure_type` (see the ACT failure-handling section in `loop-protocol.md` for details).
 
 ---
 
-## Subagent 自检协议（Context Self-Check）
+## Subagent Self-check Protocol (Context Self-Check)
 
-### 返回时必须包含
+### Must be included when returning
 
-- `completion_ratio`: 0-100 的整数，估算任务完成百分比（写入 `iterations[-1].act`）
+- `completion_ratio`: an integer between 0-100, estimating task completion percentage (write it to `iterations[-1].act`)
 
-### 自检规则
+### Self-check rules
 
-在执行过程中持续评估：
+Continuously evaluate during execution:
 
-- 如果主要目标完成 < 50% 且已尝试多种方法：停下来，汇报当前进度和阻塞原因，而非继续硬推
-- 如果发现当前方法根本行不通：提前终止并报告，而非尝试到耗尽
-- 如果遇到超出角色能力范围的问题：明确标注，返回给 controller
+- If the main goal is < 50% complete and multiple methods have already been tried: stop, report current progress and blocking reasons, rather than continue forcing it
+- If it becomes clear that the current approach simply does not work: terminate early and report it instead of pushing until exhaustion
+- If a problem exceeds the role's capabilities: explicitly mark it and return it to the controller
 
-### Controller 处理逻辑
+### Controller handling logic
 
-controller 在 ACT→VERIFY 过渡时自动解析 `completion_ratio`：
+The controller automatically interprets `completion_ratio` during the ACT→VERIFY transition:
 
-- **≥ 80%**：正常进入 VERIFY
-- **50-79%**：进入 VERIFY 但标注 `partial = true`（VERIFY 评分时参考）
-- **< 50%**：标注 `needs_replanning = true`，建议 DECIDE 重新规划
+- **>= 80%**: enter VERIFY normally
+- **50-79%**: enter VERIFY but mark `partial = true` (used as a reference during VERIFY scoring)
+- **< 50%**: mark `needs_replanning = true`; DECIDE is recommended to replan
 
 ---
 
-## 失败处理策略
+## Failure-handling Strategy
 
-| 失败类型 | 处理策略 |
+| Failure type | Handling strategy |
 | -------- | -------- |
-| Subagent 无法找到信息 | 换关键词/换来源/标注"信息不可用" |
-| Subagent 输出格式错误 | 提取可用部分，补充缺失字段 |
-| Subagent 代码验证失败 | 返回详细错误给 subagent，要求修复（遵守统一重试上限 = 2 次，见 loop-protocol.md） |
-| Subagent 超时 | 标记为"部分完成"，记录进度，继续其他任务 |
-| 并行 subagents 产生冲突 | 以保守的（改动更小的）为准，记录两种方案 |
+| Subagent cannot find the information | Change keywords / change sources / mark "Information not available" |
+| Subagent output format error | Extract usable parts and fill in missing fields |
+| Subagent code verification failed | Return detailed errors to the subagent and request a repair (respect the unified retry cap = 2; see `loop-protocol.md`) |
+| Subagent timeout | Mark as "Partially Completed", record progress, and continue other tasks |
+| Parallel subagents conflict | Record both solutions and use the more conservative one (smaller change) as the baseline |
 
 ---
 
-> **技术栈变量填充**：各技术栈的变量填充值见 `references/domain-pack-*.md` 和 `references/loop-protocol.md` 统一参数词汇表。通用规则：所有变量从 plan 中读取，不在调度时硬编码。
+> **Technology stack variable filling**: for variable values of each technology stack, see `references/domain-pack-*.md` and the unified parameter glossary in `references/loop-protocol.md`. General rule: all variables are read from plan and must not be hard-coded at dispatch time.

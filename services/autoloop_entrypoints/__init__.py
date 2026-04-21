@@ -11,7 +11,7 @@ from autoloop_scripts.locate import scripts_directory
 def _run(script: str) -> int:
     target = scripts_directory() / script
     if not target.is_file():
-        print("ERROR: 脚本不存在: {}".format(target), file=sys.stderr)
+        print("ERROR: Script does not exist: {}".format(target), file=sys.stderr)
         return 127
     cmd = [sys.executable, str(target), *sys.argv[1:]]
     return subprocess.call(cmd)

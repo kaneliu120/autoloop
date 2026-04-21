@@ -1,10 +1,10 @@
-"""P1-2：REFLECT JSON 校验（与 experience write / validate strict 对齐）。"""
+"""P1-2: REFLECT JSON validation, aligned with experience write / strict validate."""
 
 from __future__ import annotations
 
 from typing import Any
 
-_VALID_EFFECTS = frozenset({"保持", "避免", "待验证"})
+_VALID_EFFECTS = frozenset({"Keep", "Avoid", "Pending Validation"})
 
 
 def validate_reflect(obj: dict[str, Any]) -> tuple[bool, str]:
@@ -25,7 +25,7 @@ def validate_reflect(obj: dict[str, Any]) -> tuple[bool, str]:
 
 
 def normalize_reflect(obj: dict[str, Any]) -> dict[str, Any]:
-    """统一 score 键供 state / experience 使用。"""
+    """Normalize the score key for state / experience usage."""
     out = dict(obj)
     if "score" not in out and "delta" in out:
         out["score"] = out["delta"]
