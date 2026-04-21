@@ -1,4 +1,5 @@
-# Bundled CLI scripts (bundled may be a symlink to ../../scripts in dev).
+# Ship the bundled CLI scripts with the source distribution.
+# In development this directory may be a symlink to ../../scripts.
 graft services/autoloop_scripts
 global-exclude **/__pycache__/**
 global-exclude **/*.py[cod]

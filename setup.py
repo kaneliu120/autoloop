@@ -1,4 +1,4 @@
-"""Backward-compatible setuptools entry for older pip; metadata lives in pyproject.toml."""
+"""Compatibility shim for older pip versions; package metadata lives in pyproject.toml."""
 
 from setuptools import setup
 
