@@ -1,263 +1,263 @@
-# AutoLoop 流程控制参数
+# AutoLoop Process Control Parameters
 
-> **互补关系声明**：本文档与 `quality-gates.md` 形成互补关系，共同构成 AutoLoop 迭代控制体系。
-> - `quality-gates.md` 定义"结果够不够好"——质量判定，关注输出的评分标准与门禁阈值
-> - `parameters.md`（本文档）定义"过程怎么控制"——流程参数，关注迭代次数、触发条件、回退上限等执行约束
+> **Complementarity statement**: This document complements `quality-gates.md`; together they define the AutoLoop iteration control system.
+> - `quality-gates.md` defines "is the result good enough?" - quality judgment, focused on scoring criteria and gate thresholds for outputs
+> - `parameters.md` (this document) defines "how is the process controlled?" - process parameters, focused on execution constraints such as iteration counts, trigger conditions, and rollback limits
 >
-> 修改本文档属于协议进化，须经 REFLECT 阶段提案 + 用户确认后方可执行（见 `evolution-rules.md` 协议进化流程章节）。
+> Changes to this document are protocol evolution and may only be applied after a REFLECT-stage proposal plus user confirmation (see the protocol evolution section in `evolution-rules.md`).
 
 ---
 
-## 一、迭代控制参数
+## 1. Iteration Control Parameters
 
-### 1.1 默认轮次表
+### 1.1 Default Round Table
 
-> 来源：原 `commands/autoloop-plan.md` 模板默认参数参考表
+> Source: the default parameter reference table in the original `commands/autoloop-plan.md` template
 
-| 参数名 | 模板 | 值 | 适用范围 | 说明 |
+| Parameter | Template | Value | Scope | Description |
 |--------|------|----|---------|------|
-| `default_rounds.T1` | T1 Research | 3 轮 | T1 调研任务 | 调研类任务默认执行 3 轮，确保信息充分覆盖 |
-| `default_rounds.T2` | T2 Compare | 2 轮 | T2 对比任务 | 对比类任务完成两轮即可收敛结论 |
-| `default_rounds.T5` | T5 Iterate | **99**（SSOT: `gate-manifest.json`） | T5 迭代任务 | 数值以 manifest 为准；视为安全上限，可用 `plan.budget.max_rounds` 覆盖；终止仍以 KPI/门禁为主 |
-| `default_rounds.T6` | T6 Generate | 99 轮（门禁终止，**上限**） | T6 批量生成任务 | 以 pass_rate + avg_score 门禁为终止条件；未设 `plan.budget.max_rounds` 时控制器可按 `plan.generation_items` 或 `template_params.items` 取 **`min(items×2, 99)`** 作为默认轮次（P-04） |
-| `default_rounds.T4` | T4 Deliver | **5**（OODA 轮次预算）| T4 交付任务 | 与 `delivery-phases.md` 五段交付（Phase 1-5）对齐的**完整 OODA 轮次**上限。`plan.budget.max_rounds` 可覆盖。 |
-| `default_rounds.T7` | T7 Quality | **99**（SSOT: `gate-manifest.json`） | T7 质量评审任务 | 同 T5：manifest 为权威；可覆盖 max_rounds；门禁终止优先 |
-| `default_rounds.T8` | T8 Optimize | **99**（SSOT: `gate-manifest.json`） | T8 优化任务 | 同上 |
+| `default_rounds.T1` | T1 Research | 3 rounds | T1 research tasks | Research tasks default to 3 rounds to ensure sufficient information coverage |
+| `default_rounds.T2` | T2 Compare | 2 rounds | T2 comparison tasks | Comparison tasks usually converge after two rounds |
+| `default_rounds.T5` | T5 Iterate | **99** (SSOT: `gate-manifest.json`) | T5 iteration tasks | The manifest value is authoritative; treat it as a safety ceiling. It can be overridden with `plan.budget.max_rounds`; termination is still primarily gate/KPI-driven |
+| `default_rounds.T6` | T6 Generate | 99 rounds (gate-terminated, **upper bound**) | T6 batch generation tasks | `pass_rate` + `avg_score` gates determine termination. If `plan.budget.max_rounds` is not set, the controller may use **`min(items×2, 99)`** based on `plan.generation_items` or `template_params.items` as the default round count (P-04) |
+| `default_rounds.T4` | T4 Deliver | **5** (OODA round budget) | T4 delivery tasks | Upper bound for **full OODA rounds**, aligned with the five delivery phases (Phase 1-5) in `delivery-phases.md`. `plan.budget.max_rounds` can override it. |
+| `default_rounds.T7` | T7 Quality | **99** (SSOT: `gate-manifest.json`) | T7 quality review tasks | Same as T5: the manifest is authoritative; `max_rounds` can be overridden; gate-based termination takes precedence |
+| `default_rounds.T8` | T8 Optimize | **99** (SSOT: `gate-manifest.json`) | T8 optimization tasks | Same as above |
 
-**使用约定**：
-- 向导在 Step 4/5 展示对应模板的默认值，用户可在计划阶段调整
-- `items × 2` 中的 `items` 指 plan.md 中定义的生成单元总数
-- T5/T7/T8 的轮次上限以 `references/gate-manifest.json` 的 `default_rounds` 为准（当前为 **99**）；文档表中的「无上限」已废弃，避免与实现冲突
-
----
-
-## 二、进化触发参数
-
-> 来源：原 `references/evolution-rules.md`
-
-### 2.1 范围扩展允许条件
-
-| 参数名 | 值 | 适用范围 | 说明 |
-|--------|----|---------|------|
-| `evolution.expand.budget_threshold` | ≥ 30% | T1、T3、T6、T7 | 剩余预算比例须达到此阈值方可允许范围扩展 |
-| `evolution.expand.dimension_ceiling` | ≤ 初始维度 × 1.5 | 全部模板 | 扩展后总维度数不得超过初始维度数的 1.5 倍 |
-
-**触发逻辑**：同时满足以下全部条件时，允许扩展：
-1. 新维度重要性 = 高（影响核心结论）
-2. 预算剩余 ≥ `evolution.expand.budget_threshold`（30%）
-3. 扩展后总维度 ≤ `evolution.expand.dimension_ceiling`（初始 × 1.5）
-
-### 2.2 范围收窄触发条件
-
-| 参数名 | 值 | 适用范围 | 说明 |
-|--------|----|---------|------|
-| `evolution.narrow.budget_consumed` | ≥ 70% | T1、T3、T6、T7 | 已消耗预算比例达到此值时触发收窄评估 |
-| `evolution.narrow.coverage_threshold` | < 60% | T1、T3、T6、T7 | 覆盖率低于此值时触发收窄评估 |
-| `evolution.narrow.lag_dimensions` | ≥ 3 个维度连续 2 轮 | T1、T3 | 多维度同时落后的判定标准 |
-
-**触发逻辑**：满足以下任一条件时，触发收窄：
-1. 已消耗 ≥ `evolution.narrow.budget_consumed`（70%）且覆盖率 < `evolution.narrow.coverage_threshold`（60%）
-2. 连续 2 轮在 ≥ 3 个维度同时落后
-3. 发现某些维度信息极度稀缺，继续投入收益极低
-
-### 2.3 策略切换触发条件
-
-| 参数名 | 值 | 适用范围 | 说明 |
-|--------|----|---------|------|
-| `evolution.switch.consecutive_rounds` | 2 轮 | 全部模板 | 连续多少轮改进不足时触发策略切换 |
-| `evolution.switch.improvement_threshold` | < 3%（相对值）| 全部模板 | 单轮改进幅度低于此相对百分比时视为"停滞"；示例：当前 80%，改善阈值 = 2.4%；当前 7/10 分，改善阈值 = 0.21 分 |
-
-**触发逻辑**：同一维度连续 `evolution.switch.consecutive_rounds`（2）轮改进 < `evolution.switch.improvement_threshold`（3%，相对值），触发策略切换。
+**Usage conventions**:
+- The wizard shows the default value for the selected template in Step 4/5, and the user may adjust it during planning
+- In `items × 2`, `items` means the total number of generation units defined in `plan.md`
+- For T5/T7/T8, the round ceiling is determined by `default_rounds` in `references/gate-manifest.json` (currently **99**); the old "unlimited" wording in earlier docs is deprecated to avoid conflicts with the implementation
 
 ---
 
-## 三、范围扩展上限
+## 2. Evolution Trigger Parameters
 
-> 来源：原 `references/evolution-rules.md` 进化约束章节
+> Source: the original `references/evolution-rules.md`
 
-| 参数名 | 值 | 适用范围 | 说明 |
+### 2.1 Conditions That Permit Scope Expansion
+
+| Parameter | Value | Scope | Description |
 |--------|----|---------|------|
-| `evolution.expand.max_count` | 2 次 | 全部模板 | 整个任务周期内最多允许范围扩展的次数 |
-| `evolution.expand.dimension_ceiling` | ≤ 初始维度 × 1.5 | 全部模板 | 每次扩展后总维度数上限（同 2.1，此处明确为约束） |
-| `evolution.expand.cumulative_limit` | ≤ 初始维度数的 50% | 全部模板 | 累计扩展维度数上限（防止无限蔓延） |
+| `evolution.expand.budget_threshold` | ≥ 30% | T1, T3, T6, T7 | Scope expansion is allowed only if the remaining budget ratio reaches this threshold |
+| `evolution.expand.dimension_ceiling` | ≤ initial dimensions × 1.5 | All templates | The total number of dimensions after expansion must not exceed 1.5 times the initial dimension count |
 
-**约束说明**：超过 `evolution.expand.max_count`（2 次）后，即使条件满足也不允许继续扩展，须向用户报告并等待人工决策。
+**Trigger logic**: Expansion is allowed only when **all** of the following are true:
+1. The new dimension is highly important (it affects the core conclusion)
+2. Remaining budget ≥ `evolution.expand.budget_threshold` (30%)
+3. Total dimensions after expansion ≤ `evolution.expand.dimension_ceiling` (initial × 1.5)
+
+### 2.2 Conditions That Trigger Scope Narrowing
+
+| Parameter | Value | Scope | Description |
+|--------|----|---------|------|
+| `evolution.narrow.budget_consumed` | ≥ 70% | T1, T3, T6, T7 | Narrowing evaluation is triggered when the consumed budget ratio reaches this value |
+| `evolution.narrow.coverage_threshold` | < 60% | T1, T3, T6, T7 | Narrowing evaluation is triggered when coverage falls below this value |
+| `evolution.narrow.lag_dimensions` | ≥ 3 dimensions lagging for 2 consecutive rounds | T1, T3 | Criterion for multi-dimension simultaneous lag |
+
+**Trigger logic**: Narrowing is triggered when **any** of the following is true:
+1. Consumed budget ≥ `evolution.narrow.budget_consumed` (70%) and coverage < `evolution.narrow.coverage_threshold` (60%)
+2. At least 3 dimensions lag simultaneously for 2 consecutive rounds
+3. Some dimensions are found to have extremely sparse information, making further investment low-yield
+
+### 2.3 Conditions That Trigger Strategy Switching
+
+| Parameter | Value | Scope | Description |
+|--------|----|---------|------|
+| `evolution.switch.consecutive_rounds` | 2 rounds | All templates | Number of consecutive low-improvement rounds required to trigger a strategy switch |
+| `evolution.switch.improvement_threshold` | < 3% (relative) | All templates | Improvement below this relative percentage in a single round is treated as "stagnation"; example: if current is 80%, the improvement threshold is 2.4%; if current is 7/10, the threshold is 0.21 points |
+
+**Trigger logic**: A strategy switch is triggered when improvement for the same dimension remains below `evolution.switch.improvement_threshold` (3%, relative) for `evolution.switch.consecutive_rounds` (2) consecutive rounds.
 
 ---
 
-## 四、流程回退限制
+## 3. Scope Expansion Limits
 
-> 来源：原 `references/delivery-phases.md` 回退机制章节
+> Source: the evolution constraints section of the original `references/evolution-rules.md`
 
-| 参数名 | 值 | 适用范围 | 说明 |
+| Parameter | Value | Scope | Description |
 |--------|----|---------|------|
-| `flow.rollback.max_per_phase` | 2 次 | T5 各阶段（Phase 1-5）| 每个阶段最多允许的回退次数，超过上限须向用户报告并等待人工决策 |
-| `flow.rollback.phase2_exception` | 3 轮 | T5 Phase 2（修复-审查循环）| Phase 2 的修复-审查循环例外上限，允许最多 3 轮 |
+| `evolution.expand.max_count` | 2 times | All templates | Maximum number of scope expansions allowed over the entire task lifecycle |
+| `evolution.expand.dimension_ceiling` | ≤ initial dimensions × 1.5 | All templates | Upper bound on the total number of dimensions after each expansion (same as 2.1, listed here as a hard constraint) |
+| `evolution.expand.cumulative_limit` | ≤ 50% of the initial dimension count | All templates | Upper bound on the cumulative number of added dimensions (prevents unbounded sprawl) |
 
-**回退路径参考**：
+**Constraint note**: Once `evolution.expand.max_count` (2) is exceeded, further expansion is disallowed even if the conditions are met; the system must report to the user and wait for manual decision-making.
 
-| 发现问题的阶段 | 回退到 | 回退范围 |
+---
+
+## 4. Flow Rollback Limits
+
+> Source: the rollback mechanism section of the original `references/delivery-phases.md`
+
+| Parameter | Value | Scope | Description |
+|--------|----|---------|------|
+| `flow.rollback.max_per_phase` | 2 times | T5 phases (Phase 1-5) | Maximum number of rollbacks allowed per phase; once exceeded, the system must report to the user and wait for manual decision-making |
+| `flow.rollback.phase2_exception` | 3 rounds | T5 Phase 2 (fix-review loop) | Exception upper bound for the Phase 2 fix-review loop; up to 3 rounds are allowed |
+
+**Rollback path reference**:
+
+| Phase where the issue is found | Roll back to | Rollback scope |
 |-------------|--------|---------|
-| Phase 2 发现 P1/P2 | Phase 1 | 仅修复对应文件 |
-| Phase 3 验证失败 | Phase 1 或 Phase 2 | 修复 + 重审 |
-| Phase 4 部署失败 | Phase 3（修复后重测试）| 修复 + 重测 + 重部署 |
-| Phase 5 线上有问题 | Phase 4（回滚）或 Phase 1（修复）| 用户决定回滚还是热修复 |
+| P1/P2 issue found in Phase 2 | Phase 1 | Fix only the corresponding files |
+| Validation fails in Phase 3 | Phase 1 or Phase 2 | Fix + re-review |
+| Deployment fails in Phase 4 | Phase 3 (re-test after fixing) | Fix + re-test + re-deploy |
+| Production issue found in Phase 5 | Phase 4 (rollback) or Phase 1 (fix) | The user decides between rollback and hotfix |
 
 ---
 
-## 五、验证与矛盾解决参数
+## 5. Validation and Conflict Resolution Parameters
 
-> 来源：原 `references/loop-protocol.md` 矛盾解决规则
+> Source: the conflict resolution rules in the original `references/loop-protocol.md`
 
-| 参数名 | 值 | 适用范围 | 说明 |
+| Parameter | Value | Scope | Description |
 |--------|----|---------|------|
-| `verification.conflict.score_diff` | > 2 | 全部模板 | 两个 subagent 对同一代码的评分差超过此值时，触发第三次验证或人工判断 |
-| `oscillation.window` | 3 轮 | 全部模板 | 连续多少轮在 ±band 范围内波动视为振荡 |
-| `oscillation.band` | ±0.5 分 | 全部模板 | 振荡判定的分数波动带宽 |
-| `regression.threshold` | 跌破门禁阈值 | 全部模板 | 任何受影响维度跌破门禁阈值视为跨维度回归 |
+| `verification.conflict.score_diff` | > 2 | All templates | If two subagents differ by more than this score on the same code, trigger a third validation or manual judgment |
+| `oscillation.window` | 3 rounds | All templates | Number of consecutive rounds fluctuating within ±band that counts as oscillation |
+| `oscillation.band` | ±0.5 points | All templates | Score fluctuation bandwidth used to judge oscillation |
+| `regression.threshold` | falls below the gate threshold | All templates | Any affected dimension falling below its gate threshold counts as cross-dimension regression |
 
-**矛盾解决规则**：
+**Conflict resolution rules**:
 
-| 矛盾类型 | 解决规则 |
+| Conflict type | Resolution rule |
 |---------|---------|
-| A 说"有问题"，B 说"没问题" | 以更保守的（有问题）为准，记录 B 的理由 |
-| 两个 subagent 对同一代码的评分差 > `verification.conflict.score_diff`（2） | 运行第三次验证（或人工判断） |
-| 修复方案互相冲突 | 选择改动最小的，记录弃用的原因 |
+| A says "there is a problem", B says "there is no problem" | Use the more conservative conclusion ("there is a problem") and record B's rationale |
+| Two subagents differ by more than `verification.conflict.score_diff` (2) on the same code | Run a third validation (or use manual judgment) |
+| Proposed fixes conflict with each other | Choose the change with the smallest footprint and record why the other option was rejected |
 
 ---
 
-## 六、模板级停滞检测参数
+## 6. Template-Level Stagnation Detection Parameters
 
-> 来源：R7评审建议#3 — T3/T6/T7 需要独立停滞阈值
+> Source: R7 review recommendation #3 - T3/T6/T7 need independent stagnation thresholds
 >
-> **SSOT**: 运行时阈值由 `references/gate-manifest.json` 的 `stagnation_thresholds` 字段提供。本节为人类可读文档，如有冲突以 gate-manifest.json 为准。
+> **SSOT**: Runtime thresholds are provided by the `stagnation_thresholds` field in `references/gate-manifest.json`. This section is a human-readable reference; if any conflict exists, `gate-manifest.json` is authoritative.
 
-### 6.1 停滞阈值（按模板独立）
+### 6.1 Stagnation Thresholds (Independent by Template)
 
-| 参数名 | 模板 | 值 | 说明 |
+| Parameter | Template | Value | Description |
 |--------|------|----|------|
-| `stagnation.T5.threshold` | T5 Iterate | < 2%（相对值） | KPI 改善幅度低于当前值的 2% 视为停滞 |
-| `stagnation.T5.max_explore` | T5 Iterate | 3 轮 | 停滞后最多尝试 3 种新策略 |
-| `stagnation.T7.threshold` | T7 Quality | < 0.3 分（绝对值） | 安全/可靠/可维护任一维度改善 < 0.3 分视为停滞 |
-| `stagnation.T7.max_explore` | T7 Quality | 2 轮 | 停滞后最多尝试 2 种新策略 |
-| `stagnation.T8.threshold` | T8 Optimize | < 0.5 分（绝对值） | 架构/性能/稳定任一维度改善 < 0.5 分视为停滞 |
-| `stagnation.T8.max_explore` | T8 Optimize | 2 轮 | 停滞后最多尝试 2 种新策略 |
+| `stagnation.T5.threshold` | T5 Iterate | < 2% (relative) | KPI improvement below 2% of the current value counts as stagnation |
+| `stagnation.T5.max_explore` | T5 Iterate | 3 rounds | After stagnation, at most 3 new strategies may be tried |
+| `stagnation.T7.threshold` | T7 Quality | < 0.3 points (absolute) | Improvement below 0.3 points in any of security/reliability/maintainability counts as stagnation |
+| `stagnation.T7.max_explore` | T7 Quality | 2 rounds | After stagnation, at most 2 new strategies may be tried |
+| `stagnation.T8.threshold` | T8 Optimize | < 0.5 points (absolute) | Improvement below 0.5 points in any of architecture/performance/stability counts as stagnation |
+| `stagnation.T8.max_explore` | T8 Optimize | 2 rounds | After stagnation, at most 2 new strategies may be tried |
 
-**实现状态（`max_explore`）**：`references/gate-manifest.json` 的 **`stagnation_max_explore`**（T5/T7/T8）由 `autoloop-controller.py` `phase_evolve` 消费：在仍有 **stagnating** 信号时，若本轮与上轮 `iterations[].strategy.strategy_id` 不同则递增 `metadata.stagnation_explore_switches`；达到上限且决策仍为 `continue` 时改为 **`pause`**。无停滞时计数清零。与表格中 `stagnation.T5.max_explore` 等语义对齐；未在 manifest 配置的模板不适用。
+**Implementation status (`max_explore`)**: `stagnation_max_explore` in `references/gate-manifest.json` (T5/T7/T8) is consumed by `phase_evolve` in `autoloop-controller.py`: while a **stagnating** signal remains, if the current round's `iterations[].strategy.strategy_id` differs from the previous round, `metadata.stagnation_explore_switches` is incremented; once the limit is reached and the decision is still `continue`, the controller switches to **`pause`**. The counter resets when no stagnation is present. This aligns semantically with `stagnation.T5.max_explore` and related table entries; templates not configured in the manifest are not covered.
 
-**注**：T1/T2 使用通用停滞阈值 `evolution.switch.improvement_threshold`（< 3%），因为调研类任务的停滞特征与迭代优化类不同。
+**Note**: T1/T2 use the generic stagnation threshold `evolution.switch.improvement_threshold` (< 3%) because research tasks show different stagnation characteristics from iterative optimization tasks.
 
-### 6.1.1 T5：`get_current_scores` 与停滞历史（实现约定）
+### 6.1.1 T5: `get_current_scores` and Stagnation History (Implementation Convention)
 
-> 与 `scripts/autoloop-controller.py` 行为对齐；避免 ORIENT 与 EVOLVE 误判。
+> Aligned with the behavior of `scripts/autoloop-controller.py` to avoid false positives in ORIENT and EVOLVE.
 
-- **`get_current_scores(state)`**（T5）：若 `iterations[-1].scores` 为空，可用 **`plan.gates[].current` 的数值** 回填展示用当前分（如 `kpi_target`），供 ORIENT 差距表与部分启发式逻辑使用。
-- **`get_score_history(state)`**（停滞/振荡窗口）：仅串联 **`iterations[].scores` 非空** 的轮次；**不包含**上述「空轮次 + gate 回填」的虚拟点。故 T3 新轮在 VERIFY 写回前，停滞序列仍以上一轮及之前的 SSOT 分数为准。
+- **`get_current_scores(state)`** (T5): if `iterations[-1].scores` is empty, the values in **`plan.gates[].current`** may be used to backfill the displayed current score (such as `kpi_target`) for the ORIENT gap table and some heuristic logic.
+- **`get_score_history(state)`** (stagnation/oscillation window): only chains rounds where **`iterations[].scores` is non-empty**; it does **not** include the virtual points from the "empty round + gate backfill" behavior above. Therefore, before VERIFY writes the new T3 round back, the stagnation sequence still uses the SSOT scores from the previous round and earlier rounds.
 
-### 6.2 统一停滞状态机
+### 6.2 Unified Stagnation State Machine
 
 ```text
-正常迭代
-  ↓ 连续 2 轮改善 < 模板阈值
-[停滞检测] → 标记维度为"停滞"
+Normal iteration
+  ↓ improvement below the template threshold for 2 consecutive rounds
+[Stagnation detection] → mark the dimension as "stagnating"
   ↓
-[策略切换] → 从 experience-registry 或策略矩阵选择新策略
-  ↓ 执行新策略
-[探索验证] → 新策略是否有效？
-  ├── 有效（改善 ≥ 阈值）→ 回到正常迭代
-  ├── 无效但未达 max_explore → 继续探索（换另一个策略）
-  └── 无效且达 max_explore → [终止评估]
-        ├── 距离门禁 ≤ 10% → 输出当前最优，标注未达标项
-        └── 距离门禁 > 10% → 上报用户，建议调整目标或追加预算
+[Strategy switch] → choose a new strategy from experience-registry or the strategy matrix
+  ↓ execute the new strategy
+[Exploration validation] → is the new strategy effective?
+  ├── Effective (improvement ≥ threshold) → return to normal iteration
+  ├── Ineffective but max_explore not reached → continue exploring (switch to another strategy)
+  └── Ineffective and max_explore reached → [Termination evaluation]
+        ├── Distance to gate ≤ 10% → output the current best result and mark unmet items
+        └── Distance to gate > 10% → report to the user and recommend adjusting the goal or adding budget
 ```
 
 ---
 
-## 七、参数索引（快速查阅）
+## 7. Parameter Index (Quick Reference)
 
-| 参数名 | 值 | 所属分组 |
+| Parameter | Value | Group |
 |--------|----|---------|
-| `default_rounds.T1` | 3 轮 | 迭代控制 |
-| `default_rounds.T2` | 2 轮 | 迭代控制 |
-| `default_rounds.T5` | 99（见 `gate-manifest.json`） | 迭代控制 |
-| `default_rounds.T6` | 99 轮（门禁终止） | 迭代控制 |
-| `default_rounds.T4` | **5 轮**（`gate-manifest.json` SSOT，与交付阶段文档对齐）| 迭代控制；`plan.template_mode=linear_phases` 时另有暂停语义（见 `autoloop-controller`） |
-| `default_rounds.T7` | 99（见 `gate-manifest.json`） | 迭代控制 |
-| `default_rounds.T8` | 99（见 `gate-manifest.json`） | 迭代控制 |
-| `evolution.expand.budget_threshold` | ≥ 30% | 进化触发 |
-| `evolution.expand.dimension_ceiling` | ≤ 初始 × 1.5 | 进化触发 / 扩展上限 |
-| `evolution.narrow.budget_consumed` | ≥ 70% | 进化触发 |
-| `evolution.narrow.coverage_threshold` | < 60% | 进化触发 |
-| `evolution.narrow.lag_dimensions` | ≥ 3 个维度连续 2 轮 | 进化触发 |
-| `evolution.switch.consecutive_rounds` | 2 轮 | 进化触发 |
-| `evolution.switch.improvement_threshold` | < 3%（相对值）| 进化触发 |
-| `evolution.expand.max_count` | 2 次 | 扩展上限 |
-| `evolution.expand.cumulative_limit` | ≤ 初始维度数 50% | 扩展上限 |
-| `flow.rollback.max_per_phase` | 2 次 | 流程回退 |
-| `flow.rollback.phase2_exception` | 3 轮 | 流程回退 |
-| `verification.conflict.score_diff` | > 2 | 矛盾解决 |
-| `stagnation.T5.threshold` | < 2%（相对值） | 停滞检测 |
-| `stagnation.T5.max_explore` | 3 轮 | 停滞检测 |
-| `stagnation.T7.threshold` | < 0.3 分（绝对值） | 停滞检测 |
-| `stagnation.T7.max_explore` | 2 轮 | 停滞检测 |
-| `stagnation.T8.threshold` | < 0.5 分（绝对值） | 停滞检测 |
-| `stagnation.T8.max_explore` | 2 轮 | 停滞检测 |
-| `oscillation.window` | 3 轮 | 振荡检测 |
-| `oscillation.band` | ±0.5 分 | 振荡检测 |
-| `regression.threshold` | 跌破门禁阈值 | 回归检测 |
-| `routing.high_confidence_threshold` | 0.8 | 路由匹配 |
-| `routing.confirm_threshold` | 0.5 | 路由匹配 |
-| `routing.ambiguity_gap` | 0.2 | 路由匹配 |
+| `default_rounds.T1` | 3 rounds | Iteration control |
+| `default_rounds.T2` | 2 rounds | Iteration control |
+| `default_rounds.T5` | 99 (see `gate-manifest.json`) | Iteration control |
+| `default_rounds.T6` | 99 rounds (gate-terminated) | Iteration control |
+| `default_rounds.T4` | **5 rounds** (`gate-manifest.json` SSOT, aligned with delivery phase docs) | Iteration control; when `plan.template_mode=linear_phases`, additional pause semantics apply (see `autoloop-controller`) |
+| `default_rounds.T7` | 99 (see `gate-manifest.json`) | Iteration control |
+| `default_rounds.T8` | 99 (see `gate-manifest.json`) | Iteration control |
+| `evolution.expand.budget_threshold` | ≥ 30% | Evolution trigger |
+| `evolution.expand.dimension_ceiling` | ≤ initial × 1.5 | Evolution trigger / expansion limit |
+| `evolution.narrow.budget_consumed` | ≥ 70% | Evolution trigger |
+| `evolution.narrow.coverage_threshold` | < 60% | Evolution trigger |
+| `evolution.narrow.lag_dimensions` | ≥ 3 dimensions lagging for 2 consecutive rounds | Evolution trigger |
+| `evolution.switch.consecutive_rounds` | 2 rounds | Evolution trigger |
+| `evolution.switch.improvement_threshold` | < 3% (relative) | Evolution trigger |
+| `evolution.expand.max_count` | 2 times | Expansion limit |
+| `evolution.expand.cumulative_limit` | ≤ 50% of initial dimensions | Expansion limit |
+| `flow.rollback.max_per_phase` | 2 times | Flow rollback |
+| `flow.rollback.phase2_exception` | 3 rounds | Flow rollback |
+| `verification.conflict.score_diff` | > 2 | Conflict resolution |
+| `stagnation.T5.threshold` | < 2% (relative) | Stagnation detection |
+| `stagnation.T5.max_explore` | 3 rounds | Stagnation detection |
+| `stagnation.T7.threshold` | < 0.3 points (absolute) | Stagnation detection |
+| `stagnation.T7.max_explore` | 2 rounds | Stagnation detection |
+| `stagnation.T8.threshold` | < 0.5 points (absolute) | Stagnation detection |
+| `stagnation.T8.max_explore` | 2 rounds | Stagnation detection |
+| `oscillation.window` | 3 rounds | Oscillation detection |
+| `oscillation.band` | ±0.5 points | Oscillation detection |
+| `regression.threshold` | falls below the gate threshold | Regression detection |
+| `routing.high_confidence_threshold` | 0.8 | Routing match |
+| `routing.confirm_threshold` | 0.5 | Routing match |
+| `routing.ambiguity_gap` | 0.2 | Routing match |
 
 ---
 
-## 八、路由匹配参数
+## 8. Routing Match Parameters
 
-> 来源：入口命令 `commands/autoloop.md` 的置信度路由匹配机制
+> Source: the confidence-based routing mechanism in the entry command `commands/autoloop.md`
 
-| 参数名 | 值 | 说明 |
+| Parameter | Value | Description |
 |--------|----|------|
-| `routing.high_confidence_threshold` | 0.8 | 匹配得分 ≥ 此值时自动选择模板，无需用户确认 |
-| `routing.confirm_threshold` | 0.5 | 匹配得分在此值与 high_confidence 之间时，显示匹配结果请用户确认 |
-| `routing.ambiguity_gap` | 0.2 | Top 2 模板得分差距 < 此值时，视为歧义，展示多个选项 |
+| `routing.high_confidence_threshold` | 0.8 | When the match score is ≥ this value, the template is selected automatically without user confirmation |
+| `routing.confirm_threshold` | 0.5 | When the match score is between this value and `high_confidence_threshold`, show the match result and ask the user to confirm |
+| `routing.ambiguity_gap` | 0.2 | If the score gap between the top 2 templates is < this value, treat it as ambiguity and show multiple options |
 
-**路由逻辑**：
-- 得分 ≥ `high_confidence_threshold`（0.8）且无歧义 → 自动匹配
-- 得分 ≥ `high_confidence_threshold`（0.8）但 Top 2 差距 < `ambiguity_gap`（0.2）→ 展示 Top 2-3 让用户选
-- 得分在 `confirm_threshold`（0.5）到 `high_confidence_threshold`（0.8）之间 → 请用户确认
-- 得分 < `confirm_threshold`（0.5）→ 展示全部模板
-
----
-
-## 九、可复现性（采样）
-
-若子任务使用随机数或采样，须在 `findings` 或 `iterations` 中记录 **seed**（整数），便于复跑对照；与 `scripts/` 确定性工具链解耦，属任务层约定。
+**Routing logic**:
+- Score ≥ `high_confidence_threshold` (0.8) and no ambiguity → automatic match
+- Score ≥ `high_confidence_threshold` (0.8) but the top-2 gap < `ambiguity_gap` (0.2) → show the top 2-3 options for the user to choose
+- Score between `confirm_threshold` (0.5) and `high_confidence_threshold` (0.8) → ask the user to confirm
+- Score < `confirm_threshold` (0.5) → show all templates
 
 ---
 
-## 十、Pipeline 并行执行参数（P3-01）
+## 9. Reproducibility (Sampling)
 
-> 来源：`loop-protocol.md` Pipeline 并行执行规范
+If a subtask uses randomness or sampling, it must record a **seed** (integer) in `findings` or `iterations` to support reruns and comparison. This is a task-layer convention and remains decoupled from the deterministic `scripts/` toolchain.
 
-| 参数名 | 值 | 适用范围 | 说明 |
+---
+
+## 10. Pipeline Parallel Execution Parameters (P3-01)
+
+> Source: the Pipeline parallel execution specification in `loop-protocol.md`
+
+| Parameter | Value | Scope | Description |
 | ------ | -- | ------- | ---- |
-| `pipeline.parallel_groups` | `[]`（默认空，全串行） | Pipeline 模式 | 定义哪些模板可并行执行，每个元素是一组无依赖模板 |
-| `pipeline.worktree_base` | `.worktrees/` | Pipeline 模式 | Git Worktree 的创建目录（相对于 work_dir） |
-| `pipeline.merge_strategy` | `no-ff` | Pipeline 模式 | 合并策略，默认 `--no-ff` 保留分支历史 |
-| `pipeline.conflict_action` | `pause` | Pipeline 模式 | 合并冲突时的行为：`pause`（暂停等待用户）或 `abort`（放弃该分支） |
+| `pipeline.parallel_groups` | `[]` (empty by default, fully serial) | Pipeline mode | Defines which templates can execute in parallel; each element is a group of dependency-free templates |
+| `pipeline.worktree_base` | `.worktrees/` | Pipeline mode | Directory where Git worktrees are created (relative to `work_dir`) |
+| `pipeline.merge_strategy` | `no-ff` | Pipeline mode | Merge strategy; defaults to `--no-ff` to preserve branch history |
+| `pipeline.conflict_action` | `pause` | Pipeline mode | Behavior when a merge conflict occurs: `pause` (pause and wait for the user) or `abort` (abandon the branch) |
 
-**parallel_groups 配置示例**：
+**`parallel_groups` configuration example**:
 
 ```yaml
 pipeline:
   stages:
-    - [T1]           # 串行
-    - [T2]           # 串行（依赖 T1）
-    - [T7, T8]       # 并行组（无依赖）
+    - [T1]           # serial
+    - [T2]           # serial (depends on T1)
+    - [T7, T8]       # parallel group (no dependencies)
 ```
 
-**约束**：
+**Constraints**:
 
-- 同一并行组内的模板不得有数据依赖（模板 A 的输出不是模板 B 的输入）
-- 同一并行组内的模板不得操作相同文件集合（避免写冲突）
-- 并行组合并失败时，按 `pipeline.conflict_action` 决定行为
+- Templates within the same parallel group must not have data dependencies (template A's output must not be template B's input)
+- Templates within the same parallel group must not operate on the same file set (to avoid write conflicts)
+- If a parallel merge fails, behavior is determined by `pipeline.conflict_action`

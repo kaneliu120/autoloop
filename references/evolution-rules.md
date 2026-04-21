@@ -1,231 +1,247 @@
-# Evolution Rules — 轮间进化规则
+# Evolution Rules — Inter-Round Evolution Rules
 
-## 概述
+## Overview
 
-AutoLoop 的核心能力是在迭代过程中动态调整目标、范围和策略。本文档定义什么时候应该调整，如何调整，以及如何记录调整。
+AutoLoop's core capability is adjusting goals, scope, and strategy dynamically during iteration. This document defines when to adjust them, how to adjust them, and how those adjustments must be recorded.
 
-**核心原则**：进化是受控的，不是无限蔓延。每次调整都必须有明确的触发条件和边界。
+**Core principle**: evolution is controlled, not open-ended. Every adjustment must have explicit trigger conditions and boundaries.
 
-**统一状态枚举**：状态枚举定义见 `references/loop-protocol.md` 统一状态枚举章节，所有进化记录中必须使用该章节定义的枚举值，不得使用其他状态词（如"完成"、"未完成"、"待定"）。
-
----
-
-## 进化类型 1：扩展范围
-
-### 触发条件
-- Subagent 发现了计划外的重要维度，且这个维度对目标有显著影响
-- 判断标准：如果忽略这个维度，结论会有实质性偏差
-
-### 扩展规则
-
-**允许扩展**：
-```
-新维度重要性 = 高（影响核心结论）
-+ 预算剩余 ≥ 30%
-+ 扩展后总维度 ≤ 初始维度 × 1.5
-→ 允许扩展，下一轮覆盖新维度
-```
-
-**不允许扩展**：
-```
-预算剩余 < 30%
-OR 扩展会导致总维度翻倍
-OR 新维度与核心目标关系模糊
-→ 记录新维度到 findings.md "拓展方向"区块，不纳入本次范围
-```
-
-### 扩展操作步骤
-1. 在 `autoloop-plan.md` 的"范围定义 > 扩展维度"中追加新维度
-2. 在"变更记录"中记录：时间、新增维度、触发原因
-3. 更新覆盖率计算的分母（总维度数增加）
-4. 在 `autoloop-progress.md` 当前轮的 EVOLVE 部分记录决策
+**Unified status enum**: the canonical status enum is defined in `references/loop-protocol.md`. All evolution records must use the values defined there and may not introduce alternative terms such as "done", "not done", or "pending".
 
 ---
 
-## 进化类型 2：收窄焦点
+## Evolution Type 1: Scope Expansion
 
-### 触发条件
-- 已消耗 ≥ 70% 预算，但覆盖率 < 60%
-- 连续 2 轮在 ≥ 3 个维度同时落后
-- 发现某些维度信息极度稀缺，继续投入收益极低
+### Trigger Conditions
+- a subagent discovers an unplanned dimension that materially affects the goal
+- the test is whether ignoring that dimension would meaningfully distort the conclusion
 
-### 收窄规则
+### Expansion Rules
 
-**收窄优先级**：保留对核心结论影响最大的维度，降低或删除次要维度。
-
-**哪些维度可以降低要求**：
-```
-维度重要性 = 低（对推荐/结论影响 < 10%）
-→ 将质量标准从"有 3 个来源"降低到"有 1 个来源即可"
-→ 在报告中注明"该维度调研深度有限"
+**Expansion allowed**:
+```text
+New dimension importance = high (affects the core conclusion)
++ remaining budget >= 30%
++ total dimensions after expansion <= initial dimensions x 1.5
+-> expansion allowed; cover the new dimension in the next round
 ```
 
-**哪些维度可以完全跳过**：
-```
-维度重要性 = 低 AND 信息获取极困难 AND 预算告急
-→ 从覆盖率计算中移除该维度（不计入分母）
-→ 在报告中明确声明"未调研此维度及原因"
+**Expansion not allowed**:
+```text
+Remaining budget < 30%
+OR expansion would double the total dimension count
+OR the relation between the new dimension and the core goal is unclear
+-> record the new dimension in the "Expansion Directions" section of findings.md, but keep it out of the current scope
 ```
 
-### 收窄操作步骤
-1. 在 `autoloop-plan.md` 的"范围变更"中记录缩减内容和原因
-2. 更新质量门禁（调低的维度注明调整）
-3. 在 `autoloop-progress.md` 记录决策和影响评估
+### Expansion Steps
+1. Append the new dimension under "Scope Definition > Expanded Dimensions" in `autoloop-plan.md`.
+2. Add a change-log record with the time, added dimension, and trigger reason.
+3. Update the coverage denominator (the total dimension count increases).
+4. Record the decision in the current round's EVOLVE section of `autoloop-progress.md`.
 
 ---
 
-## 进化类型 3：策略切换
+## Evolution Type 2: Narrowing the Focus
 
-### 触发条件
-- 同一维度连续 2 轮改进 < 当前分数的 3%（相对值）
-  - 示例：当前 80%，改善阈值 = 2.4%；当前 7/10 分，改善阈值 = 0.21 分
-- 当前方法在该维度已到极限
+### Trigger Conditions
+- >= 70% of the budget has been consumed, but coverage is still < 60%
+- >= 3 dimensions have lagged simultaneously for 2 consecutive rounds
+- some dimensions are extremely information-scarce and further investment has very low expected return
 
-### 策略切换规则
+### Narrowing Rules
 
-记录已尝试方法，选择未尝试的方向：
+**Narrowing priority**: preserve the dimensions with the greatest impact on the core conclusion; demote or remove secondary dimensions first.
 
-**知识类任务策略矩阵**：
+**Dimensions whose requirements may be lowered**:
+```text
+Dimension importance = low (impact on the recommendation/conclusion < 10%)
+-> lower the quality standard from "3 sources" to "1 source is enough"
+-> note in the report that research depth on this dimension is limited
+```
 
-| 已尝试 | 切换到 |
+**Dimensions that may be skipped entirely**:
+```text
+Dimension importance = low AND information is extremely hard to obtain AND budget is tight
+-> remove the dimension from the coverage denominator
+-> explicitly state in the report that this dimension was not researched and why
+```
+
+### Narrowing Steps
+1. Record the reduction and its reason under "Scope Changes" in `autoloop-plan.md`.
+2. Update the quality gates and clearly mark any lowered requirements.
+3. Record the decision and impact assessment in `autoloop-progress.md`.
+
+---
+
+## Evolution Type 3: Strategy Switching
+
+### Trigger Conditions
+- the same dimension improves by less than 3% of its current score for 2 consecutive rounds
+  - example: if the current score is 80%, the improvement threshold is 2.4%; if the current score is 7/10, the threshold is 0.21 points
+- the current method has reached its limit for that dimension
+
+### Strategy Switching Rules
+
+Record the methods already tried, then switch to an untried direction.
+
+**Knowledge-task strategy matrix**:
+
+| Already Tried | Switch To |
 |--------|--------|
-| 关键词搜索 | 直接访问官方文档 |
-| 英文搜索 | 中文搜索（针对中国市场数据）|
-| 一般搜索 | 学术/专业数据库 |
-| 近期内容 | 历史内容（了解演变轨迹）|
-| 文字来源 | 视频/播客（技术大会演讲）|
+| keyword search | direct access to official documentation |
+| English search | Chinese search (for China-market data) |
+| general search | academic / professional databases |
+| recent content | historical content (to understand how the space evolved) |
+| text sources | video / podcast sources (conference talks, etc.) |
 
-**工程类任务策略矩阵**：
+**Engineering-task strategy matrix**:
 
-| 已尝试 | 切换到 |
+| Already Tried | Switch To |
 |--------|--------|
-| 算法优化 | 架构重构 |
-| 查询优化 | 缓存策略 |
-| 代码审查发现问题 | 运行 profiler 找实际瓶颈 |
-| 逐行修复 | 批量替换（正则/脚本）|
+| algorithm optimization | architectural refactor |
+| query optimization | caching strategy |
+| code review to find problems | profiler-driven bottleneck analysis |
+| line-by-line fixes | batch replacement (regex / scripts) |
 
-### 策略切换操作步骤
-1. 在 `autoloop-findings.md` 的第 2 层（策略复盘）表格中，将已失效策略标记为 `避免`，新策略标记为 `待验证`
-2. 在 `autoloop-plan.md` 的"策略历史"中追加（格式见下方"进化决策日志格式"）
-3. 在 ORIENT 阶段明确说明新策略，引用 findings.md 中的 `避免` 策略，避免重复
+### Strategy Switching Steps
+1. In Layer 2 ("Strategy Review") of `autoloop-findings.md`, mark the failed strategy as `Avoid` and the new strategy as `Pending Verification`.
+2. Append the change to the "Strategy History" section of `autoloop-plan.md` (format defined under "Evolution Decision Log Format" below).
+3. In ORIENT, explicitly describe the new strategy and reference the `Avoid` strategy from `findings.md` to prevent repeating it.
 
 ---
 
-## 进化类型 4：优先级重排
+## Evolution Type 4: Priority Reordering
 
-### 触发条件
-- 发现紧急 P1 问题（数据丢失风险、生产安全漏洞）
-- 发现高于预期的关键风险
+### Trigger Conditions
+- an urgent P1 issue is discovered (data-loss risk, production security vulnerability)
+- a critical risk is found that is more severe than expected
 
-### 紧急 P1 问题判断标准
+### Criteria for Urgent P1 Issues
 
-工程类：
-```
-紧急 P1（立即停止一切，优先处理）：
-- SQL 注入已被利用的证据
-- 密钥/密码暴露在代码仓库
-- 生产数据被误删的风险
-- 内存泄漏导致服务崩溃的模式
-```
-
-知识类：
-```
-紧急 P1（立即通知用户）：
-- 调研目标在法律/合规上有重大风险
-- 发现核心假设完全错误（如市场方向判断错误）
+Engineering tasks:
+```text
+Urgent P1 (stop everything and address immediately):
+- evidence that SQL injection is already being exploited
+- keys/passwords exposed in the code repository
+- a real risk of deleting production data by mistake
+- a memory leak pattern that crashes the service
 ```
 
-### 紧急 P1 处理流程
-1. 立即暂停当前轮次的其他工作
-2. 通知用户（人工确认点，等待确认）
-3. 获得确认后，紧急 P1 问题的修复优先于所有其他任务
-4. 紧急 P1 修复完成后继续正常迭代
+Knowledge tasks:
+```text
+Urgent P1 (notify the user immediately):
+- the research target carries major legal/compliance risk
+- a core assumption is found to be fundamentally wrong (for example, the market direction itself is wrong)
+```
 
-### 优先级重排的记录
+### Urgent P1 Handling Flow
+1. Immediately pause all other work in the current round.
+2. Notify the user and wait at a human confirmation gate.
+3. After confirmation, fixing the urgent P1 takes precedence over every other task.
+4. Resume normal iteration only after the urgent P1 fix is complete.
+
+### Priority-Reordering Log Format
 ```markdown
-### 优先级变更记录
-- 时间：{时间}
-- 触发原因：{紧急 P1 问题描述}
-- 暂停的任务：{列表}
-- 新优先级顺序：{紧急P1修复 → 其他P1 → ...}
-- 恢复时间（预计）：{估计}
+### Priority Change Log
+- Time: {time}
+- Trigger: {urgent P1 description}
+- Paused tasks: {list}
+- New priority order: {urgent P1 fix -> other P1 -> ...}
+- Estimated resume time: {estimate}
 ```
 
 ---
 
-## 进化约束（防止无限蔓延）
+## Evolution Constraints (Preventing Unbounded Scope Creep)
 
-### 范围扩展上限
-- 最多扩展 2 次（整个任务周期内）
-- 每次扩展后的总维度 ≤ 初始维度 × 1.5
-- 累计扩展维度数 ≤ 初始维度数的 50%
+### Scope Expansion Limits
+- at most 2 expansions over the entire task lifecycle
+- after each expansion, total dimensions must remain <= initial dimensions x 1.5
+- cumulative added dimensions must remain <= 50% of the initial dimension count
 
-### 预算追加规则
-- AutoLoop 不自动追加预算
-- 达到最大轮次后，必须用户明确批准才能追加
-- 追加时向用户说明：当前状态、距离目标的差距、预计还需几轮
+### Budget-Extension Rules
+- AutoLoop does not extend budget automatically
+- once the max round count is reached, only explicit user approval may add more budget
+- when asking for more budget, explain the current state, the remaining gap to target, and how many more rounds are expected
 
-### 目标漂移防护
-- 不允许在迭代过程中更改核心目标（只能在 plan.md 的"范围定义"中追加，不能修改核心目标）
-- 如果发现最初目标定义有问题，必须暂停并让用户重新确认目标
-- 目标确认后，之前的迭代结果是否有效需要评估
+### Goal-Drift Protection
+- the core goal may not change during iteration; only additions to scope are allowed in the "Scope Definition" section of `plan.md`
+- if the initial goal definition is found to be flawed, pause and ask the user to reconfirm the goal
+- once the goal changes, previously generated iteration results may need to be re-evaluated
 
 ---
 
-## 协议进化流程（Protocol Evolution）
+## Protocol Evolution Flow
 
-本章节定义 AutoLoop 协议文件本身发生变更时的标准流程。协议进化与轮间进化（范围/焦点/策略调整）不同：前者修改的是制度层文件（`references/` 目录），后者调整的是当次任务的执行方式。
+This section defines the standard flow for changing AutoLoop protocol files themselves. Protocol evolution differs from inter-round evolution: the former changes the rules in `references/`, while the latter only changes how the current task is executed.
 
-**核心原则**：协议是唯一规则源，修改必须受控、可追溯、向下兼容。
+**Core principle**: the protocol is the single source of rules. Changes must be controlled, traceable, and backward compatible.
 
+```text
+Trigger -> Proposal -> Approval -> Update -> Notify -> Verify -> Conflict Handling -> Archive
 ```
-触发 → 提案 → 审批 → 更新 → 通知 → 验证 → 冲突处理 → 存档
-```
 
-### 协议进化步骤
+### Protocol Evolution Steps
 
-| 步骤 | 执行者 | 输入 | 输出 | 记录位置 |
+| Step | Owner | Input | Output | Recorded In |
 | ---- | ------ | ---- | ---- | -------- |
-| 1 触发 | REFLECT subagent | 迭代中发现的规则问题 | 变更需求(文件+问题+影响) | progress.md REFLECT区块 |
-| 2 提案 | 编排 agent | 变更需求 | 完整提案(改什么+为什么+影响+替代方案) | progress.md REFLECT区块 |
-| 3 审批 | 用户(Kane) | 提案 | 确认/否决/修改意见 | progress.md REFLECT区块 |
-| 4 更新 | 编排 agent | 确认的提案 | 修改后的 protocol 文件 + 联动修改 | progress.md 当前轮 |
-| 5 通知 | 编排 agent | 更新结果 | 变更通知(文件/章节/内容/生效轮次/联动) | progress.md 当前轮 |
-| 6 验证 | 下轮 ORIENT subagent | 变更通知 | 验证报告(规则生效+联动一致+无冲突) | progress.md 下轮 ORIENT |
+| 1 Trigger | REFLECT subagent | rule issue discovered during iteration | change request (file + issue + impact) | REFLECT section of `progress.md` |
+| 2 Proposal | orchestrating agent | change request | full proposal (what changes + why + impact + alternatives) | REFLECT section of `progress.md` |
+| 3 Approval | user (Kane) | proposal | approval / rejection / revision comments | REFLECT section of `progress.md` |
+| 4 Update | orchestrating agent | approved proposal | updated protocol file + linked changes | current round in `progress.md` |
+| 5 Notify | orchestrating agent | update result | change notice (file / section / content / effective round / linked changes) | current round in `progress.md` |
+| 6 Verify | next-round ORIENT subagent | change notice | verification report (rule effective + linked docs consistent + no conflict) | next-round ORIENT in `progress.md` |
 
-**验证阶段2（结果验证）**：
-- 每次变更须声明预期目标（格式：预期{指标}从{当前}改善到{目标}，窗口{N}次任务；幅度 <= 20%）
-- 达预期 → 固化，patch+1；有正向趋势 → 延长1次；无趋势 → 触发回滚评估
-- 结果记录到 `experience-registry.md` 协议变更效果追踪表
+**Verification stage 2 (outcome validation)**:
+- Every change must declare an expected result in the format: expected `{metric}` improves from `{current}` to `{target}` within `{N}` tasks; amplitude must be <= 20%.
+- Meets expectation -> harden it, patch+1.
+- Positive trend but not enough -> extend by 1 more task.
+- No trend -> trigger rollback review.
+- Record the result in the protocol-change effectiveness tracking table in `experience-registry.md`.
 
-**追踪表更新时机**：提案通过(创建行) → 每次任务结束(追加数据) → 窗口结束(判定) → 回滚后(记录)
+**Tracking table update timing**: when the proposal is approved (create row) -> after each task (append data) -> when the validation window ends (final judgment) -> after rollback (record outcome).
 
-**回滚评估判据**（非自动回滚）：
-1. 窗口内 0 次正向改善 → 分析原因(变更问题/环境不同/样本不足)
-2. 任一维度回退 >= 1.0 分 → 回滚变更，version patch+1
-3. 样本不足 → 延长1次（仅1次）
+**Rollback review criteria** (not automatic rollback):
+1. Zero positive improvements within the window -> analyze why (bad change / different environment / insufficient sample).
+2. Any dimension regresses by >= 1.0 points -> roll back the change and bump patch+1.
+3. Insufficient sample -> extend once, but only once.
 
-### 冲突处理
+### Conflict Handling
 
-当新协议规则与现有规则产生矛盾时：
+When a new protocol rule conflicts with an existing rule:
 
-1. **新规则优先**：经用户确认的新规则具有最高效力，覆盖旧规则
-2. **冲突项识别**：在步骤 6 验证时识别，记录到 `autoloop-progress.md` 当前轮「冲突清单」
-3. **冲突解决排期**：冲突项自动排入下一轮 REFLECT 讨论，生成新的变更需求（回到步骤 1）
-4. **临时处理**：在冲突解决前，执行 agent 以最新变更通知为准，旧规则中与之矛盾的部分暂时失效
-
----
-
-### 存档
-
-- 所有协议变更记录（变更需求 → 提案 → 审批 → 通知 → 验证）永久保留在 `autoloop-progress.md` 对应轮次，不可删除
-- 存档内容作为后续 REFLECT 阶段的历史参考，防止重复提出已否决的变更
-- 若任务结束后需要汇总协议变更历史，从各轮 `autoloop-progress.md` 的「协议变更通知」区块提取
+1. **Newest approved rule wins**: once user-approved, the new rule takes precedence and overrides the old one.
+2. **Conflict identification**: detect the conflict during Step 6 verification and record it in the current round's "Conflict List" in `autoloop-progress.md`.
+3. **Resolution scheduling**: the conflict automatically becomes a REFLECT topic in the next round and generates a new change request (back to Step 1).
+4. **Temporary handling**: until resolved, execution follows the latest approved change notice; the conflicting part of the old rule is temporarily suspended.
 
 ---
 
-## 进化决策日志格式
+### Archiving
 
-每次进化决策追加到 progress.md 当前轮次末尾，包含：触发条件 + 决策类型(扩展/收窄/策略切换/优先级重排) + 变更前后对比 + 影响评估(覆盖率/预算/质量) + 策略状态更新表(保持/避免/待验证) + 遗留问题状态表(跨轮遗留/待处理) + 下轮策略。
+- All protocol change records (change request -> proposal -> approval -> notice -> verification) are permanently retained in the relevant round of `autoloop-progress.md` and must not be deleted.
+- The archive serves as historical input for future REFLECT phases, preventing rejected changes from being proposed repeatedly.
+- If protocol-change history needs to be summarized after the task ends, extract it from the "Protocol Change Notice" sections across `autoloop-progress.md`.
 
-状态枚举：保持(上轮有效继续用) | 避免(尝试>=2轮无改善) | 待验证(新引入) | 新发现 | 已修复 | 待处理 | 跨轮遗留。
+---
+
+## Evolution Decision Log Format
+
+Append every evolution decision to the end of the current round in `progress.md`. Each entry must include:
+- trigger condition
+- decision type (expand / narrow / strategy switch / priority reorder)
+- before/after comparison
+- impact assessment (coverage / budget / quality)
+- strategy status update table (`Keep` / `Avoid` / `Pending Verification`)
+- open-issue status table (`Cross-round carryover` / `Pending`)
+- next-round strategy
+
+Status enum:
+`Keep` (effective in the previous round, continue using it) |
+`Avoid` (tried for >=2 rounds without improvement) |
+`Pending Verification` (newly introduced) |
+`Newly discovered` |
+`Fixed` |
+`Pending` |
+`Cross-round carryover`

@@ -1,4 +1,4 @@
-"""读写 autoloop-state.json / checkpoint.json（Runner 侧）。"""
+"""Read and write autoloop-state.json / checkpoint.json (runner side)."""
 
 from __future__ import annotations
 
@@ -87,7 +87,7 @@ def bump_runner_tick(work_dir: str) -> None:
 
 
 def merge_iteration_act(work_dir: str, record: dict[str, Any]) -> None:
-    """向 iterations[-1].act.records 追加一条 Runner 执行记录。"""
+    """Append one runner execution record to iterations[-1].act.records."""
     sp = state_path(work_dir)
     st = load_json(sp)
     iters = st.get("iterations") or []
@@ -110,7 +110,7 @@ def set_metadata(
     pause_reason: str | None = None,
     python_exe: str | None = None,
 ) -> None:
-    """写入 metadata.runner_status / metadata.pause_reason（点分路径需存在）。"""
+    """Write metadata.runner_status / metadata.pause_reason (dot-paths must already exist)."""
     sp = state_path(work_dir)
     st = load_json(sp)
     meta = st.setdefault("metadata", {})

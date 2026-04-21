@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P3-06：multi: strategy_id 约束。"""
+"""P3-06: constraints for `multi:` strategy_id values."""
 
 import importlib.util
 import os
@@ -57,12 +57,12 @@ class TestStrategyMultiParse(unittest.TestCase):
     def test_validate_rejects_duplicate(self):
         ok, msg = validate_multi_strategy_id("multi:{S01-a,S01-a}")
         self.assertFalse(ok)
-        self.assertIn("重复", msg)
+        self.assertIn("duplicate", msg.lower())
 
     def test_validate_rejects_bad_child(self):
         ok, msg = validate_multi_strategy_id("multi:{S01-a,foo}")
         self.assertFalse(ok)
-        self.assertIn("子策略", msg)
+        self.assertIn("child strategy", msg.lower())
 
 
 class TestExperienceWriteMultiConstraints(unittest.TestCase):
@@ -79,7 +79,7 @@ class TestExperienceWriteMultiConstraints(unittest.TestCase):
         ok = self.mod.cmd_write(
             self.reg,
             "multi:{S01-a,S02-b}",
-            "待验证",
+            "Pending Validation",
             "0",
             None,
             template="T1",
@@ -92,7 +92,7 @@ class TestExperienceWriteMultiConstraints(unittest.TestCase):
         ok = self.mod.cmd_write(
             self.reg,
             "multi:{S01-a}",
-            "待验证",
+            "Pending Validation",
             "0",
             None,
             template="T1",
@@ -105,10 +105,10 @@ class TestExperienceWriteMultiConstraints(unittest.TestCase):
         ok = self.mod.cmd_write(
             self.reg,
             "multi:{S01-a,S02-b}",
-            "待验证",
+            "Pending Validation",
             "0",
             None,
-            status="观察",
+            status="Observation",
             template="T1",
             dimension="—",
             tags=None,

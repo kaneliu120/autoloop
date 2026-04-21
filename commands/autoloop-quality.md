@@ -1,458 +1,458 @@
 ---
 name: autoloop-quality
 description: >
-  AutoLoop T7: 企业级质量迭代模板。三维度并行扫描（安全/可靠/可维护），
-  按 P1→P2→P3 优先级修复，每修复后验证无回归，直到全部达到企业级标准。
-  目标：达到 references/quality-gates.md T7 门禁矩阵要求。
-  触发：/autoloop:quality 或任何需要将代码提升到企业级质量的任务。
+  AutoLoop T7: Enterprise-grade quality iteration template. Run three-dimensional parallel scans (security/reliability/maintainability),
+  fix issues by P1→P2→P3 priority, verify no regression after each fix, and continue until everything reaches enterprise-grade standards.
+  Goal: meet the requirements of the references/quality-gates.md T7 gate matrix.
+  Trigger: /autoloop:quality or any task that needs to raise code to enterprise-grade quality.
 ---
 
-# AutoLoop T7: Quality — 企业级质量迭代
+# AutoLoop T7: Quality — Enterprise-Grade Quality Iteration
 
-## 执行前提
+## Prerequisites for Execution
 
-读取 `autoloop-plan.md` 获取：
-- 代码库路径（绝对路径）
-- 重点审查模块（留空则全部扫描）
-- 特殊约束（不可修改的接口/文件）
-- 技术栈（在 plan 阶段检测或用户指定）
-- 验证命令（syntax_check_cmd，来自 plan 阶段，见下方技术栈检测说明）
+Read `autoloop-plan.md` to get:
+- Codebase path (absolute path)
+- Priority review modules (leave blank to scan everything)
+- Special constraints (interfaces/files that cannot be modified)
+- Tech stack (detected during the plan phase or specified by the user)
+- Verification command (`syntax_check_cmd`, from the plan phase; see the tech stack detection section below)
 
-### 技术栈检测与验证命令
+### Tech Stack Detection and Verification Commands
 
-在 Phase 1 开始前，先确认技术栈，选择对应的验证命令：
+Before Phase 1 begins, confirm the tech stack and choose the corresponding verification command:
 
-所有技术栈使用 plan 中定义的 `{syntax_check_cmd}`（见 `references/loop-protocol.md` 统一参数词汇表）进行语法验证，按 `syntax_check_file_arg` 决定是否附加文件参数。模块导出和路由注册检查方式由 plan 的 `main_entry_file` 决定。
+All tech stacks use the `{syntax_check_cmd}` defined in the plan (see the unified parameter glossary in `references/loop-protocol.md`) for syntax verification, with `syntax_check_file_arg` determining whether to append a file argument. Module export and route registration checks are determined by the plan's `main_entry_file`.
 
-如果 plan 阶段未指定验证命令，在开始扫描前向用户确认：
-"检测到技术栈：{检测结果}。将使用 {验证命令} 进行语法验证，是否正确？"
+If the plan phase did not specify a verification command, confirm with the user before scanning begins:
+"Detected tech stack: {detection result}. Will use {verification command} for syntax verification. Is this correct?"
 
-**Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再制定本轮修复计划。详见 `references/loop-protocol.md` OBSERVE Step 0 章节。
+**Round 2+ OBSERVE starting point**: first read the reflection chapter in `autoloop-findings.md` to obtain remaining issues, effective/ineffective strategies, identified patterns, and lessons learned, then formulate the repair plan for this round. See the OBSERVE Step 0 section in `references/loop-protocol.md` for details.
 
-- **经验库读取**: 读取 `references/experience-registry.md` 中与当前任务类型和目标维度匹配的条目，识别状态为「推荐」或「候选默认」的策略，传递到 DECIDE 阶段参考
+- **Experience registry read**: read entries in `references/experience-registry.md` that match the current task type and target dimensions, identify strategies with status "recommended" or "candidate default", and pass them to the DECIDE stage as reference
 
 ---
 
-## 每轮 OBSERVE 执行规范（Round 2+ 强制）
+## OBSERVE Execution Rules for Each Round (Mandatory for Round 2+)
 
-每轮修复开始前，在执行任何扫描或修复行动之前，必须先完成 OBSERVE Step 0：
+Before each repair round begins, and before any scanning or repair action is executed, OBSERVE Step 0 must be completed first:
 
 ```
-**Domain Pack 加载**：执行 domain pack 自动检测（见 domain-pack-spec.md §加载机制）。扫描工作目录技术栈特征自动加载匹配 pack；如 plan 中手动指定 `domain_pack` 则使用指定值；`domain_pack: none` 显式禁用。加载后用 pack 检测命令替换 enterprise-standard.md 的通用命令，权重调整覆盖通用权重。
+**Domain Pack Loading**: perform domain pack auto-detection (see domain-pack-spec.md §Loading Mechanism). Scan tech stack characteristics in the working directory to automatically load the matching pack; if `domain_pack` is manually specified in the plan, use that value; `domain_pack: none` explicitly disables it. After loading, use the pack's detection commands to replace the generic commands in enterprise-standard.md, and let the adjusted weights override the generic weights.
 
-OBSERVE Step 0（Round 2+ 必执行，第1轮跳过执行基线采集）：
-  读取 autoloop-findings.md 的反思章节（4层结构表）
-  获取：
-  - 问题清单：上轮遗留未修复的问题，哪些已修复但效果不佳
-  - 策略评估：上轮"保持"策略（本轮优先使用）、"避免"策略（本轮排除）、"待验证"策略（本轮谨慎使用并观察效果）
-  - 模式识别：反复出现的问题类型（说明有架构级根因，优先处理）
-  - 经验教训：哪类修复最有效、哪些验证步骤能发现最多问题
+OBSERVE Step 0 (required for Round 2+, skip it in Round 1 and perform baseline collection instead):
+  Read the reflection chapter in autoloop-findings.md (the 4-layer structure table)
+  Obtain:
+  - Issue list: unresolved issues left from the previous round, and which "fixed" items had poor results
+  - Strategy evaluation: previous-round "keep" strategies (use first this round), "avoid" strategies (exclude this round), and "to be verified" strategies (use cautiously this round and observe results)
+  - Pattern recognition: recurring issue types (indicating architecture-level root causes; prioritize them)
+  - Lessons learned: which types of fixes work best, and which validation steps discover the most issues
 
-  完成后再扫描当前代码状态并制定本轮修复计划
-  （完整规范见 references/loop-protocol.md OBSERVE Step 0 章节）
+  Only after that, scan the current code state and formulate the repair plan for this round
+  (See the OBSERVE Step 0 section in references/loop-protocol.md for the full specification)
 ```
 
 ---
 
-## 企业级质量标准定义
+## Enterprise-Grade Quality Standard Definition
 
-> **评分标准完整定义见 `references/enterprise-standard.md`。**
-> T7 审查必须覆盖 enterprise-standard.md 中的所有检查项，包括但不限于：
-> 超时配置、重试逻辑、健康检查、测试覆盖、连接池配置等。
-> 不得仅依赖本文件中的简化列表，必须以 enterprise-standard.md 为准。
+> **See `references/enterprise-standard.md` for the complete scoring definition.**
+> T7 review must cover every check item in enterprise-standard.md, including but not limited to:
+> timeout configuration, retry logic, health checks, test coverage, connection pool configuration, and so on.
+> Do not rely only on the simplified list in this file; enterprise-standard.md is the source of truth.
 
-**目标分数**：质量门禁阈值见 `references/quality-gates.md` T7 行（安全性、可靠性、可维护性各维度分数目标）。
+**Target scores**: see row T7 in `references/quality-gates.md` for the quality gate thresholds (score targets for security, reliability, and maintainability).
 
-**达标条件（复合判定，见 references/quality-gates-engineering.md T7 复合判定规则）**：
-- 分数达标 AND 计数达标（P1=0，安全P2=0）两个条件必须同时满足
+**Passing condition (composite judgment; see the T7 composite judgment rules in references/quality-gates-engineering.md)**:
+- Both conditions must be met at the same time: score threshold met AND count threshold met (`P1=0`, `security P2=0`)
 
 ---
 
-## 第一轮：三维度并行扫描
+## Round 1: Three-Dimensional Parallel Scan
 
-**同时运行 3 个 code-reviewer subagents**（独立，并行）：
+**Run 3 code-reviewer subagents simultaneously** (independent, parallel):
 
 ### Security Reviewer Subagent
 
 ```
-你是 security-reviewer subagent，专注代码安全审查。
+You are the security-reviewer subagent, focused on code security review.
 
-代码库路径：{绝对路径}
-审查模块：{模块列表，留空则全部}
+Codebase path: {absolute path}
+Modules under review: {module list, leave blank for full scan}
 
-审查清单：
-1. SQL 注入
-   - 查找：f-string 或 % 格式化直接拼接 SQL
-   - 查找：原始字符串传入 execute()
-   - 查找：ORM 的 text() 函数使用未参数化的用户输入
+Review checklist:
+1. SQL injection
+   - Find: SQL built directly with f-strings or `%` formatting
+   - Find: raw strings passed into `execute()`
+   - Find: unparameterized user input used with the ORM `text()` function
 
-2. 命令注入
-   - 查找：subprocess.run/call/Popen 中包含用户输入
-   - 查找：os.system() / os.popen()
-   - 查找：eval() / exec() 包含用户输入
+2. Command injection
+   - Find: user input included in `subprocess.run/call/Popen`
+   - Find: `os.system()` / `os.popen()`
+   - Find: user input included in `eval()` / `exec()`
 
-3. XSS（如有前端）
-   - 查找：dangerouslySetInnerHTML
-   - 查找：innerHTML 赋值用户输入
+3. XSS (if there is a frontend)
+   - Find: `dangerouslySetInnerHTML`
+   - Find: user input assigned to `innerHTML`
 
-4. 路径穿越
-   - 查找：os.path.join() / open() 使用未校验的用户输入
-   - 查找：../../../ 类的路径构建
+4. Path traversal
+   - Find: unvalidated user input used in `os.path.join()` / `open()`
+   - Find: path construction like `../../../`
 
-5. 敏感数据暴露
-   - 查找：密码/密钥在 logger.info/debug/print 中
-   - 查找：密码/密钥在 API 响应的 dict 中
-   - 查找：.env 文件中的值被 response 返回
+5. Sensitive data exposure
+   - Find: passwords/keys in `logger.info/debug/print`
+   - Find: passwords/keys in API response dicts
+   - Find: values from `.env` files returned in responses
 
-6. 输入验证
-### 技术栈适配（输入验证检查）
-根据实际技术栈检查对应的输入验证机制：
-- Python/FastAPI: 路由参数有无 Pydantic 模型；接受文件上传的路由有无类型和大小检查
-- Node.js/Express: 有无 express-validator / zod / joi 验证中间件
-- 其他框架: 检查等效的请求验证机制，有无任意用户输入直接传入数据库/命令
+6. Input validation
+### Tech stack adaptation (input validation checks)
+Check the corresponding input-validation mechanism based on the actual tech stack:
+- Python/FastAPI: whether route parameters use Pydantic models; whether file-upload routes validate type and size
+- Node.js/Express: whether `express-validator` / `zod` / `joi` middleware is present
+- Other frameworks: check equivalent request-validation mechanisms and whether arbitrary user input flows directly into databases/commands
 
-搜索命令参考（在代码库中执行 grep）：
-grep -rn "execute(f" {路径}
-grep -rn "subprocess" {路径}
-grep -rn "os.system" {路径}
-grep -rn "dangerouslySetInnerHTML" {路径}
-grep -rn "# type: ignore" {路径}
+Reference search commands (run `grep` in the codebase):
+grep -rn "execute(f" {path}
+grep -rn "subprocess" {path}
+grep -rn "os.system" {path}
+grep -rn "dangerouslySetInnerHTML" {path}
+grep -rn "# type: ignore" {path}
 
-输出格式：
-## 安全审查报告
+Output format:
+## Security Review Report
 
-### 发现的问题
+### Issues Found
 
-| ID | 文件（绝对路径） | 行号 | 类型 | 严重级别 | 描述 | 影响分析 | 修复建议 |
+| ID | File (absolute path) | Line | Type | Severity | Description | Impact Analysis | Fix Suggestion |
 |----|---------------|------|------|---------|------|---------|---------|
-| S001 | {路径} | {行} | SQL注入 | P1 | {描述} | {影响} | {建议} |
+| S001 | {path} | {line} | SQL injection | P1 | {description} | {impact} | {suggestion} |
 
-### 安全性评分
+### Security Score
 
-初始分：10
-扣分项：
-- {问题 S001}：-{分} （原因：{分类}）
-最终安全性得分：{N}/10
+Initial score: 10
+Deductions:
+- {issue S001}: -{points} (reason: {category})
+Final security score: {N}/10
 
-### 优先级摘要
-P1（必须立即修复）：{N} 个
-P2（应该在本次修复）：{N} 个
-P3（建议修复）：{N} 个
+### Priority Summary
+P1 (must be fixed immediately): {N}
+P2 (should be fixed in this pass): {N}
+P3 (recommended fix): {N}
 ```
 
 ### Reliability Reviewer Subagent
 
 ```
-你是 reliability-reviewer subagent，专注代码可靠性审查。
+You are the reliability-reviewer subagent, focused on code reliability review.
 
-代码库路径：{绝对路径}
-审查模块：{模块列表}
+Codebase path: {absolute path}
+Modules under review: {module list}
 
-审查清单：
-1. 异常处理覆盖
-   - 查找：HTTP 客户端调用（httpx/aiohttp/requests）无 try/except
-   - 查找：Redis 操作无 try/except
-   - 查找：数据库操作无 try/except
-   - 查找：文件操作无 try/except
+Review checklist:
+1. Exception-handling coverage
+   - Find: HTTP client calls (`httpx/aiohttp/requests`) without `try/except`
+   - Find: Redis operations without `try/except`
+   - Find: database operations without `try/except`
+   - Find: file operations without `try/except`
 
-2. 静默失败
-   - 查找：except: pass
-   - 查找：except Exception: logger.debug（关键路径不够）
-   - 查找：空的 finally 块
+2. Silent failures
+   - Find: `except: pass`
+   - Find: `except Exception: logger.debug` in key paths (insufficient handling)
+   - Find: empty `finally` blocks
 
-3. 降级回退
-   - 查找：Redis 缓存读取失败时有无降级到数据库
-   - 查找：外部 API 超时时有无重试或降级
-   - 查找：数据库连接失败时有无适当的错误响应
+3. Degradation fallback
+   - Find: whether Redis cache read failures fall back to the database
+   - Find: whether external API timeouts have retries or fallback
+   - Find: whether database connection failures return proper error responses
 
-4. 事务完整性
-   - 查找：多个数据库写操作是否在同一事务中
-   - 查找：写操作后是否有 await session.commit()
+4. Transaction integrity
+   - Find: whether multiple database writes are performed in the same transaction
+   - Find: whether write operations are followed by `await session.commit()`
 
-5. 资源泄漏
-   - 查找：打开的连接/文件是否在 finally 或 async with 中关闭
-   - 查找：异步生成器是否有 return 语句
+5. Resource leaks
+   - Find: whether opened connections/files are closed in `finally` or `async with`
+   - Find: whether async generators have `return` statements
 
-搜索命令参考：
-grep -rn "except.*pass" {路径}
-grep -rn "except:" {路径}
-grep -rn "redis" {路径}  # 然后检查是否有 try/except
+Reference search commands:
+grep -rn "except.*pass" {path}
+grep -rn "except:" {path}
+grep -rn "redis" {path}  # then check whether try/except exists
 
-输出格式：
-## 可靠性审查报告
+Output format:
+## Reliability Review Report
 
-### 发现的问题
+### Issues Found
 
-| ID | 文件 | 行号 | 类型 | 严重级别 | 描述 | 修复建议 |
+| ID | File | Line | Type | Severity | Description | Fix Suggestion |
 |----|------|------|------|---------|------|---------|
-| R001 | {路径} | {行} | 静默失败 | P1 | {描述} | {建议} |
+| R001 | {path} | {line} | Silent failure | P1 | {description} | {suggestion} |
 
-### 可靠性评分
+### Reliability Score
 
-初始分：10
-扣分项：...
-最终可靠性得分：{N}/10
+Initial score: 10
+Deductions: ...
+Final reliability score: {N}/10
 
-P1/P2/P3 数量摘要
+P1/P2/P3 count summary
 ```
 
 ### Maintainability Reviewer Subagent
 
 ```
-你是 maintainability-reviewer subagent，专注代码可维护性审查。
+You are the maintainability-reviewer subagent, focused on code maintainability review.
 
-代码库路径：{绝对路径}
-审查模块：{模块列表}
+Codebase path: {absolute path}
+Modules under review: {module list}
 
-审查清单：
-1. 类型系统
-   - 查找：any 类型（Python: Any / TypeScript: any）
-   - 查找：# type: ignore
-   - 查找：缺少返回类型标注的函数
+Review checklist:
+1. Type system
+   - Find: `any` types (Python: `Any` / TypeScript: `any`)
+   - Find: `# type: ignore`
+   - Find: functions missing return type annotations
 
-2. 代码重复
-   - 识别：超过 10 行的重复代码块
-   - 识别：同样的功能在多处实现
+2. Code duplication
+   - Identify: duplicated code blocks longer than 10 lines
+   - Identify: the same functionality implemented in multiple places
 
-3. 硬编码
-   - 查找：URL / 端口 / 超时时间 硬编码（非配置文件）
-   - 查找：魔法数字（如 3600 而不是 CACHE_TTL）
+3. Hardcoding
+   - Find: hardcoded URLs / ports / timeout values (outside config files)
+   - Find: magic numbers (for example `3600` instead of `CACHE_TTL`)
 
-4. 模块化
-### 技术栈适配（模块化检查）
-根据实际技术栈检查对应的模块导出和路由注册：
-- Python: 新文件是否在 __init__.py 中导出；新路由是否在 {main_entry_file} 注册
-- Node.js/TypeScript: 新文件是否在 index.ts barrel export 中声明；新路由是否在入口文件（app.ts）注册
-- 其他框架: 按项目规范检查等效的模块导出和路由注册机制
-- 通用: 函数单一职责（超过 50 行的函数是否需要分解）
+4. Modularity
+### Tech stack adaptation (modularity checks)
+Check the corresponding module export and route registration rules based on the actual tech stack:
+- Python: whether new files are exported in `__init__.py`; whether new routes are registered in `{main_entry_file}`
+- Node.js/TypeScript: whether new files are declared in `index.ts` barrel exports; whether new routes are registered in the entry file (`app.ts`)
+- Other frameworks: check equivalent module export and route registration mechanisms according to project conventions
+- General: single responsibility of functions (whether functions longer than 50 lines should be split)
 
-5. 命名规范
-   - 查找：缩写变量名（如 d, tmp, x）
-   - 查找：不符合项目规范的命名风格（如 Python 中用 camelCase）
+5. Naming conventions
+   - Find: abbreviated variable names (such as `d`, `tmp`, `x`)
+   - Find: naming styles that violate project conventions (such as camelCase in Python)
 
-搜索命令参考：
-grep -rn "Any" {路径}
-grep -rn ": any" {路径}
-grep -rn "# type: ignore" {路径}
-grep -rn "http://\|https://" {路径}  # 硬编码 URL
+Reference search commands:
+grep -rn "Any" {path}
+grep -rn ": any" {path}
+grep -rn "# type: ignore" {path}
+grep -rn "http://\|https://" {path}  # hardcoded URLs
 
-输出格式：
-## 可维护性审查报告
+Output format:
+## Maintainability Review Report
 
-### 发现的问题
+### Issues Found
 
-| ID | 文件 | 行号 | 类型 | 严重级别 | 描述 | 修复建议 |
+| ID | File | Line | Type | Severity | Description | Fix Suggestion |
 |----|------|------|------|---------|------|---------|
 
-### 可维护性评分
+### Maintainability Score
 
-初始分：10
-扣分项：...
-最终可维护性得分：{N}/10
+Initial score: 10
+Deductions: ...
+Final maintainability score: {N}/10
 ```
 
-### 第一轮结束：汇总扫描结果
+### End of Round 1: Summarize Scan Results
 
-将三个报告汇总，建立统一的问题清单：
+Merge the three reports and build a unified issue list:
 
 ```markdown
-## 第 1 轮扫描完成
+## Round 1 Scan Complete
 
-| 维度 | 初始得分 | 目标 | 状态 |
+| Dimension | Initial Score | Target | Status |
 |------|---------|------|------|
-| 安全性 | {N}/10 | {阈值见 quality-gates.md §T7 门禁} | 未达标/达标 |
-| 可靠性 | {N}/10 | {阈值见 quality-gates.md §T7 门禁} | 未达标/达标 |
-| 可维护性 | {N}/10 | {阈值见 quality-gates.md §T7 门禁} | 未达标/达标 |
+| Security | {N}/10 | {threshold, see quality-gates.md §T7 gate} | below target / meets target |
+| Reliability | {N}/10 | {threshold, see quality-gates.md §T7 gate} | below target / meets target |
+| Maintainability | {N}/10 | {threshold, see quality-gates.md §T7 gate} | below target / meets target |
 
-总问题数：{N}
-  P1（必须修复）：{N}
-  P2（应该修复）：{N}
-  P3（建议修复）：{N}
+Total issues: {N}
+  P1 (must fix): {N}
+  P2 (should fix): {N}
+  P3 (recommended): {N}
 
-下一步：按 P1 → P2 → P3 顺序修复
+Next step: fix in P1 → P2 → P3 order
 ```
 
 ---
 
-## 第 2-N 轮：优先级修复循环
+## Round 2-N: Priority-Based Repair Loop
 
-### 修复顺序规则
+### Repair Order Rules
 
-1. **P1 安全问题**（全部修复才能进行下一类型）
-2. **P1 可靠性问题**
-3. **P1 可维护性问题**
-4. **P2 安全问题**
-5. **P2 可靠性问题**
-6. **P2 可维护性问题**
-7. **P3 问题**（视预算决定）
+1. **P1 security issues** (all must be fixed before moving to the next type)
+2. **P1 reliability issues**
+3. **P1 maintainability issues**
+4. **P2 security issues**
+5. **P2 reliability issues**
+6. **P2 maintainability issues**
+7. **P3 issues** (depending on budget)
 
-### 每个修复的执行流程
+### Execution Flow for Each Fix
 
-**对每个问题（按优先级）**：
+**For each issue (in priority order)**:
 
-1. **工单生成**: 按 `references/agent-dispatch.md` 对应角色模板生成委派工单，填充任务目标、输入数据、输出格式、质量标准、范围限制、当前轮次、上下文摘要
+1. **Work order generation**: generate the delegation work order using the corresponding role template in `references/agent-dispatch.md`, filling in the task objective, input data, output format, quality standard, scope limits, current round, and context summary
 
-2. **分配修复 subagent**：
+2. **Assign repair subagent**:
 
 ```
-你是 fix-{类型} subagent，修复以下代码质量问题。
+You are the `fix-{type}` subagent, fixing the following code quality issue.
 
-问题 ID：{ID}
-文件：{绝对路径}
-行号：{行}
-问题描述：{描述}
-修复建议：{建议}
+Issue ID: {ID}
+File: {absolute path}
+Line: {line}
+Issue description: {description}
+Fix suggestion: {suggestion}
 
-约束：
-- 只修改标注的问题，不做其他改动
-- 不改变函数签名和 API 接口
-- 修改后立即运行语法验证命令（{syntax_check_cmd}，来自 autoloop-plan.md）
+Constraints:
+- Only modify the flagged issue; make no unrelated changes
+- Do not change function signatures or API interfaces
+- Run the syntax verification command immediately after the change (`{syntax_check_cmd}`, from `autoloop-plan.md`)
 
-修复步骤：
-1. 读取文件
-2. 实施最小化修复
-3. 运行 {syntax_check_cmd}（必须通过才报告完成）
-4. 确认修复解决了问题
-5. 确认没有引入新问题
+Repair steps:
+1. Read the file
+2. Apply the minimal fix
+3. Run `{syntax_check_cmd}` (must pass before reporting completion)
+4. Confirm that the fix resolves the issue
+5. Confirm that no new issue was introduced
 
-输出：
-- 修改内容（diff 格式）
-- {syntax_check_cmd} 验证结果（必须通过）
-- 是否引入新问题（是/否，如是则描述）
+Output:
+- Modified content (diff format)
+- `{syntax_check_cmd}` verification result (must pass)
+- Whether a new issue was introduced (yes/no; describe if yes)
 ```
 
-3. **验证无回归**（每次修复后）：
+3. **Verify no regression** (after every fix):
 
 ```bash
-# 语法验证（使用 autoloop-plan.md 中的 syntax_check_cmd）
-# plan 阶段应明确 syntax_check_file_arg: true/false。
-# - syntax_check_file_arg=true：  {syntax_check_cmd} {修改的文件}
-# - syntax_check_file_arg=false： {syntax_check_cmd}（不附加文件参数）
+# Syntax verification (using syntax_check_cmd from autoloop-plan.md)
+# The plan phase should explicitly define syntax_check_file_arg: true/false.
+# - syntax_check_file_arg=true:  {syntax_check_cmd} {modified file}
+# - syntax_check_file_arg=false: {syntax_check_cmd} (do not append a file argument)
 
-# 如果路由文件被修改，检查主入口注册（按技术栈规范检查 {main_entry_file}）
+# If a route file was modified, check registration in the main entry file (according to the tech stack convention for {main_entry_file})
 grep -n "{new_router_name}" {main_entry_file}
 
-# 如果修改了关键 import，检查循环依赖（按技术栈执行对应工具）
+# If key imports were modified, check circular dependencies (using the appropriate tool for the tech stack)
 {syntax_check_cmd}
 ```
 
-4. **更新问题清单状态**：将已修复的问题状态更新为 "已修复"（使用 loop-protocol.md 统一状态枚举）。
+4. **Update issue-list status**: update repaired issues to `"resolved"` (using the unified status enums from `loop-protocol.md`).
 
-### 批量修复的并行规则
+### Parallel Rules for Batch Repair
 
-- 同一文件的多个问题：**串行修复**（防止冲突）
-- 不同文件的问题：**并行修复**（提高效率）
-- P1 全部完成后再处理 P2（不并行跨优先级）
-
----
-
-## 每 5 个修复后 Checkpoint
-
-```
-Checkpoint（已修复 {N} 个问题）
-
-当前得分：
-  安全性：{旧} → {新}（{+/-变化}）
-  可靠性：{旧} → {新}（{+/-变化}）
-  可维护性：{旧} → {新}（{+/-变化}）
-
-还未修复：{N} 个（P1:{N} P2:{N} P3:{N}）
-
-是否出现新问题（修复引入的）：{是/否}
-  如是：{描述新问题，加入问题清单}
-
-继续修复 → 下一批（{具体计划}）
-```
+- Multiple issues in the same file: fix **serially** (to avoid conflicts)
+- Issues in different files: fix **in parallel** (to improve efficiency)
+- Finish all P1 items before handling P2 (do not parallelize across priorities)
 
 ---
 
-## 最终验收扫描
-
-所有 P1 和 P2 修复完成后，重新运行三维度完整扫描：
+## Checkpoint After Every 5 Fixes
 
 ```
-最终扫描目标：确认所有问题已修复，无回归
+Checkpoint ({N} issues fixed)
 
-安全性重新扫描 → {N}/10（改进：{+X}）
-可靠性重新扫描 → {N}/10（改进：{+X}）
-可维护性重新扫描 → {N}/10（改进：{+X}）
+Current scores:
+  Security: {old} → {new} ({+/- change})
+  Reliability: {old} → {new} ({+/- change})
+  Maintainability: {old} → {new} ({+/- change})
 
-新发现问题（改进过程中引入的）：{N} 个
+Remaining unresolved: {N} (P1:{N} P2:{N} P3:{N})
+
+Any new issue introduced by fixes: {yes/no}
+  If yes: {describe the new issue and add it to the issue list}
+
+Continue fixing → next batch ({specific plan})
 ```
-
-### 终止判断
-
-终止条件为复合判定（必须同时满足两个条件），完整规则见 `references/quality-gates.md` T7 复合判定规则。
-
-```
-条件一：分数达标（阈值见 quality-gates.md T7 门禁行）
-  安全性 {N}/10 ≥ {阈值} ✓
-  可靠性 {N}/10 ≥ {阈值} ✓
-  可维护性 {N}/10 ≥ {阈值} ✓
-
-条件二：计数达标（容忍度见 quality-gates-engineering.md T7 复合判定规则）
-  P1 问题 = 0（所有维度）✓
-  安全 P2 问题 = 0 ✓
-  可靠性 P2 问题 ≤ {容忍值} ✓
-  可维护性 P2 问题 ≤ {容忍值} ✓
-
-两个条件必须同时满足 → 终止迭代，生成最终审计报告
-
-注意：分数达标但 P1 仍存在 → 不得终止，必须继续修复 P1
-```
-
-未全部达标 → 继续修复轮次（但 P3 问题可根据预算决定是否处理）。
 
 ---
 
-## 每轮 REFLECT 执行规范
+## Final Acceptance Scan
 
-每修复批次（checkpoint）完成后，在 EVOLVE 判断之后执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `references/loop-protocol.md` REFLECT 章节）：
+After all P1 and P2 issues are fixed, rerun the full three-dimensional scan:
 
-写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `assets/findings-template.md`：
+```
+Goal of final scan: confirm all issues are fixed and no regression exists
 
-- **问题登记**：记录本轮发现的代码问题、修复是否引入新问题、审查遗漏、未能修复的遗留项
-- **策略复盘**：修复策略/审查方法/验证命令的效果评估（保持 | 避免 | 待验证）（策略评价枚举见 references/loop-data-schema.md 统一状态枚举）
-- **模式识别**：反复出现的代码问题类型（说明有架构级根因）、修复→新问题的因果链、哪类问题集中在同一模块
-- **经验教训**：哪类修复最有效、哪些验证步骤能发现最多问题、安全/可靠/可维护性三维度的系统性教训
-- **经验写回**: 将本轮策略效果写入 `references/experience-registry.md`（策略ID、适用场景、效果评分、执行上下文，遵循效果记录表格式）
+Security rescan → {N}/10 (improvement: {+X})
+Reliability rescan → {N}/10 (improvement: {+X})
+Maintainability rescan → {N}/10 (improvement: {+X})
+
+New issues discovered (introduced during improvement): {N}
+```
+
+### Termination Judgment
+
+The termination condition uses composite judgment (both conditions must be satisfied); see the T7 composite judgment rules in `references/quality-gates.md` for the full definition.
+
+```
+Condition 1: score thresholds met (see the T7 gate row in quality-gates.md)
+  Security {N}/10 ≥ {threshold} ✓
+  Reliability {N}/10 ≥ {threshold} ✓
+  Maintainability {N}/10 ≥ {threshold} ✓
+
+Condition 2: count thresholds met (for tolerance, see the T7 composite judgment rules in quality-gates-engineering.md)
+  P1 issues = 0 (all dimensions) ✓
+  Security P2 issues = 0 ✓
+  Reliability P2 issues ≤ {tolerance} ✓
+  Maintainability P2 issues ≤ {tolerance} ✓
+
+Both conditions must be satisfied at the same time → terminate iteration and generate the final audit report
+
+Note: if score thresholds are met but P1 issues still exist → do not terminate; continue fixing P1
+```
+
+If not everything meets the threshold → continue repair rounds (P3 issues may be handled depending on budget).
 
 ---
 
-## 最终审计报告
+## REFLECT Execution Rules for Each Round
 
-文件名遵循 `references/loop-protocol.md` 统一输出文件命名章节（T7: `autoloop-audit-{date}.md`）。写入时使用 `assets/audit-template.md`：
+After each repair batch (checkpoint), execute this after EVOLVE judgment. REFLECT must be written to a file and cannot be completed only in thought (see the REFLECT section in `references/loop-protocol.md`):
+
+Write the 4-layer reflection structure table into `autoloop-findings.md` (issue registration / strategy review / pattern recognition / lessons learned); see `assets/findings-template.md` for the format:
+
+- **Issue registration**: record code issues found in this round, whether fixes introduced new issues, review omissions, and remaining items that could not be fixed
+- **Strategy review**: evaluate the effectiveness of repair strategies / review methods / verification commands (keep | avoid | to be verified) (for strategy evaluation enums, see the unified status enums in `references/loop-data-schema.md`)
+- **Pattern recognition**: recurring types of code issues (indicating architecture-level root causes), fix → new issue causal chains, and which issue types are concentrated in the same module
+- **Lessons learned**: which kinds of fixes are most effective, which validation steps uncover the most issues, and systemic lessons across security / reliability / maintainability
+- **Experience write-back**: write the strategy effects from this round into `references/experience-registry.md` (strategy ID, applicable scenario, effect score, execution context, following the effect-record table format)
+
+---
+
+## Final Audit Report
+
+Follow the unified output filename rules in `references/loop-protocol.md` (T7: `autoloop-audit-{date}.md`). Use `assets/audit-template.md` when writing:
 
 ```markdown
-# 企业级质量审计报告
+# Enterprise-Grade Quality Audit Report
 
-## 执行摘要
+## Executive Summary
 
-| 维度 | 初始 | 最终 | 目标 | 状态 |
+| Dimension | Initial | Final | Target | Status |
 |------|------|------|------|------|
-| 安全性 | {初始}/10 | {最终}/10 | {阈值见 quality-gates.md §T7 门禁} | 达标/未达标 |
-| 可靠性 | {初始}/10 | {最终}/10 | {阈值见 quality-gates.md §T7 门禁} | 达标/未达标 |
-| 可维护性 | {初始}/10 | {最终}/10 | {阈值见 quality-gates.md §T7 门禁} | 达标/未达标 |
+| Security | {initial}/10 | {final}/10 | {threshold, see quality-gates.md §T7 gate} | meets target / below target |
+| Reliability | {initial}/10 | {final}/10 | {threshold, see quality-gates.md §T7 gate} | meets target / below target |
+| Maintainability | {initial}/10 | {final}/10 | {threshold, see quality-gates.md §T7 gate} | meets target / below target |
 
-**迭代轮次**：{N}
-**修复问题数**：{N}（P1:{N} P2:{N} P3:{N}）
-**结论**：{企业级质量达标 / 接近达标（说明差距）}
+**Iteration rounds**: {N}
+**Issues fixed**: {N} (P1:{N} P2:{N} P3:{N})
+**Conclusion**: {enterprise-grade quality achieved / close to target (explain the gap)}
 
-## 修复明细
+## Repair Details
 
-| ID | 维度 | 优先级 | 文件 | 问题 | 修复方案 | 状态 |
+| ID | Dimension | Priority | File | Issue | Fix Approach | Status |
 |----|------|--------|------|------|---------|------|
 
-## 遗留问题
+## Remaining Issues
 
-（未修复的 P3 问题，说明原因）
+(Unfixed P3 issues, with reasons)
 
-## 代码库健康度变化
+## Codebase Health Changes
 
-扫描覆盖文件：{N} 个
-关键改善：{TOP 3 改善项}
+Files covered by the scan: {N}
+Key improvements: {top 3 improvements}
 
-## 后续建议
+## Follow-Up Recommendations
 
-{持续改进建议}
+{continuous improvement suggestions}
 ```

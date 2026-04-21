@@ -1,4 +1,4 @@
-"""OpenAI Chat Completions：JSON 输出、429/5xx 退避（实施手册 §6）。"""
+"""OpenAI Chat Completions: JSON output, 429/5xx backoff (implementation manual §6)."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def chat_json(
         from openai import OpenAI
     except ImportError as e:
         raise RuntimeError(
-            "需要安装 openai 包: pip install 'autoloop[runner]'"
+            "The openai package is required: pip install 'autoloop[runner]'"
         ) from e
 
     client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout)

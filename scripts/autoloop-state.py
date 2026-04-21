@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""AutoLoop SSOT 单一数据源管理工具
+"""AutoLoop SSOT single source of truth manager
 
-用法:
-  autoloop-state.py init <工作目录> <模板> <目标>
-  autoloop-state.py update <工作目录> <字段路径> <值>
-  autoloop-state.py query <工作目录> <查询表达式>
-  autoloop-state.py add-iteration <工作目录>
-  autoloop-state.py add-finding <工作目录> <JSON>
-  autoloop-state.py add-tsv-row <工作目录> <JSON>
-  autoloop-state.py migrate <工作目录> [--dry-run]
+Usage:
+  autoloop-state.py init <Work Directory> <Template> <Target>
+  autoloop-state.py update <Work Directory> <field path> <Value>
+  autoloop-state.py query <Work Directory> <query expression>
+  autoloop-state.py add-iteration <Work Directory>
+  autoloop-state.py add-finding <Work Directory> <JSON>
+  autoloop-state.py add-tsv-row <Work Directory> <JSON>
+  autoloop-state.py migrate <Work Directory> [--dry-run]
 
-数据源文件: <工作目录>/autoloop-state.json
+Data source file: <Work Directory>/autoloop-state.json
 """
 
 import datetime
@@ -42,19 +42,19 @@ def task_id_now():
 
 
 def validate_phase_transition(current, target):
-    """验证阶段转换合法性（参照 loop-protocol.md §阶段转换约束）"""
+    """Validate whether a phase transition is legal(see loop-protocol.md §phase transition constraints)"""
     if current not in PHASES or target not in PHASES:
-        return False, "未知阶段: {} → {}".format(current, target)
+        return False, "unknown phase: {} → {}".format(current, target)
     ci, ti = PHASES.index(current), PHASES.index(target)
     if ti == ci + 1:
         return True, ""
     if target == "OBSERVE" and current == "REFLECT":
-        return True, "进入下一轮"
-    return False, "非法转换: {} → {}（必须按顺序推进）".format(current, target)
+        return True, "enter the next round"
+    return False, "illegal transition: {} → {}(must advance in order)".format(current, target)
 
 
 def initial_state(template, goal, work_dir):
-    """创建初始 SSOT JSON 结构，覆盖 plan/progress/findings/results.tsv 所有信息"""
+    """Create the initial SSOT JSON structure covering all plan/progress/findings/results.tsv data"""
     now = now_iso()
     tid = task_id_now()
 
@@ -65,7 +65,7 @@ def initial_state(template, goal, work_dir):
             "goal": goal,
             "detailed_background": "",
             "success_criteria": [],
-            "status": "准备开始",
+            "status": "Ready to Start",
             "work_dir": work_dir,
             "plan_version": "1.0",
             "dimensions": [],
@@ -73,8 +73,8 @@ def initial_state(template, goal, work_dir):
             "budget": {
                 "max_rounds": 0,
                 "current_round": 0,
-                "time_limit": "无限制",
-                "exhaustion_strategy": "输出当前最优"
+                "time_limit": "Unlimited",
+                "exhaustion_strategy": "Output Best Current Result"
             },
             "scope": {
                 "includes": [],
@@ -85,21 +85,21 @@ def initial_state(template, goal, work_dir):
             "template_mode": "ooda_rounds",
             "linear_delivery_complete": False,
             "output_files": {
-                "plan": {"path": "autoloop-plan.md", "status": "已创建"},
-                "progress": {"path": "autoloop-progress.md", "status": "待创建"},
-                "findings": {"path": "autoloop-findings.md", "status": "待创建"},
-                "results_tsv": {"path": "autoloop-results.tsv", "status": "待创建"}
+                "plan": {"path": "autoloop-plan.md", "status": "Created"},
+                "progress": {"path": "autoloop-progress.md", "status": "Pending"},
+                "findings": {"path": "autoloop-findings.md", "status": "Pending"},
+                "results_tsv": {"path": "autoloop-results.tsv", "status": "Pending"}
             },
             "strategy_history": [],
             "decide_act_handoff": None,
             "change_log": [
-                {"time": now, "field": "初始创建", "before": "", "after": "", "reason": ""}
+                {"time": now, "field": "Initial Creation", "before": "", "after": "", "reason": ""}
             ]
         },
         "iterations": [],
         "findings": {
             "executive_summary": {
-                "topic": "待填写",
+                "topic": "TBD",
                 "total_rounds": 0,
                 "final_scores": {},
                 "top_conclusions": []
@@ -144,18 +144,18 @@ def initial_state(template, goal, work_dir):
 
 
 def load_state(work_dir):
-    """加载 state.json，不存在时报错退出"""
+    """Load state.json and exit with an error if it does not exist"""
     path = os.path.join(work_dir, STATE_FILE)
     if not os.path.exists(path):
-        print("ERROR: 数据源文件不存在: {}".format(path))
-        print("提示: 先运行 autoloop-state.py init <工作目录> <模板> <目标>")
+        print("ERROR: data source file does not exist: {}".format(path))
+        print("Hint: run autoloop-state.py init <Work Directory> <Template> <Target> first")
         sys.exit(1)
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
 def save_state(work_dir, state):
-    """保存 state.json，自动更新 updated_at"""
+    """Save state.json and automatically update updated_at"""
     state["metadata"]["updated_at"] = now_iso()
     path = os.path.join(work_dir, STATE_FILE)
     with open(path, "w", encoding="utf-8") as f:
@@ -163,10 +163,10 @@ def save_state(work_dir, state):
     return path
 
 
-# --- 字段路径解析 ---
+# --- Field Path Parsing ---
 
 def _parse_path_segment(segment):
-    """解析路径段，支持 key[N] 格式的数组索引"""
+    """Parse a path segment, supporting key[N] array indexing"""
     m = re.match(r"^(\w+)\[(-?\d+)\]$", segment)
     if m:
         return m.group(1), int(m.group(2))
@@ -175,9 +175,9 @@ def _parse_path_segment(segment):
 
 def resolve_path(obj, path_str):
     """
-    按点分路径遍历嵌套 dict/list，返回 (parent, key, value)。
+    Traverse nested dict/list values by dot path and return (parent, key, value).
 
-    支持语法:
+    Supported syntax:
       plan.goal                     -> state["plan"]["goal"]
       iterations[-1].scores         -> state["iterations"][-1]["scores"]
       findings.rounds[0].findings   -> state["findings"]["rounds"][0]["findings"]
@@ -217,7 +217,7 @@ def resolve_path(obj, path_str):
 
 
 def set_by_path(obj, path_str, value):
-    """按点分路径设置值，自动创建缺失的中间 dict 键"""
+    """Set a value by dot path and auto-create missing intermediate dict keys"""
     segments = path_str.split(".")
     current = obj
 
@@ -246,7 +246,7 @@ def set_by_path(obj, path_str, value):
 
 
 def _auto_convert(value_str):
-    """尝试将字符串转为合适的 Python 类型"""
+    """Try converting a string to an appropriate Python type"""
     if value_str.lower() in ("true", "false"):
         return value_str.lower() == "true"
     try:
@@ -265,10 +265,10 @@ def _auto_convert(value_str):
     return value_str
 
 
-# --- 子命令实现 ---
+# --- Subcommand implementation ---
 
 def _load_plan_gates_for_template(template):
-    """从 autoloop-score 加载与 scorer 对齐的 plan.gates（避免维度键分裂）。"""
+    """ autoloop-score and scorer  plan.gates(AvoidDimension)."""
     score_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "autoloop-score.py")
     spec = importlib.util.spec_from_file_location("al_score_ssot", score_path)
     mod = importlib.util.module_from_spec(spec)
@@ -277,15 +277,15 @@ def _load_plan_gates_for_template(template):
 
 
 def cmd_init(work_dir, template, goal):
-    """初始化 autoloop-state.json"""
+    """Initialize autoloop-state.json"""
     if not os.path.isdir(work_dir):
-        print("ERROR: 目录不存在: {}".format(work_dir))
+        print("ERROR: directory does not exist: {}".format(work_dir))
         return False
 
     path = os.path.join(work_dir, STATE_FILE)
     if os.path.exists(path):
-        print("WARNING: 数据源已存在: {}".format(path))
-        print("如需重新初始化，请先删除该文件。")
+        print("WARNING: data source already exists: {}".format(path))
+        print("Delete this file first if you need to reinitialize.")
         return False
 
     state = initial_state(template, goal, work_dir)
@@ -303,7 +303,7 @@ def cmd_init(work_dir, template, goal):
             for g in gates
             if g.get("manifest_dimension") or g.get("dimension") or g.get("dim")
         ]
-    # 从 gate-manifest.json 读取模板默认轮次
+    # Read default template rounds from gate-manifest.json
     if state["plan"]["budget"]["max_rounds"] <= 0:
         manifest_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
@@ -317,10 +317,10 @@ def cmd_init(work_dir, template, goal):
         except (OSError, json.JSONDecodeError):
             state["plan"]["budget"]["max_rounds"] = 3  # fallback
     saved = save_state(work_dir, state)
-    print("OK: SSOT 数据源已创建: {}".format(saved))
-    print("  任务 ID: {}".format(state["plan"]["task_id"]))
-    print("  模板: {}".format(template))
-    print("  目标: {}".format(goal))
+    print("OK: SSOT data source created: {}".format(saved))
+    print("  Task ID: {}".format(state["plan"]["task_id"]))
+    print("  Template: {}".format(template))
+    print("  Target: {}".format(goal))
     return True
 
 
@@ -331,7 +331,7 @@ PROTECTED_PATH_PATTERNS = [
 
 
 def cmd_update(work_dir, field_path, value_str):
-    """更新数据源中的特定字段"""
+    """Update a specific field in the data source"""
     for pat in PROTECTED_PATH_PATTERNS:
         if pat.match(field_path):
             print("WARNING: Cannot update protected path '{}' via update command.".format(field_path))
@@ -348,13 +348,13 @@ def cmd_update(work_dir, field_path, value_str):
         if parent_path:
             pp, pk, parent_val = resolve_path(state, parent_path)
             if pp is None or not isinstance(parent_val, dict):
-                print("ERROR: 字段路径不存在: {}".format(field_path))
-                print("提示: 使用 query 命令查看现有结构")
+                print("ERROR: field path does not exist: {}".format(field_path))
+                print("Hint: use the query command to inspect the current structure")
                 sys.exit(1)
         else:
             # Single-segment path with no parent — root must be a dict
             if not isinstance(state, dict):
-                print("ERROR: 字段路径不存在: {}".format(field_path))
+                print("ERROR: field path does not exist: {}".format(field_path))
                 sys.exit(1)
         # Parent exists as a dict; new key will be auto-created by set_by_path
         old_value = None
@@ -365,7 +365,7 @@ def cmd_update(work_dir, field_path, value_str):
         if isinstance(old_value, str) and isinstance(new_value, str):
             ok, msg = validate_phase_transition(old_value, new_value)
             if not ok:
-                print("ERROR: 阶段转换验证失败: {}".format(msg))
+                print("ERROR: phase transition validation failed: {}".format(msg))
                 sys.exit(1)
             if msg:
                 print("INFO: {}".format(msg))
@@ -382,14 +382,14 @@ def cmd_update(work_dir, field_path, value_str):
 
     save_state(work_dir, state)
     print("OK: {}".format(field_path))
-    print("  旧值: {}".format(old_value))
-    print("  新值: {}".format(new_value))
+    print("  Old Value: {}".format(old_value))
+    print("  New Value: {}".format(new_value))
 
     return True
 
 
 def cmd_query(work_dir, query_expr):
-    """查询数据源字段"""
+    """Query data source fields"""
     state = load_state(work_dir)
 
     if query_expr == "summary":
@@ -401,26 +401,26 @@ def cmd_query(work_dir, query_expr):
             for r in state["findings"]["rounds"]
         )
         n_tsv = len(state["results_tsv"])
-        print("任务 ID: {}".format(plan["task_id"]))
-        print("模板: {}".format(plan["template"]))
-        print("状态: {}".format(plan["status"]))
-        print("目标: {}".format(plan["goal"]))
-        print("迭代轮次: {}".format(n_iter))
-        print("发现总数: {}".format(n_findings))
-        print("TSV 记录数: {}".format(n_tsv))
-        print("协议版本: {}".format(meta["protocol_version"]))
-        print("创建时间: {}".format(meta["created_at"]))
-        print("更新时间: {}".format(meta["updated_at"]))
+        print("Task ID: {}".format(plan["task_id"]))
+        print("Template: {}".format(plan["template"]))
+        print("Status: {}".format(plan["status"]))
+        print("Target: {}".format(plan["goal"]))
+        print("Iteration Count: {}".format(n_iter))
+        print("Total Findings: {}".format(n_findings))
+        print("TSV Row Count: {}".format(n_tsv))
+        print("Protocol Version: {}".format(meta["protocol_version"]))
+        print("Created At: {}".format(meta["created_at"]))
+        print("Updated At: {}".format(meta["updated_at"]))
         return True
 
     if query_expr == "dimensions":
         gates = state["plan"].get("gates", [])
         if not gates:
-            print("未设置质量门禁维度")
+            print("No quality gate dimensions configured")
             return True
         for g in gates:
             dim_label = g.get("dimension", g.get("dim", "?"))
-            print("  {}: 当前={} 目标={} 状态={}".format(
+            print("  {}: Current={} Target={} Status={}".format(
                 dim_label,
                 g.get("current", "—"),
                 g.get("target", "—"),
@@ -430,7 +430,7 @@ def cmd_query(work_dir, query_expr):
 
     _, _, value = resolve_path(state, query_expr)
     if value is None:
-        print("未找到: {}".format(query_expr))
+        print("Not Found: {}".format(query_expr))
         return False
 
     if isinstance(value, (dict, list)):
@@ -441,7 +441,7 @@ def cmd_query(work_dir, query_expr):
 
 
 def cmd_add_iteration(work_dir):
-    """添加新一轮迭代记录"""
+    """Add a new round iteration record"""
     state = load_state(work_dir)
 
     round_num = len(state["iterations"]) + 1
@@ -455,7 +455,7 @@ def cmd_add_iteration(work_dir):
         "round": round_num,
         "start_time": now,
         "end_time": "",
-        "status": "进行中",
+        "status": "In Progress",
         "phase": "OBSERVE",
         "scores": prev_scores,
         "strategy": {
@@ -473,7 +473,7 @@ def cmd_add_iteration(work_dir):
         "orient": {
             "gap_cause": "",
             "strategy": "",
-            "scope_adjustment": "无",
+            "scope_adjustment": "None",
             "expected_improvement": ""
         },
         "decide": {
@@ -495,14 +495,14 @@ def cmd_add_iteration(work_dir):
             "new_insights": []
         },
         "evolve": {
-            "termination": "继续",
+            "termination": "Continue",
             "next_focus": "",
-            "strategy_adjustment": "无",
-            "scope_change": "无"
+            "strategy_adjustment": "None",
+            "scope_change": "None"
         },
         "reflect": {
             "problem_registry": {"new": 0, "fixed": 0, "remaining": 0},
-            "strategy_review": {"rating": 0, "verdict": "待验证", "reason": ""},
+            "strategy_review": {"rating": 0, "verdict": "To Validate", "reason": ""},
             "pattern_recognition": "",
             "lesson_learned": "",
             "next_round_guidance": ""
@@ -514,40 +514,40 @@ def cmd_add_iteration(work_dir):
 
     state["iterations"].append(iteration)
     state["plan"]["budget"]["current_round"] = round_num
-    state["plan"]["status"] = "进行中"
+    state["plan"]["status"] = "In Progress"
 
     save_state(work_dir, state)
-    print("OK: 已添加第 {} 轮迭代".format(round_num))
-    print("  状态: 进行中")
-    print("  阶段: OBSERVE")
+    print("OK: Added round {} iteration".format(round_num))
+    print("  Status: In Progress")
+    print("  Phase: OBSERVE")
     return True
 
 
 def cmd_add_finding(work_dir, finding_json):
-    """添加新发现到当前轮次"""
+    """Add a finding to the current round."""
     state = load_state(work_dir)
 
     if not state["iterations"]:
-        print("ERROR: 尚未创建迭代，请先执行 add-iteration")
+        print("ERROR: No iteration exists yet; run add-iteration first")
         sys.exit(1)
 
     try:
         finding = json.loads(finding_json)
     except json.JSONDecodeError as e:
-        print("ERROR: JSON 解析失败: {}".format(e))
+        print("ERROR: JSON parse failed: {}".format(e))
         print(
-            "示例: autoloop-state.py add-finding /path "
-            '\'{"dimension": "coverage", "content": "分析内容...", '
-            '"source": "https://example.com", "confidence": "高"}\''
+            "Example: autoloop-state.py add-finding /path "
+            '\'{"dimension": "coverage", "content": "analysis content...", '
+            '"source": "https://example.com", "confidence": "High"}\''
         )
         sys.exit(1)
 
     if "dimension" not in finding:
-        print("ERROR: 缺少必需字段: dimension")
+        print("ERROR: Missing required field: dimension")
         print(
-            "示例: autoloop-state.py add-finding /path "
-            '\'{"dimension": "coverage", "content": "分析内容...", '
-            '"source": "https://example.com", "confidence": "高"}\''
+            "Example: autoloop-state.py add-finding /path "
+            '\'{"dimension": "coverage", "content": "analysis content...", '
+            '"source": "https://example.com", "confidence": "High"}\''
         )
         sys.exit(1)
     body_keys = ("summary", "description", "content")
@@ -555,11 +555,11 @@ def cmd_add_finding(work_dir, finding_json):
         finding.get(k) not in (None, "")
         for k in body_keys
     ):
-        print("ERROR: 缺少正文字段: 须提供 summary、description 或 content 之一")
+        print("ERROR: Missing body field: provide summary, description, or content")
         print(
-            "示例: autoloop-state.py add-finding /path "
-            '\'{"dimension": "coverage", "content": "分析内容...", '
-            '"source": "https://example.com", "confidence": "高"}\''
+            "Example: autoloop-state.py add-finding /path "
+            '\'{"dimension": "coverage", "content": "analysis content...", '
+            '"source": "https://example.com", "confidence": "High"}\''
         )
         sys.exit(1)
     if not finding.get("content"):
@@ -570,7 +570,7 @@ def cmd_add_finding(work_dir, finding_json):
                 break
 
     finding.setdefault("source", "")
-    finding.setdefault("confidence", "中")
+    finding.setdefault("confidence", "Medium")
     finding.setdefault("type", "finding")
     finding.setdefault("time", now_iso())
     finding.setdefault("round", len(state["iterations"]))
@@ -597,24 +597,24 @@ def cmd_add_finding(work_dir, finding_json):
         or finding.get("description")
         or ""
     )
-    print("OK: 已添加发现 (第 {} 轮, 维度: {})".format(
+    print("OK: Added finding (Round {}, Dimension: {})".format(
         round_num, finding["dimension"]))
-    print("  内容: {}...".format(str(preview)[:80]))
+    print("  Content: {}...".format(str(preview)[:80]))
     return True
 
 
 def _tsv_row_variance_fail_closed(row):
-    """与 autoloop-variance check 对齐的 fail-closed（方差≥2 或 0<置信度<50）。"""
+    """Fail-closed aligned with autoloop-variance check (variance≥2 or 0<Confidence<50)."""
     sv = str(row.get("score_variance", "0")).strip()
     conf = str(row.get("confidence", "100")).replace("%", "").strip()
     try:
         var = float(sv) if sv and sv != "—" else 0.0
     except ValueError:
-        return True, "score_variance 非数字"
+        return True, "score_variance non-numeric"
     try:
         c = float(conf) if conf and conf != "—" else 100.0
     except ValueError:
-        return True, "confidence 非数字"
+        return True, "confidence non-numeric"
     if var >= 2.0:
         return True, "score_variance≥2.0"
     if c < 50 and c != 0:
@@ -623,13 +623,13 @@ def _tsv_row_variance_fail_closed(row):
 
 
 def cmd_add_tsv_row(work_dir, row_json):
-    """添加 TSV 行记录"""
+    """Add a TSV row record"""
     state = load_state(work_dir)
 
     try:
         row = json.loads(row_json)
     except json.JSONDecodeError as e:
-        print("ERROR: JSON 解析失败: {}".format(e))
+        print("ERROR: JSON parse failed: {}".format(e))
         sys.exit(1)
 
     for col in TSV_COLUMNS:
@@ -637,8 +637,8 @@ def cmd_add_tsv_row(work_dir, row_json):
 
     fc, reason = _tsv_row_variance_fail_closed(row)
     if fc:
-        print("ERROR: TSV 行未通过方差/置信度校验: {}".format(reason))
-        print("  请修正 score_variance / confidence 后重试（见 autoloop-variance.py check）")
+        print("ERROR: TSV row failed variance/confidence validation: {}".format(reason))
+        print("  Fix score_variance / confidence and retry (see autoloop-variance.py check)")
         sys.exit(1)
 
     row.setdefault("protocol_version", PROTOCOL_VERSION)
@@ -648,41 +648,41 @@ def cmd_add_tsv_row(work_dir, row_json):
         state["iterations"][-1]["tsv_rows"].append(row)
 
     save_state(work_dir, state)
-    print("OK: 已添加 TSV 记录 (iteration={}, dimension={})".format(
+    print("OK: Added TSV row (iteration={}, dimension={})".format(
         row.get("iteration", "—"), row.get("dimension", "—")))
     return True
 
 
-# --- 主入口 ---
+# --- Main Entry ---
 
-USAGE = """用法:
-  autoloop-state.py init <工作目录> <模板> <目标>
-  autoloop-state.py update <工作目录> <字段路径> <值>
-  autoloop-state.py query <工作目录> <查询表达式>
-  autoloop-state.py add-iteration <工作目录>
-  autoloop-state.py add-finding <工作目录> '<JSON>'
-  autoloop-state.py add-tsv-row <工作目录> '<JSON>'
-  autoloop-state.py migrate <工作目录> --dry-run
+USAGE = """Usage:
+  autoloop-state.py init <Work Directory> <Template> <Target>
+  autoloop-state.py update <Work Directory> <field path> <Value>
+  autoloop-state.py query <Work Directory> <query expression>
+  autoloop-state.py add-iteration <Work Directory>
+  autoloop-state.py add-finding <Work Directory> '<JSON>'
+  autoloop-state.py add-tsv-row <Work Directory> '<JSON>'
+  autoloop-state.py migrate <Work Directory> --dry-run
 
-查询示例:
+Query Example:
   autoloop-state.py query /path summary
   autoloop-state.py query /path dimensions
   autoloop-state.py query /path plan.goal
   autoloop-state.py query /path iterations[-1].scores
   autoloop-state.py query /path metadata.protocol_version
 
-更新示例:
-  autoloop-state.py update /path plan.status 进行中
+Update Example:
+  autoloop-state.py update /path plan.status In Progress
   autoloop-state.py update /path plan.budget.max_rounds 7
   autoloop-state.py update /path iterations[-1].phase ORIENT
 
-迁移示例:
-  autoloop-state.py migrate /path --dry-run   # 打印当前 plan.gates 与 SSOT 建议的差异预览
+Migration Example:
+  autoloop-state.py migrate /path --dry-run   # print a preview diff between current plan.gates and the SSOT suggestion
 """
 
 
 def cmd_migrate(work_dir, dry_run):
-    """对比 plan.gates 与 gate-manifest 初始化建议（不自动写回）。"""
+    """Compare plan.gates with the gate-manifest initialization recommendation (no automatic write-back)."""
     import importlib.util
 
     state = load_state(work_dir)
@@ -695,15 +695,15 @@ def cmd_migrate(work_dir, dry_run):
     proposed = mod.plan_gates_for_ssot_init(tmpl)
     current = state.get("plan", {}).get("gates", [])
 
-    print("模板: {}".format(tmpl))
-    print("当前 plan.gates 条数: {}".format(len(current)))
-    print("SSOT 建议条数: {}".format(len(proposed)))
+    print("Template: {}".format(tmpl))
+    print("Current plan.gates count: {}".format(len(current)))
+    print("SSOT recommended gate count: {}".format(len(proposed)))
     if dry_run:
-        print("\n--- 建议 plan.gates（预览，完整见下方 JSON）---")
+        print("\n--- Suggested plan.gates (preview; full JSON below)---")
         print(json.dumps(proposed, ensure_ascii=False, indent=2))
         print(
-            "\n（dry-run）未修改文件。若需对齐，请手工合并或重新 init；"
-            "详见 references/loop-data-schema.md §迁移"
+            "\n(dry-run)No files were modified. Merge manually or re-run init to align them;"
+            "See references/loop-data-schema.md §migration"
         )
     return True
 
@@ -717,56 +717,56 @@ def main():
 
     if cmd == "init":
         if len(sys.argv) < 5:
-            print("用法: autoloop-state.py init <工作目录> <模板> <目标>")
+            print("Usage: autoloop-state.py init <Work Directory> <Template> <Target>")
             sys.exit(1)
         ok = cmd_init(sys.argv[2], sys.argv[3], sys.argv[4])
         sys.exit(0 if ok else 1)
 
     elif cmd == "update":
         if len(sys.argv) < 5:
-            print("用法: autoloop-state.py update <工作目录> <字段路径> <值>")
+            print("Usage: autoloop-state.py update <Work Directory> <field path> <Value>")
             sys.exit(1)
         ok = cmd_update(sys.argv[2], sys.argv[3], sys.argv[4])
         sys.exit(0 if ok else 1)
 
     elif cmd == "query":
         if len(sys.argv) < 4:
-            print("用法: autoloop-state.py query <工作目录> <查询表达式>")
+            print("Usage: autoloop-state.py query <Work Directory> <query expression>")
             sys.exit(1)
         ok = cmd_query(sys.argv[2], sys.argv[3])
         sys.exit(0 if ok else 1)
 
     elif cmd == "add-iteration":
         if len(sys.argv) < 3:
-            print("用法: autoloop-state.py add-iteration <工作目录>")
+            print("Usage: autoloop-state.py add-iteration <Work Directory>")
             sys.exit(1)
         ok = cmd_add_iteration(sys.argv[2])
         sys.exit(0 if ok else 1)
 
     elif cmd == "add-finding":
         if len(sys.argv) < 4:
-            print("用法: autoloop-state.py add-finding <工作目录> '<JSON>'")
+            print("Usage: autoloop-state.py add-finding <Work Directory> '<JSON>'")
             sys.exit(1)
         ok = cmd_add_finding(sys.argv[2], sys.argv[3])
         sys.exit(0 if ok else 1)
 
     elif cmd == "add-tsv-row":
         if len(sys.argv) < 4:
-            print("用法: autoloop-state.py add-tsv-row <工作目录> '<JSON>'")
+            print("Usage: autoloop-state.py add-tsv-row <Work Directory> '<JSON>'")
             sys.exit(1)
         ok = cmd_add_tsv_row(sys.argv[2], sys.argv[3])
         sys.exit(0 if ok else 1)
 
     elif cmd == "migrate":
         if len(sys.argv) < 3:
-            print("用法: autoloop-state.py migrate <工作目录> [--dry-run]")
+            print("Usage: autoloop-state.py migrate <Work Directory> [--dry-run]")
             sys.exit(1)
         dry = "--dry-run" in sys.argv
         ok = cmd_migrate(sys.argv[2], dry)
         sys.exit(0 if ok else 1)
 
     else:
-        print("未知命令: {}".format(cmd))
+        print("unknown command: {}".format(cmd))
         print(USAGE)
         sys.exit(1)
 
