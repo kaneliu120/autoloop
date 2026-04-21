@@ -1,30 +1,30 @@
-"""Cost Tracking Middleware — 成本追踪和预算管理
+"""Cost Tracking Middleware — cost tracking and budget management
 
-从 controller.py 中抽离的成本/预算相关逻辑的参考实现。
-当前为文档+接口定义，实际逻辑仍在 autoloop-controller.py 中。
+Reference implementation for the cost/budget logic extracted from controller.py.
+This file currently provides docs and interface definitions; the real logic still lives in autoloop-controller.py.
 
-对应 controller.py 中的函数/逻辑：
+Corresponding controller.py functions/logic:
 - print_cost_summary(state)              → CostTrackingMiddleware.get_summary
-- plan.budget.max_rounds / current_round → CostTrackingMiddleware 内部状态
+- plan.budget.max_rounds / current_round → internal state in CostTrackingMiddleware
 - get_max_rounds() / get_current_round() → CostTrackingMiddleware.remaining_budget_pct
 
-未来扩展方向：
-- 每个 subagent 的 token 用量追踪（输入/输出分开计）
-- 按模型计费（不同 provider 不同单价）
-- 累计成本写入 metadata.json 用于跨任务分析
+Future extension directions:
+- Track token usage for each subagent (separate input/output counts)
+- Bill by model (different providers, different prices)
+- Write cumulative cost to metadata.json for cross-task analysis
 """
 
 
 class CostTrackingMiddleware:
-    """成本追踪 Middleware
+    """Cost-tracking middleware.
 
-    职责：
-    - 记录每个 subagent 调用的 token 用量和成本
-    - 计算累计成本和剩余预算百分比
-    - 预算耗尽时发出警告（不阻断管道）
-    - 生成成本摘要报告
+    Responsibilities:
+    - Record token usage and cost for each subagent call
+    - Compute cumulative cost and remaining budget percentage
+    - Warn when budget is exhausted (without blocking the pipeline)
+    - Produce a cost summary report
 
-    接口：
+    Interface:
     - on_subagent_start(subagent_id, model, task_type) -> None
     - on_subagent_end(subagent_id, tokens_in, tokens_out, cost_usd) -> None
     - get_summary() -> dict
@@ -32,25 +32,25 @@ class CostTrackingMiddleware:
     """
 
     def __init__(self, max_rounds: int = 0, warn_threshold: float = 0.2):
-        """初始化成本追踪 Middleware。
+        """Initialize the cost-tracking middleware.
 
         Args:
-            max_rounds: 最大轮次预算（0 = 从 manifest 读取默认值）
-            warn_threshold: 剩余预算低于此比例时发出警告 (0.0-1.0)
+            max_rounds: maximum round budget (0 = read default from manifest)
+            warn_threshold: warn when remaining budget falls below this ratio (0.0-1.0)
         """
         self.max_rounds = max_rounds
         self.warn_threshold = warn_threshold
         self._records: list[dict] = []
 
     def on_subagent_start(self, subagent_id: str, model: str, task_type: str) -> None:
-        """Subagent 开始执行时调用。
+        """Called when a subagent starts.
 
         Args:
-            subagent_id: subagent 标识（如 "round_2_act_1"）
-            model: 使用的模型名（如 "claude-sonnet-4-20250514"）
-            task_type: 任务类型（如 "research", "coding"）
+            subagent_id: subagent identifier (e.g. "round_2_act_1")
+            model: model name in use (e.g. "claude-sonnet-4-20250514")
+            task_type: task type (e.g. "research", "coding")
         """
-        pass  # 未来从 controller.phase_act() 迁移
+        pass  # Future migration from controller.phase_act()
 
     def on_subagent_end(
         self,
@@ -59,18 +59,18 @@ class CostTrackingMiddleware:
         tokens_out: int = 0,
         cost_usd: float = 0.0,
     ) -> None:
-        """Subagent 执行结束时调用。
+        """Called when a subagent finishes.
 
         Args:
-            subagent_id: subagent 标识
-            tokens_in: 输入 token 数
-            tokens_out: 输出 token 数
-            cost_usd: 本次调用成本（美元）
+            subagent_id: subagent identifier
+            tokens_in: input token count
+            tokens_out: output token count
+            cost_usd: cost of this call (USD)
         """
-        pass  # 未来从 controller 迁移
+        pass  # Future migration from controller
 
     def get_summary(self) -> dict:
-        """返回成本摘要。
+        """Return a cost summary.
 
         Returns:
             {
@@ -92,23 +92,23 @@ class CostTrackingMiddleware:
         }
 
     def remaining_budget_pct(self, current_round: int) -> float:
-        """计算剩余预算百分比。
+        """Compute the remaining budget percentage.
 
         Args:
-            current_round: 当前轮次
+            current_round: current round
 
         Returns:
-            剩余预算比例 (0.0 - 1.0)，max_rounds=0 时返回 1.0
+            Remaining budget ratio (0.0 - 1.0); returns 1.0 when max_rounds=0
         """
         if self.max_rounds <= 0:
             return 1.0
         return max(0.0, 1.0 - current_round / self.max_rounds)
 
     def __call__(self, phase: str, state: dict, work_dir: str, **kwargs) -> dict:
-        """统一 Middleware 接口。
+        """Unified middleware interface.
 
         Returns:
             {"proceed": True, "modifications": {}}
-            成本 Middleware 永远不阻断管道（仅警告）。
+            Cost middleware never blocks the pipeline (warnings only).
         """
         return {"proceed": True, "modifications": {}}

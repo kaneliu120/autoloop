@@ -1,31 +1,31 @@
-# AutoLoop 发布与版本对齐
+# AutoLoop Release and Version Alignment
 
-## Skill / 仓库 / gate-manifest 对应关系
+## Skill / Repository / gate-manifest mapping
 
-- **仓库版本**：根目录 `pyproject.toml` 的 `version`（当前多为 `0.0.0` 开发占位）。
-- **协议与门禁 SSOT**：`references/gate-manifest.json` 可维护字段 `version`（若缺失则以 git tag 或 CHANGELOG 为准）。
-- **Skill**：`.claude/skills/autoloop/SKILL.md`（或你安装路径下的同名文件）应与当前仓库 **同一 commit** 或同一 **git tag**，避免阈值/阶段描述与 manifest 脱节。
+- **Repository version**: the `version` in the root `pyproject.toml` (often `0.0.0` as a development placeholder).
+- **Protocol and gate SSOT**: `references/gate-manifest.json` may maintain a `version` field (if missing, use the git tag or CHANGELOG as the source of truth).
+- **Skill**: `.claude/skills/autoloop/SKILL.md` (or the same file under your install path) should match the current repository at the **same commit** or the same **git tag** so threshold / phase descriptions do not drift from the manifest.
 
-**建议约定**：对外可复现发行版打 tag `vX.Y.Z`，并在 CHANGELOG 该条中写明「兼容 gate-manifest.json 变更摘要」。
+**Recommended convention**: tag reproducible releases as `vX.Y.Z` and note a "manifest-compatible change summary" in the corresponding CHANGELOG entry.
 
-## 发布前检查清单
+## Pre-release Checklist
 
 1. `python3 -m unittest discover -s tests -v`
-2. 更新 `CHANGELOG.md`（用户可见行为、破坏性变更、迁移说明）
-3. 若改门禁或默认轮次：同步 `references/gate-manifest.json` 与 `references/parameters.md`
-4. 打 tag：`git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`
+2. Update `CHANGELOG.md` (user-visible behavior, breaking changes, migration notes)
+3. If gates or default rounds changed, sync `references/gate-manifest.json` and `references/parameters.md`
+4. Create the tag: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`
 
-## GitHub Release 说明模板（可选）
+## Optional GitHub Release Notes Template
 
 ```markdown
 ## AutoLoop vX.Y.Z
 
-### 亮点
+### Highlights
 - …
 
-### 迁移
+### Migration
 - …
 
-### 校验
-- Python >=3.10；运行时脚本无第三方依赖（MCP 服务另需 `pip install mcp`）。
+### Validation
+- Python >=3.10; runtime scripts have no third-party dependencies (the MCP service additionally requires `pip install mcp`).
 ```

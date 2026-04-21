@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""AutoLoop Bootstrap 初始化工具 — 创建4个工作文件（plan/findings/progress/results.tsv）
+"""AutoLoop bootstrap initializer — creates 4 working files (plan/findings/progress/results.tsv)
 
-用法:
-  autoloop-init.py <工作目录> [模板] [目标]
-  autoloop-init.py <工作目录> 'T1: Research' '调研AI自主迭代工具'
-  autoloop-init.py <工作目录> 'T6: Quality' '代码质量审查' --ssot
+Usage:
+  autoloop-init.py <Work Directory> [Template] [Target]
+  autoloop-init.py <Work Directory> 'T1: Research' 'research AI autonomous iteration tools'
+  autoloop-init.py <Work Directory> 'T6: Quality' 'code quality review' --ssot
 """
 
 import subprocess
@@ -15,7 +15,7 @@ import datetime
 TSV_HEADER = "iteration\tphase\tstatus\tdimension\tmetric_value\tdelta\tstrategy_id\taction_summary\tside_effect\tevidence_ref\tunit_id\tprotocol_version\tscore_variance\tconfidence\tdetails"
 
 # ---------------------------------------------------------------------------
-# T1-T7 质量门禁维度定义 — 从 gate-manifest.json（SSOT）加载
+# T1-T7 quality gate dimension definitions — loaded from gate-manifest.json (SSOT)
 # ---------------------------------------------------------------------------
 
 import json
@@ -28,31 +28,31 @@ def _load_gate_manifest():
         return json.load(f)
 
 
-# manifest dimension → 中文标签
+# manifest dimension → English label
 _MANIFEST_LABEL_MAP = {
-    "coverage": "覆盖率",
-    "credibility": "可信度",
-    "consistency": "一致性",
-    "completeness": "完整性",
-    "bias_check": "偏见检查",
-    "sensitivity": "敏感性分析",
-    "kpi_target": "KPI 达目标值",
-    "pass_rate": "通过率",
-    "avg_score": "平均分",
-    "syntax_errors": "语法验证",
-    "p1_p2_issues": "P1/P2 问题",
-    "service_health": "服务健康",
-    "user_acceptance": "人工验收",
-    "security": "安全性",
-    "reliability": "可靠性",
-    "maintainability": "可维护性",
-    "p1_count": "P1 问题",
-    "security_p2": "安全 P2 问题",
-    "reliability_p2": "可靠性 P2 问题",
-    "maintainability_p2": "可维护性 P2 问题",
-    "architecture": "架构",
-    "performance": "性能",
-    "stability": "稳定性",
+    "coverage": "Coverage",
+    "credibility": "Credibility",
+    "consistency": "Consistency",
+    "completeness": "Completeness",
+    "bias_check": "Bias Check",
+    "sensitivity": "Sensitivity Analysis",
+    "kpi_target": "KPI Target Met",
+    "pass_rate": "Pass Rate",
+    "avg_score": "Average Score",
+    "syntax_errors": "Syntax Validation",
+    "p1_p2_issues": "P1/P2 Issues",
+    "service_health": "Service Health",
+    "user_acceptance": "Manual Acceptance",
+    "security": "Security",
+    "reliability": "Reliability",
+    "maintainability": "Maintainability",
+    "p1_count": "P1 Issues",
+    "security_p2": "Security P2 Issues",
+    "reliability_p2": "Reliability P2 Issues",
+    "maintainability_p2": "Maintainability P2 Issues",
+    "architecture": "Architecture",
+    "performance": "Performance",
+    "stability": "Stability",
 }
 
 
@@ -63,7 +63,7 @@ def _format_threshold(gate):
     comparator = gate.get("comparator", ">=")
 
     if threshold is None:
-        return "用户在 plan 中设定"
+        return "Set by the user in plan"
     if unit == "bool":
         return "True" if threshold else "False"
     if unit == "%":
@@ -90,7 +90,7 @@ def _format_threshold(gate):
 def _manifest_to_init_gates(manifest):
     """Convert manifest templates to init's internal TEMPLATE_GATES format.
 
-    Returns dict: {"T1": [("覆盖率", "≥ 85%", "Hard"), ...], ...}
+    Returns dict: {"T1": [("Coverage", "≥ 85%", "Hard"), ...], ...}
     """
     result = {}
     for tkey, tdef in manifest["templates"].items():
@@ -109,7 +109,7 @@ _MANIFEST = _load_gate_manifest()
 TEMPLATE_GATES = _manifest_to_init_gates(_MANIFEST)
 
 # ---------------------------------------------------------------------------
-# 资产模板路径
+# Asset template paths
 # ---------------------------------------------------------------------------
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -117,7 +117,7 @@ ASSETS_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "assets"))
 
 
 def _read_asset(filename):
-    """读取 assets/ 目录下的模板文件，不存在则返回 None。"""
+    """read assets/ template file and return None if it does not exist."""
     path = os.path.join(ASSETS_DIR, filename)
     if os.path.isfile(path):
         with open(path, "r", encoding="utf-8") as f:
@@ -126,7 +126,7 @@ def _read_asset(filename):
 
 
 def _parse_template_key(template):
-    """从模板字符串中提取 T{N} 键，如 'T6: Quality' -> 'T6'。"""
+    """Extract the T{N} key from the template string, e.g. 'T6: Quality' -> 'T6'."""
     t = template.strip().upper().split(":")[0].split(" ")[0]
     if t.startswith("T") and len(t) >= 2 and t[1:].isdigit():
         return t
@@ -134,16 +134,16 @@ def _parse_template_key(template):
 
 
 def _build_gate_table(template):
-    """根据模板生成质量门禁表格内容。"""
+    """Generate quality gate table content from the template."""
     key = _parse_template_key(template)
     gates = TEMPLATE_GATES.get(key, []) if key else []
 
     if not gates:
-        return "| — | — | 0 | — | 准备开始 |"
+        return "| — | — | 0 | — | Ready to Start |"
 
     rows = []
     for dim, threshold, gate_type in gates:
-        rows.append(f"| {dim} | {threshold} | 0 | {gate_type} | 准备开始 |")
+        rows.append(f"| {dim} | {threshold} | 0 | {gate_type} | Ready to Start |")
     return "\n".join(rows)
 
 
@@ -152,49 +152,49 @@ def create_plan(work_dir, task_id, template, goal):
     now = datetime.datetime.now().isoformat()
     gate_rows = _build_gate_table(template)
 
-    content = f"""# AutoLoop 任务计划
+    content = f"""# AutoLoop Task Plan
 
-## 元信息
+## Metadata
 
-| 字段 | 值 |
+| Field | Value |
 |------|-----|
-| 任务 ID | {task_id} |
-| 模板 | {template} |
-| 状态 | 准备开始 |
-| 创建时间 | {now} |
-| 最后更新 | {now} |
-| 工作目录 | {work_dir} |
-| 计划版本 | 1.0 |
+| Task ID | {task_id} |
+| Template | {template} |
+| Status | Ready to Start |
+| Created At | {now} |
+| Last Updated | {now} |
+| Work Directory | {work_dir} |
+| Plan Version | 1.0 |
 
 ---
 
-## 目标描述
+## Goal Description
 
-**一句话目标**：{goal}
+**One-line Goal**: {goal}
 
 ---
 
-## 质量门禁
+## Quality Gates
 
-| 维度 | 目标阈值 | 当前分数 | 门禁类型 | 状态 |
+| Dimension | Target Threshold | Current Score | Gate Type | Status |
 |------|---------|---------|---------|------|
 {gate_rows}
 
 ---
 
-## 迭代预算
+## Iteration Budget
 
-| 字段 | 值 |
+| Field | Value |
 |------|-----|
-| 最大轮次 | 见 references/parameters.md |
-| 当前轮次 | 0 |
-| 预算耗尽策略 | 输出当前最优 |
+| Max Rounds | See references/parameters.md |
+| current round | 0 |
+| Budget Exhaustion Strategy | Output Best Current Result |
 
 ---
 
-## 策略历史
+## Strategy History
 
-| 轮次 | strategy_id | 维度 | 策略 | 结果 | 弃用原因 |
+| Round | strategy_id | Dimension | Strategy | Result | Deprecation Reason |
 |------|-------------|------|------|------|---------|
 | — | — | — | — | — | — |
 """
@@ -204,82 +204,82 @@ def create_plan(work_dir, task_id, template, goal):
 
 
 def create_findings(work_dir, task_id, template):
-    """创建 findings 文件，使用 assets/findings-template.md 的4层结构骨架。"""
+    """Create the findings file using the 4-layer skeleton from assets/findings-template.md."""
     path = os.path.join(work_dir, "autoloop-findings.md")
     now = datetime.datetime.now().isoformat()
 
     asset = _read_asset("findings-template.md")
     if asset:
-        # 用实际值替换模板占位符
+        # Replace template placeholders with actual values
         content = asset
         content = content.replace("autoloop-{YYYYMMDD-HHMMSS}", task_id)
-        content = content.replace("T{N}: {名称}", template)
+        content = content.replace("T{N}: {Name}", template)
         content = content.replace("{ISO 8601}", now)
-        # 清理其余占位符为待填写
-        content = content.replace("{主题}", "待填写")
-        content = content.replace("{N}", "进行中")
+        # TBD
+        content = content.replace("{Topic}", "TBD")
+        content = content.replace("{N}", "In Progress")
     else:
-        # 回退：内联最小骨架
-        content = f"""# AutoLoop Findings — 发现记录
+        # Fallback: inline minimal skeleton
+        content = f"""# AutoLoop Findings — Findings Log
 
-**任务 ID**：{task_id}
-**模板**：{template}
-**创建时间**：{now}
-**最后更新**：{now}
-
----
-
-## 执行摘要
-
-**调研/分析主题**：待填写
-**总轮次**：进行中
-**最终质量得分**：待评分
-
-**关键结论（TOP 5）**：
-1. 待填写
-2. 待填写
-3. 待填写
-4. 待填写
-5. 待填写
+**Task ID**: {task_id}
+**Template**: {template}
+**Created At**: {now}
+**Last Updated**: {now}
 
 ---
 
-## 问题清单（REFLECT 第 1 层 — 累积追踪）
+## Executive Summary
 
-| 轮次 | 问题描述 | 来源 | 严重度 | 状态 | 根因分析 |
+**Research/Analysis Topic**: TBD
+**Total Rounds**: In Progress
+**Final Quality Score**: TBD
+
+**Key Conclusions (Top 5)**: 
+1. TBD
+2. TBD
+3. TBD
+4. TBD
+5. TBD
+
+---
+
+## Issue List (REFLECT Layer 1 - Cumulative Tracking)
+
+| Round | Issue Description | Source | Severity | Status | Root Cause Analysis |
 |------|---------|------|--------|------|---------|
 | — | — | — | — | — | — |
 
-## 策略评估（REFLECT 第 2 层 — 策略效果知识库）
+## Strategy Evaluation (REFLECT Layer 2 - Strategy Effect Knowledge Base)
 
-| 轮次 | strategy_id | 策略 | 效果评分(1-5) | 分数变化 | 保持/避免/待验证 | 原因 |
+| Round | strategy_id | Strategy | Effect Rating (1-5) | Score Delta | Keep/Avoid/To Validate | Reason |
 |------|-------------|------|--------------|---------|-----------------|------|
 | — | — | — | — | — | — | — |
 
-## 模式识别（REFLECT 第 3 层 — 跨轮次趋势）
+## Pattern Recognition (REFLECT Layer 3 - Cross-round Trends)
 
-### 反复出现的问题
-- 待记录
+### Recurring Issues
+- To Record
 
-### 收益递减信号
-- 待记录
+### Diminishing-return Signals
+- To Record
 
-### 跨维度关联
-- 待记录
+### Cross-dimension Links
+- To Record
 
-### 瓶颈
-- 待记录
+### Bottlenecks
+- To Record
 
-## 经验教训（REFLECT 第 4 层 — 可复用认知）
+## Lessons Learned (REFLECT Layer 4 - Reusable Insights)
 
-### 验证的假设
-- 待记录
+### Validated Hypotheses
+- To Record
 
-### 可泛化的方法论
-- 待记录
+### Generalizable Methodology
+- To Record
 
-### 对 AutoLoop 自身流程的改进建议
-- 待记录
+### Improvements for the AutoLoop process itself
+- To Record
 """
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
@@ -287,7 +287,7 @@ def create_findings(work_dir, task_id, template):
 
 
 def create_progress(work_dir, task_id, template):
-    """创建 progress 文件，使用 assets/progress-template.md 的8阶段循环骨架。"""
+    """Create the progress file using the 8-phase loop skeleton from assets/progress-template.md."""
     path = os.path.join(work_dir, "autoloop-progress.md")
 
     asset = _read_asset("progress-template.md")
@@ -295,31 +295,31 @@ def create_progress(work_dir, task_id, template):
         now = datetime.datetime.now().isoformat()
         content = asset
         content = content.replace("autoloop-{YYYYMMDD-HHMMSS}", task_id)
-        content = content.replace("T{N}: {名称}", template)
+        content = content.replace("T{N}: {Name}", template)
         content = content.replace("{ISO 8601}", now)
 
-        # 填充质量门禁总览行
+        # Fill quality gate overview rows
         key = _parse_template_key(template)
         gates = TEMPLATE_GATES.get(key, []) if key else []
         if gates:
-            # 替换模板中的占位维度行
+            # Replace placeholder dimension rows in the template
             gate_rows = []
             for dim, threshold, _ in gates:
                 gate_rows.append(f"| {dim} | — | — | — | — | ≥{threshold.lstrip('≥').strip()} |")
             gate_block = "\n".join(gate_rows)
-            # 替换模板中 {维度 N} 占位行
+            # Replace {Dimension N} placeholder rows in the template
             import re
             content = re.sub(
-                r'\| \{维度 \d+\} \| — \| — \| — \| — \| ≥\{阈值\} \|\n?',
+                r'\| \{Dimension \d+\} \| — \| — \| — \| — \| ≥\{threshold\} \|\n?',
                 '',
                 content,
             )
-            # 在质量门禁总览表头分隔行后插入实际维度
+            # Insert actual dimensions after the quality gate overview header separator
             sep_marker = "|------|------|-------|-------|-------|------|\n"
             if sep_marker in content:
                 content = content.replace(sep_marker, sep_marker + gate_block + "\n")
     else:
-        # 回退：内联最小骨架
+        # Fallback: inline minimal skeleton
         key = _parse_template_key(template)
         gates = TEMPLATE_GATES.get(key, []) if key else []
         if gates:
@@ -330,14 +330,14 @@ def create_progress(work_dir, task_id, template):
         else:
             gate_block = "| — | 0 | — | — | — | — |"
 
-        content = f"""# AutoLoop Progress — 进度追踪
+        content = f"""# AutoLoop Progress — Progress Tracking
 
-**任务 ID**：{task_id}
-**模板**：{template}
+**Task ID**: {task_id}
+**Template**: {template}
 
-## 质量门禁总览
+## Quality Gate Overview
 
-| 维度 | 基线 | 第1轮 | 第2轮 | 第3轮 | 目标 |
+| Dimension | Baseline | Round 1 | Round 2 | Round 3 | Target |
 |------|------|-------|-------|-------|------|
 {gate_block}
 """
@@ -353,10 +353,10 @@ def create_tsv(work_dir):
     return path
 
 
-def bootstrap(work_dir, task_id=None, template="T1: Research", goal="待填写",
+def bootstrap(work_dir, task_id=None, template="T1: Research", goal="TBD",
               ssot=False):
     if not os.path.isdir(work_dir):
-        print(f"ERROR: 目录不存在: {work_dir}")
+        print(f"ERROR: directory does not exist: {work_dir}")
         return False
 
     if task_id is None:
@@ -368,7 +368,7 @@ def bootstrap(work_dir, task_id=None, template="T1: Research", goal="待填写",
     files.append(create_progress(work_dir, task_id, template))
     files.append(create_tsv(work_dir))
 
-    # --ssot: 同时初始化 autoloop-state.json
+    # --ssot: initialize autoloop-state.json as well
     if ssot:
         state_script = os.path.join(SCRIPT_DIR, "autoloop-state.py")
         if os.path.isfile(state_script):
@@ -381,16 +381,16 @@ def bootstrap(work_dir, task_id=None, template="T1: Research", goal="待填写",
                 print(f"SSOT: {result.stdout.strip()}")
             else:
                 error = result.stderr.strip() or result.stdout.strip()
-                print(f"WARNING: SSOT 初始化失败: {error}")
+                print(f"WARNING: SSOT initialization failed: {error}")
         else:
-            print(f"WARNING: autoloop-state.py 不存在: {state_script}")
+            print(f"WARNING: autoloop-state.py does not exist: {state_script}")
 
-    print(f"OK: Bootstrap完成，已创建{len(files)}个文件:")
+    print(f"OK: Bootstrap completed, created {len(files)} files:")
     for f in files:
         print(f"  - {os.path.basename(f)}")
-    print(f"\n任务ID: {task_id}")
-    print(f"模板: {template}")
-    print(f"工作目录: {work_dir}")
+    print(f"\nTask ID: {task_id}")
+    print(f"Template: {template}")
+    print(f"Work Directory: {work_dir}")
     return True
 
 
@@ -400,10 +400,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     work_dir = sys.argv[1]
-    # 过滤掉 flags
+    # Filter out flags
     positional = [a for a in sys.argv[2:] if not a.startswith("--")]
     template = positional[0] if len(positional) > 0 else "T1: Research"
-    goal = positional[1] if len(positional) > 1 else "待填写"
+    goal = positional[1] if len(positional) > 1 else "TBD"
     ssot = "--ssot" in sys.argv
 
     ok = bootstrap(work_dir, template=template, goal=goal, ssot=ssot)

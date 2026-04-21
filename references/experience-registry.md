@@ -1,318 +1,318 @@
-# Experience Registry — 全局经验库
+# Experience Registry — Global Experience Library
 
-## 概述
+## Overview
 
-经验库是 AutoLoop 第二层反馈循环（方法论自身迭代）的核心组件。它实现经验的跨任务流动，使第 N 次执行比第 1 次更快、更准、更高效。
+The experience library is the core component of AutoLoop's second feedback loop (iteration of the methodology itself). It enables experience to flow across tasks, making the Nth execution faster, more accurate, and more efficient than the first.
 
-**与其他文件的关系**：
-- `loop-protocol.md`：OBSERVE 阶段读取全局经验；REFLECT 阶段产出经验条目
-- `evolution-rules.md`：定义经验分发后的协议变更审批流程
-- `findings-template.md`：策略评估表中的 strategy_id 与本库的策略效果表对应
+**Relationship to other files**:
+- `loop-protocol.md`: OBSERVE reads global experience; REFLECT produces experience entries
+- `evolution-rules.md`: defines the approval workflow for protocol changes after experience distribution
+- `findings-template.md`: the `strategy_id` in the strategy evaluation table maps to the strategy-effect table in this library
 
-> 版本语义定义见 loop-protocol.md §版本语义定义（唯一权威）。
+> Version semantics are defined in `loop-protocol.md` §Version Semantics (single authority).
 
 ---
 
-## 经验沉淀流程
+## Experience Capture Flow
 
 ```text
-经验产出（REFLECT阶段）
+Experience output (REFLECT phase)
   ↓
-评估（类型 + 影响层级 + 置信度）
+Evaluation (type + impact level + confidence)
   ↓
-分发（按类型和层级写入对应文件）
+Distribution (write to the corresponding file by type and level)
   ↓
-验证（下次同类任务验证经验是否有效）
+Validation (verify whether the experience is effective in the next similar task)
   ↓
-淘汰（连续 2 次验证无效 → 标记废弃）
+Retirement (2 consecutive failed validations → mark as retired)
 ```
 
-**写回规则**：策略 use_count 达到 2 时，必须补充 mechanism/preconditions/contraindications 三个必填字段（见下方"策略详细描述格式"）。
+**Write-back rule**: when a strategy's `use_count` reaches 2, the three required fields `mechanism` / `preconditions` / `contraindications` must be added (see "Detailed Strategy Description Format" below).
 
 ---
 
-## 经验类型与分发目标
+## Experience Types and Distribution Targets
 
-| 经验类型 | 分发目标 | 审批级别 | 示例 |
+| Experience type | Distribution target | Approval level | Example |
 |---------|---------|---------|------|
-| 评分标准缺陷 | quality-gates.md | 低风险：AI自动 | "T7 SQL注入检查容易漏报存储过程" |
-| 参数校准 | parameters.md | 中风险：AI推进+下轮验证 | "T1用3轮比5轮效率更高" |
-| 策略效果 | 本文件策略效果库 | 低风险：AI自动 | "分模块扫描比全量扫描提升30%" |
-| 模板改进 | 对应template文件 | 低风险：AI自动 | "findings表增加根因列更有用" |
-| 流程缺陷 | loop-protocol.md 或对应command | 高风险：用户确认 | "T4缺少数据库回滚验证步骤" |
-| 门禁阈值调整 | quality-gates.md | 高风险：用户确认 | "T7安全性从9改为8" |
+| Scoring-standard defect | `quality-gates.md` | Low risk: AI automatic | "T7 SQL injection checks easily miss stored procedures" |
+| Parameter calibration | `parameters.md` | Medium risk: AI promotes + validate next round | "T1 is more efficient with 3 rounds than 5" |
+| Strategy effect | Strategy-effect library in this file | Low risk: AI automatic | "Module-by-module scanning improves by 30% over full scan" |
+| Template improvement | Corresponding template file | Low risk: AI automatic | "Adding a root-cause column to the findings table is more useful" |
+| Process defect | `loop-protocol.md` or the corresponding command | High risk: user confirmation | "T4 is missing a database rollback verification step" |
+| Gate threshold adjustment | `quality-gates.md` | High risk: user confirmation | "T7 security should be lowered from 9 to 8" |
 
 ---
 
-## 全局策略效果库
+## Global Strategy-effect Library
 
-以下表格记录跨任务积累的策略效果数据，供 OBSERVE 阶段参考。
+The table below records strategy-effect data accumulated across tasks for OBSERVE to reference.
 
 | strategy_id | template | dimension | description | avg_delta | side_effects | use_count | success_rate | status |
 |------------|----------|-----------|-------------|-----------|-------------|-----------|-------------|--------|
-| （初始为空，随任务执行积累） | | | | | | | | |
+| (initially empty; accumulates as tasks run) | | | | | | | | |
 
-**P3-01 主表与审计（实现约定）**：
-- **主表**：每个 `strategy_id` **仅保留一行**（`autoloop-experience.py write` 为 upsert，更新 `use_count` / `success_rate` / `avg_delta` / `description` / `status` 等聚合字段）。
-- **审计**：与 `experience-registry.md` **同目录** 追加 `experience-audit.md`（每次 `write` 一条；`consolidate` 合并重复行时一条）。（此文件由 `autoloop-experience.py write` 首次调用时自动创建，无需手动创建。）
-- **历史重复行**：可执行 `autoloop-experience.py <工作目录> consolidate [--dry-run]`（须能解析到本文件；工作目录下 `references/` 或技能包 `references/` 之一存在本文件）。合并时 **优先按审计**重算 `use_count` / `avg_delta` / `success_rate`；无审计时对各行已有 `avg_delta` 取算术平均（近似）。
-- **`multi:`**：`strategy_id` 以 `multi:` 开头时**只写审计**、不修改主表（混合归因，见下文归因规则）。
+**P3-01 Main table and audit (implementation convention)**:
+- **Main table**: each `strategy_id` keeps **only one row** (`autoloop-experience.py write` is an upsert that updates aggregate fields such as `use_count` / `success_rate` / `avg_delta` / `description` / `status`).
+- **Audit**: append `experience-audit.md` in the **same directory** as `experience-registry.md` (one entry per `write`; one entry when `consolidate` merges duplicate rows). (This file is created automatically the first time `autoloop-experience.py write` is called; do not create it manually.)
+- **Historical duplicate rows**: run `autoloop-experience.py <work_dir> consolidate [--dry-run]` (it must be able to resolve this file; this file must exist either under `references/` in the work directory or under a skill bundle `references/`). During merge, **prefer recomputing from the audit** for `use_count` / `avg_delta` / `success_rate`; without audit, use the arithmetic mean of existing `avg_delta` values in the duplicate rows (approximation).
+- **`multi:`**: when `strategy_id` starts with `multi:`, **write audit only** and do not modify the main table (mixed attribution; see the attribution rules below).
 
-**P3-06 `multi:` 策略约束（实现约定）**：
-- **格式**：`multi:{SNN-描述,SNN-描述}` 或 `multi:{SNN-描述+SNN-描述}`（`+` / `,` 均可，可混用）；须 **恰好一层** 花括号；`multi:` 前缀大小写不敏感。
-- **子策略**：至少 **2** 个；每个须匹配与单策略相同的 `SNN-描述` 形式；**不得重复**。
-- **write**：`autoloop-experience.py write` 在校验通过前**拒绝**非法 `multi:`；**禁止**对 `multi:` 使用 `--status`（不入主表生命周期）。
-- **validate**：`results.tsv` / SSOT `results_tsv` 中 `multi:` 行须通过上述格式校验，且每个子策略须在 findings（或 strategy_history）中可追溯；建议 `side_effect` 注明「混合归因」（与 loop-protocol 一致）。
+**P3-06 `multi:` strategy constraints (implementation convention)**:
+- **Format**: `multi:{SNN-description,SNN-description}` or `multi:{SNN-description+SNN-description}` (`+` / `,` are both allowed and may be mixed); there must be **exactly one layer** of braces; the `multi:` prefix is case-insensitive.
+- **Sub-strategies**: at least **2**; each must match the same `SNN-description` form as a single strategy; **duplicates are forbidden**.
+- **write**: `autoloop-experience.py write` **rejects** invalid `multi:` values before validation passes; `--status` is **forbidden** on `multi:` values (they do not enter the main-table lifecycle).
+- **validate**: rows with `multi:` in `results.tsv` / SSOT `results_tsv` must pass the format validation above, and each sub-strategy must be traceable in findings (or `strategy_history`); `side_effect` is recommended to explicitly say "mixed attribution" (consistent with `loop-protocol`).
 
-**P3-02 context 匹配（实现约定）**：
-- **`query`**：`--tags`（任务 context_tags）非空时，仅保留与策略 **description 内 context_tags**（`write --tags` 写入、紧跟 `@YYYY-MM-DD` 后的 `[…]`）**交集 ≥ 2** 的策略；无 `--tags` 时不做重叠过滤（首轮冷启动，与 loop-protocol 一致）。
-- **context-scoped 补充表**：有效 status 取 **精确匹配**（任务标签集 = 表行标签集）优先；否则在 **任务标签 ⊇ 表行标签** 的行中选 **表行标签数最多** 的一行；再无匹配则用主表全局 `status`。
-- **控制器**：`plan.context_tags` 为字符串或字符串列表时传给 `query --tags`；缺省不传（冷启动）。
+**P3-02 Context matching (implementation convention)**:
+- **`query`**: when `--tags` (task `context_tags`) is non-empty, keep only strategies whose `context_tags` inside `description` (written by `write --tags`, stored inside `[...]` immediately after `@YYYY-MM-DD`) have **intersection >= 2** with the task tags; when `--tags` is absent, no overlap filtering is applied (first-round cold start, consistent with `loop-protocol`).
+- **Context-scoped supplemental table**: effective `status` prefers an **exact match** first (task tag set = row tag set); otherwise select the row where **task tags ⊇ row tags** and the row has the **largest number of tags**; if nothing matches, fall back to the global `status` in the main table.
+- **Controller**: when `plan.context_tags` is a string or a string list, pass it to `query --tags`; omit the argument by default for cold start.
 
-**write `--mechanism`（可选）**：`autoloop-experience.py write --mechanism "…"` 将机制简述写入主表 `description` 中的 `[mechanism: …]` 片段，便于 `use_count≥2` 时满足「补充 mechanism」类文档要求（与下方策略详细描述格式一致）。**context-scoped 补充表**：当前仅 `query` 读取；**无**独立 `write` 路径将行写入 scoped 区；全量 scoped 写入与「归档区」迁移仍为 v2 / backlog（见清单 F08）。
+**write `--mechanism` (optional)**: `autoloop-experience.py write --mechanism "..."` writes a mechanism summary into the `[mechanism: ...]` fragment inside the main-table `description`, making it easier to satisfy the "add mechanism" documentation requirement once `use_count>=2` (consistent with the detailed strategy description format below). **Context-scoped supplemental table**: currently only `query` reads it; there is **no** separate `write` path for writing rows into the scoped section. Full scoped writes and migration to an "archive section" remain v2 / backlog items (see list item F08).
 
-**write 状态机与 use_count（实现约定）**：
-- 无 `--status` 时自动转换的**起点状态**为主表该 `strategy_id` 当前行的 `status`（不得在无 `--status` 时用固定「观察」覆盖「已废弃」等）。
-- 「连续 2 次 delta>0 / delta≤0」以 **`experience-audit.md` 中该策略最近一次 `write` 的 score** 与**本轮 `--score`** 比较；`use_count`、`avg_delta`、`success_rate` 亦由审计中同策略全部 `write` 的 score 序列（按时间顺序）+ 本轮重算，与主表仅保留一行 upsert 一致。
-- **推荐后应保持**：`query` 将某策略标为 **保持** 后，除非后续 `write` 用 `--effect` 等显式改写，主表该行的 `status`/推荐语义应保持稳定，与「连续 2 次」淘汰逻辑独立（淘汰仅针对验证失败路径）。
+**write state machine and `use_count` (implementation convention)**:
+- Without `--status`, the automatic transition **starting state** is the current row's `status` for that `strategy_id` in the main table (you must not overwrite statuses such as "Retired" with a fixed "Observe" default when `--status` is omitted).
+- "2 consecutive `delta>0` / `delta<=0`" is evaluated by comparing the **score from the most recent `write` for that strategy in `experience-audit.md`** with the **current round `--score`**; `use_count`, `avg_delta`, and `success_rate` are also recomputed from the full score sequence of all `write` records for that strategy in the audit (chronological order) plus the current round, matching the main-table one-row upsert behavior.
+- **Recommendation should remain stable once promoted**: after `query` marks a strategy as **maintain**, unless a later `write` explicitly overrides it with flags such as `--effect`, the main-table `status` / recommendation semantics for that row should remain stable, independent from the "2 consecutive" retirement logic (retirement applies only to the failed-validation path).
 
-**字段说明**：
-- strategy_id：策略唯一标识，与 results.tsv 和 findings.md 一致
-- template：适用模板（T1-T8，或"通用"）
-- dimension：目标维度
-- description：策略摘要（一句话，详细描述见下方"策略详细描述格式"）
-- avg_delta：各轮写入时 `--score`（单轮分数变化量 delta）的**算术平均值**；与 `use_count`、`success_rate` 同源，**有 `experience-audit.md` 时以审计中该 `strategy_id` 全部 `write` 的 score 序列为准**（`write` 与主表聚合一致）。
-- side_effects：已知副作用列表
-- use_count：累计使用次数（= 上述 score 序列长度）
-- success_rate：产生正向效果的比例（各轮 delta **>** 0 的占比；与晋升规则「delta > 0」一致）
-- status：推荐 / 候选默认 / 观察 / 已废弃（生命周期状态枚举）
-- applicable_templates：适用模板列表。如 `[T1,T2]` 表示仅适用于 T1 和 T2；`[*]` 表示全模板通用。默认为当前模板（即 template 字段值）。写入方式：`write --templates "T1,T2"` 或 `--templates "*"`，存储在 description 的 `[templates: ...]` 片段中。
+**Field descriptions**:
+- `strategy_id`: unique strategy identifier, consistent with `results.tsv` and `findings.md`
+- `template`: applicable template (`T1-T8`, or `"general"`)
+- `dimension`: target dimension
+- `description`: one-line strategy summary; see "Detailed Strategy Description Format" below for the detailed form
+- `avg_delta`: the **arithmetic mean** of the per-round `--score` values written by `write` (single-round score / gate delta); it shares the same source as `use_count` and `success_rate`, and when `experience-audit.md` exists, **the authoritative source is the full score sequence of all `write` records for that `strategy_id` in the audit** (consistent with `write` aggregation into the main table)
+- `side_effects`: list of known side effects
+- `use_count`: total usage count (= length of the score sequence above)
+- `success_rate`: ratio of rounds with positive effect (share of rounds where `delta > 0`; consistent with the promotion rule `delta > 0`)
+- `status`: Recommended / Candidate Default / Observe / Retired (lifecycle state enum)
+- `applicable_templates`: list of applicable templates. For example, `[T1,T2]` means only applicable to T1 and T2; `[*]` means applicable to all templates. Default is the current template (that is, the value of the `template` field). Write with `write --templates "T1,T2"` or `--templates "*"` and store it in the `[templates: ...]` fragment inside `description`.
 
-**扩展字段**：
+**Extended fields**:
 
-- avg_cost：平均执行成本（轮次数），当前默认 —（v2 预留，待数据积累后启用）
-- confidence：效果数据置信度（低/中/高），**运行时计算**（cmd_write 内部根据 use_count 自动推导，不持久化到表列）— 见下方"confidence 自动计算与升格门槛"
-- context_tags：适用上下文标签列表（如 [python, backend, security]），**已激活**（通过 --tags 参数写入 description 字段）— 见下方"context_tags 标准词汇表"
-- side_effect_severity：副作用严重度（无/低/中/高），当前默认 无（v2 预留，待数据积累后启用）
+- `avg_cost`: average execution cost (round count), currently defaults to — (reserved for v2, to be enabled after enough data accumulates)
+- `confidence`: confidence of the effect data (low / medium / high), **computed at runtime** (auto-derived inside `cmd_write` from `use_count`, not persisted as a table column) — see "Automatic Confidence Calculation and Promotion Thresholds" below
+- `context_tags`: applicable context-tag list (for example `[python, backend, security]`), **already active** (written into the `description` field via `--tags`) — see "Standard Vocabulary for context_tags" below
+- `side_effect_severity`: side-effect severity (none / low / medium / high), currently defaults to none (reserved for v2, to be enabled after enough data accumulates)
 
-### 策略详细描述格式
+### Detailed Strategy Description Format
 
-当策略的 use_count ≥ 2 时，必须补充以下结构化描述（写在策略效果库表格下方，按 strategy_id 索引）：
+When a strategy's `use_count` is >= 2, the following structured description must be added (written below the strategy-effect table and indexed by `strategy_id`):
 
-| 字段 | 必填 | 说明 |
+| Field | Required | Description |
 |------|------|------|
-| mechanism | 是 | 策略生效的机制（为什么有效） |
-| preconditions | 是 | 策略生效的前提条件（什么情况下该用） |
-| contraindications | 是 | 策略的禁忌条件（什么情况下不该用） |
-| optimal_context | 否 | 最佳使用场景（从成功案例中提炼） |
-| failure_mode | 否 | 失败时的典型表现（从失败案例中提炼） |
-| pitfall_description | 否（status=已废弃时建议填写） | 如果做了这个策略会发生什么后果（具体的负面影响描述） |
-| failure_lesson | 否（effect=避免时建议填写） | 结构化失败教训：what(做了什么)/why(为什么失败)/instead(替代建议)。CLI 写入: `--failure-lesson "what:...\|why:...\|instead:..."` |
+| `mechanism` | Yes | Mechanism by which the strategy works (why it is effective) |
+| `preconditions` | Yes | Preconditions for the strategy to work (when it should be used) |
+| `contraindications` | Yes | Contraindications for the strategy (when it should not be used) |
+| `optimal_context` | No | Best-use scenario (distilled from successful cases) |
+| `failure_mode` | No | Typical failure behavior (distilled from failed cases) |
+| `pitfall_description` | No (recommended when `status=Retired`) | What happens if this strategy is used anyway (concrete negative impact description) |
+| `failure_lesson` | No (recommended when `effect=avoid`) | Structured failure lesson: `what` (what was done) / `why` (why it failed) / `instead` (recommended alternative). CLI write form: `--failure-lesson "what:...\|why:...\|instead:..."` |
 
-**示例**：
+**Example**:
 
-**S01-parallel-scan**：
-- mechanism：将独立维度分配给不同 subagent 并行扫描，利用任务无依赖特性缩短总耗时
-- preconditions：维度之间无数据依赖；可用 subagent 数 ≥ 维度数
-- contraindications：维度间存在强依赖（如安全扫描需要先完成架构分析）；总维度数 ≤ 2（并行开销超过收益）
+**S01-parallel-scan**:
+- `mechanism`: assign independent dimensions to different subagents and scan them in parallel, using the task's dependency-free nature to reduce total elapsed time
+- `preconditions`: there is no data dependency between dimensions; the number of available subagents is >= the number of dimensions
+- `contraindications`: strong dependencies exist between dimensions (for example, a security scan requires architecture analysis first); total dimension count <= 2 (parallel overhead exceeds the benefit)
 
 ---
 
-### context_tags 标准词汇表
+### Standard Vocabulary for `context_tags`
 
-以下标签用于标注策略的适用上下文，OBSERVE阶段按标签重叠度过滤推荐策略：
+The following tags are used to mark the applicable context of a strategy. OBSERVE filters recommended strategies by tag overlap:
 
-**语言**：`python` | `typescript` | `javascript` | `go` | `rust` | `java`
-**层级**：`backend` | `frontend` | `database` | `infrastructure` | `fullstack`
-**领域**：`security` | `performance` | `reliability` | `maintainability` | `architecture`
-**任务**：`api-design` | `data-model` | `testing` | `deployment` | `migration` | `refactoring`
-**规模**：`small(<1K行)` | `medium(1K-10K行)` | `large(>10K行)`
+**Language**: `python` | `typescript` | `javascript` | `go` | `rust` | `java`  
+**Layer**: `backend` | `frontend` | `database` | `infrastructure` | `fullstack`  
+**Domain**: `security` | `performance` | `reliability` | `maintainability` | `architecture`  
+**Task**: `api-design` | `data-model` | `testing` | `deployment` | `migration` | `refactoring`  
+**Scale**: `small(<1K lines)` | `medium(1K-10K lines)` | `large(>10K lines)`
 
-标注规则：每条策略至少标注1个语言+1个层级+1个领域标签。根据涉及文件路径自动推断。
+Tagging rule: each strategy must include at least 1 language tag + 1 layer tag + 1 domain tag. Infer them automatically based on the affected file paths.
 
-### confidence 自动计算与升格门槛
+### Automatic Confidence Calculation and Promotion Thresholds
 
-**自动计算**：
-- use_count = 1 → confidence = 低
-- use_count = 2-3 → confidence = 中
-- use_count ≥ 4 → confidence = 高
+**Automatic calculation**:
+- `use_count = 1` → `confidence = low`
+- `use_count = 2-3` → `confidence = medium`
+- `use_count >= 4` → `confidence = high`
 
-**升格门槛**：策略从"观察"升格为"推荐"必须满足：
-- confidence ≥ 中（即 use_count ≥ 2）
-- 连续2次 delta > 0
+**Promotion threshold**: for a strategy to move from "Observe" to "Recommended", it must satisfy:
+- `confidence >= medium` (that is, `use_count >= 2`)
+- 2 consecutive `delta > 0`
 
-use_count = 1 时 success_rate 无统计意义，不作为升格依据。
+When `use_count = 1`, `success_rate` is not statistically meaningful and must not be used as a promotion basis.
 
-**排序规则**：
+**Ordering rules**:
 
-- 当前版本：按 success_rate 降序（简单版）
-- 未来版本（数据充足后）：success_rate × confidence × (1 - side_effect_penalty) / avg_cost
+- Current version: sort by `success_rate` descending (simple version)
+- Future version (after enough data accumulates): `success_rate × confidence × (1 - side_effect_penalty) / avg_cost`
 
-**归因规则**：
-- 只有单策略轮次（strategy_id 为单一策略）的结果才能更新 avg_delta 和 success_rate
-- 多策略并行轮次（strategy_id 为 `multi:...`）的结果标记为"混合归因"，不更新聚合指标，仅记录为参考数据
-- 此规则确保策略效果库中的数据可归因、可复现
+**Attribution rules**:
+- Only results from single-strategy rounds (where `strategy_id` is a single strategy) may update `avg_delta` and `success_rate`
+- Results from multi-strategy parallel rounds (where `strategy_id` is `multi:...`) are marked as "mixed attribution" and do not update aggregate metrics; they are recorded only as reference data
+- This rule ensures that the data in the strategy-effect library remains attributable and reproducible
 
-**状态转换规则**（生命周期状态枚举：推荐 / 候选默认 / 观察 / 已废弃）：
-- 新策略默认"观察"
-- 升格为"推荐"必须满足：confidence ≥ 中（use_count ≥ 2）且连续 2 次 delta > 0
-- 连续 2 次 delta ≤ 0 → "已废弃"
-- "已废弃"策略在新上下文中 delta > 0 → 回到"观察"
+**State transition rules** (lifecycle enum: Recommended / Candidate Default / Observe / Retired):
+- New strategies default to "Observe"
+- Promotion to "Recommended" requires `confidence >= medium` (`use_count >= 2`) and 2 consecutive `delta > 0`
+- 2 consecutive `delta <= 0` → "Retired"
+- A "Retired" strategy with `delta > 0` in a new context → move back to "Observe"
 
-### context-scoped 状态
+### Context-scoped Status
 
-策略的 status 可以按 context_tags 组合细分。当同一策略在不同上下文中表现不同时，使用以下扩展机制：
+A strategy's `status` may be refined by `context_tags` combinations. When the same strategy performs differently in different contexts, use the extension below:
 
-**全局 status**：仍保留在策略效果库主表中，作为无上下文匹配时的默认值。
+**Global `status`**: still kept in the main strategy-effect table as the default when no context match exists.
 
-**上下文特定 status**：在策略效果库表格之外，维护一个补充表：
+**Context-specific `status`**: maintain a supplemental table outside the main strategy-effect table:
 
 | strategy_id | context_tags | status | evidence | last_validated |
 |-------------|-------------|--------|----------|----------------|
-| S01-parallel-scan | [python, backend, security] | 推荐 | 3次正向 | 2026-03-28 |
-| S01-parallel-scan | [typescript, frontend, performance] | 已废弃 | 2次负向 | 2026-03-28 |
+| S01-parallel-scan | [python, backend, security] | Recommended | 3 positive runs | 2026-03-28 |
+| S01-parallel-scan | [typescript, frontend, performance] | Retired | 2 negative runs | 2026-03-28 |
 
-**查询优先级**：
-1. 精确匹配：当前任务的 context_tags 与补充表的 context_tags 完全匹配 → 使用该行 status
-2. 子集匹配：当前任务的 context_tags 是补充表某行的超集 → 使用该行 status
-3. 无匹配：使用全局 status（策略效果库表格中的 status 字段）
+**Query priority**:
+1. Exact match: the task's `context_tags` exactly match the row's `context_tags` → use that row's `status`
+2. Subset match: the task's `context_tags` are a superset of a row's `context_tags` → use that row's `status`
+3. No match: use the global `status` (the `status` field in the main strategy-effect table)
 
-**状态转换规则扩展**：
-- 上下文特定 status 的转换规则与全局规则相同（连续 2 次 delta > 0 → 推荐，连续 2 次 delta ≤ 0 → 已废弃）
-- 但只基于该特定上下文的使用数据，不受其他上下文影响
-- 新上下文首次使用 → 继承全局 status，第二次使用后产生独立上下文 status
+**Extended state transition rules**:
+- Context-specific `status` follows the same transition rules as the global rules (2 consecutive `delta > 0` → Recommended; 2 consecutive `delta <= 0` → Retired)
+- It is based only on usage data from that specific context and is not affected by other contexts
+- First use in a new context → inherit the global `status`; after the second use, an independent context-specific `status` is created
 
-### 经验自动晋升链
+### Automatic Experience Promotion Chain
 
 ```text
-入库(自动,观察,低置信) → 推荐(连续2次delta>0+use>=2) → 候选默认(success>=80%+use>=4+高置信) → [v2] 金丝雀验证(1次同类任务) → [v2] 升级(写入command,用户确认,patch+1)
+Stored (automatic, Observe, low confidence) → Recommended (2 consecutive delta>0 + use>=2) → Candidate Default (success>=80% + use>=4 + high confidence) → [v2] Canary validation (1 similar task) → [v2] Upgrade (write into command, user confirmation, patch+1)
 ```
 
-**v1 已实现**: 入库 → 观察 → 推荐 → 候选默认（自动晋升）；连续2次负向 → 已废弃（自动废弃）；已废弃 + 正向 → 观察（自动恢复）。
-**v2 预留**: 金丝雀验证、command 文件写入升级、升级后回滚。
-**回滚**（v2）：升级后连续 2 次 delta <= 0 → 从 command 移除，回退到推荐，patch+1。
+**Implemented in v1**: stored → Observe → Recommended → Candidate Default (automatic promotion); 2 consecutive negative runs → Retired (automatic retirement); Retired + positive run → Observe (automatic recovery).  
+**Reserved for v2**: canary validation, upgrade by writing into command files, rollback after upgrade.  
+**Rollback** (v2): 2 consecutive `delta <= 0` after upgrade → remove from command, demote back to Recommended, `patch+1`.
 
 ---
 
-## 记忆分层（MUSE 三层分级）
+## Memory Layering (MUSE Three-layer Classification)
 
-经验库中的每条策略按影响层级分为三层，不同层级的经验在 OBSERVE 阶段有不同的读取优先级和衰减速率。
+Each strategy in the experience library is classified into three layers by impact level. Different layers are read with different priorities and decay rates in OBSERVE.
 
-| 层级 | 标签 | 含义 | 示例 | 衰减速率 |
+| Layer | Tag | Meaning | Example | Decay rate |
 |------|------|------|------|---------|
-| L1 | `strategic` | 方法论级别的认知，影响整体方向 | "fail-closed评分比宽容评分更能驱动质量" | 慢（180d） |
-| L2 | `procedural` | 流程级别的经验，影响执行步骤 | "并行扫描比串行扫描在T7中提速40%" | 中（90d） |
-| L3 | `tool` | 工具/技巧级别，影响具体操作 | "grep -rn 比 find + xargs 更快定位问题" | 快（30d） |
+| L1 | `strategic` | Methodology-level knowledge that changes the overall direction | "Fail-closed scoring drives quality better than permissive scoring" | Slow (180d) |
+| L2 | `procedural` | Process-level experience that changes execution steps | "Parallel scanning speeds up T7 by 40% compared to serial scanning" | Medium (90d) |
+| L3 | `tool` | Tool / technique-level experience that changes concrete operations | "`grep -rn` locates issues faster than `find + xargs`" | Fast (30d) |
 
-**标注规则**（v2 预留）：每条策略在入库时标注一个层级标签。判断标准：
-- 改变了"做不做" → strategic
-- 改变了"怎么做" → procedural
-- 改变了"用什么做" → tool
+**Tagging rules** (reserved for v2): when a strategy enters the library, add one layer tag. Criteria:
+- Changes "whether to do it" → `strategic`
+- Changes "how to do it" → `procedural`
+- Changes "what to use to do it" → `tool`
 
-**读取优先级**（v2 预留）：OBSERVE 阶段读取经验时，strategic > procedural > tool。当预算紧张时，优先应用高层级经验。
+**Read priority** (reserved for v2): in OBSERVE, `strategic > procedural > tool`. When the budget is tight, prefer higher-layer experience.
 
-> **v1 状态**: MUSE 分层为设计文档，`memory_layer` 字段未写入表列。v1 使用扁平排序（success_rate × 时间衰减）。
+> **v1 status**: MUSE layering exists only in the design docs; the `memory_layer` field is not persisted as a table column. v1 uses flat sorting (`success_rate × time decay`).
 
-### 时间衰减机制
+### Time-decay Mechanism
 
-策略效果随时间递减，避免过时经验干扰决策。
+Strategy effect decays over time to avoid outdated experience influencing decisions.
 
-**衰减规则**（基于 last_validated_date）：
+**Decay rules** (based on `last_validated_date`):
 
-| 距今天数 | 衰减系数 | 效果 |
+| Days ago | Decay coefficient | Effect |
 |---------|---------|------|
-| 0-30d | ×1.0 | 完全有效 |
-| 31-60d | ×0.8 | 略微衰减 |
-| 61-90d | ×0.5 | 显著衰减 |
-| >90d | 降级 | status 自动从"推荐"降为"观察" |
+| 0-30d | ×1.0 | Fully valid |
+| 31-60d | ×0.8 | Slight decay |
+| 61-90d | ×0.5 | Significant decay |
+| >90d | Downgrade | `status` automatically drops from "Recommended" to "Observe" |
 
-**衰减应用**：
-- 排序时：实际排序分 = success_rate × 衰减系数
-- 降级触发：>90d 未验证的"推荐"策略自动降为"观察"，下次使用时需重新验证
-- 重新验证：使用后 delta > 0 → last_validated_date 更新为当天，衰减重置
-- strategic 层级豁免：L1 经验的衰减周期为上表的 2 倍（60d/120d/180d）
+**Decay application**:
+- During ranking: effective ranking score = `success_rate × decay coefficient`
+- Downgrade trigger: a "Recommended" strategy not validated for >90d automatically downgrades to "Observe" and must be revalidated on next use
+- Revalidation: if `delta > 0` after use, update `last_validated_date` to today and reset decay
+- Strategic-layer exemption: L1 experience decays at 2× the periods in the table above (60d / 120d / 180d)
 
-**扩展字段**（v2 预留）：策略效果库计划新增 `memory_layer`（L1/L2/L3）和 `last_validated_date`（ISO 8601 日期）两个字段。v1 中 `last_validated_date` 通过 description 字段的 `@YYYY-MM-DD` 标签实现等效功能（cmd_query 解析此标签进行时间衰减排序）。
+**Extended fields** (reserved for v2): the strategy-effect library plans to add `memory_layer` (`L1/L2/L3`) and `last_validated_date` (ISO 8601 date). In v1, `last_validated_date` is represented equivalently by the `@YYYY-MM-DD` tag inside `description` (parsed by `cmd_query` for time-decay sorting).
 
 ---
 
-## 策略组合与消融（v2 预留）
+## Strategy Composition and Ablation (reserved for v2)
 
-### 策略组合（composed_from）
+### Strategy composition (`composed_from`)
 
-当多个基础策略组合使用效果更好时，可以创建组合策略：
+When a combination of multiple base strategies performs better, a composed strategy may be created:
 
-**扩展字段**：策略效果库新增 `composed_from` 字段（strategy_id 列表，如 `[S01-parallel-scan, S03-cache-first]`）。
+**Extended field**: add a `composed_from` field to the strategy-effect library (a list of `strategy_id` values, such as `[S01-parallel-scan, S03-cache-first]`).
 
-**组合规则**：
-- 组合策略的 strategy_id 使用 `C{NN}-{描述}` 格式（C 表示 Composed）
-- composed_from 中的每个基础策略必须在策略效果库中独立存在
-- 组合策略的 avg_delta 独立计算，不影响基础策略的 avg_delta
-- 组合策略的 success_rate 独立跟踪
+**Composition rules**:
+- Composed strategy `strategy_id` uses the format `C{NN}-{description}` (`C` = Composed)
+- Every base strategy in `composed_from` must independently exist in the strategy-effect library
+- The composed strategy's `avg_delta` is calculated independently and does not affect the base strategies' `avg_delta`
+- The composed strategy's `success_rate` is tracked independently
 
-**示例**：
-```
+**Example**:
+```text
 strategy_id: C01-parallel-cached-scan
 composed_from: [S01-parallel-scan, S03-cache-first]
-description: 并行扫描 + 缓存优先的组合策略
+description: composed strategy of parallel scan + cache-first
 ```
 
-### 消融协议（Ablation Protocol）
+### Ablation protocol
 
-组合策略连续 2 次 delta > 0 时触发（需预算>=50%+用户未跳过）。依次移除组合中一个基础策略执行一轮，对比 delta 变化：无显著变化(<阈值20%)=低贡献(移除简化)；显著下降=关键组成(保留)。仅一个有贡献时解散组合，该策略直接升格。
+Triggered when a composed strategy records 2 consecutive `delta > 0` runs (requires budget >= 50% and the user has not skipped it). Remove one base strategy from the composition at a time and run one round, then compare delta changes: no significant change (<20% threshold) = low contribution (remove to simplify); significant drop = key component (keep). If only one component contributes, dissolve the composition and promote that strategy directly.
 
 ---
 
-## 经验评估标准
+## Experience Evaluation Criteria
 
-| 评估维度 | 判据 |
+| Evaluation dimension | Criteria |
 |---------|------|
-| 类型 | 见上方"经验类型与分发目标"表 |
-| 影响层级 | 低：补充锚点/样本；中：调整参数（±20%以内）；高：改变规则/门禁/流程 |
-| 置信度 | 基于验证次数：1次=低，2-3次=中，≥4次=高 |
-| 分发优先级 | 高风险高置信 > 低风险高置信 > 中风险中置信 > 其他 |
+| Type | See the "Experience Types and Distribution Targets" table above |
+| Impact level | Low: add anchors / samples; Medium: adjust parameters (within +/-20%); High: change rules / gates / workflow |
+| Confidence | Based on validation count: 1 = low, 2-3 = medium, >=4 = high |
+| Distribution priority | High-risk high-confidence > low-risk high-confidence > medium-risk medium-confidence > others |
 
 ---
 
-## 跨任务经验读取规则
+## Cross-task Experience Read Rules
 
-OBSERVE 阶段读取顺序（写入 loop-protocol.md）：
+OBSERVE read order (also written into `loop-protocol.md`):
 
 ```text
-0. 有 pitfall_description 或 failure_lesson 的"已废弃"条目（避免踩坑优先于复用成功）
-1. 当前任务的 findings.md（任务本地经验）
-2. references/experience-registry.md 全局策略效果库（跨任务经验）
-3. (同模板 OR applicable_templates 包含当前模板 OR applicable_templates 为 `[*]`) + context_tags重叠 的"推荐"策略（按 success_rate 降序）
-   - applicable_templates 匹配：策略 description 中 `[templates: ...]` 包含当前模板标识或 `*`
-   - context_tags重叠 = 当前任务的标签与策略的context_tags至少有2个相同标签
-   - 无重叠标签的策略不推荐，避免跨上下文误迁移
-   - 如果策略有 context-scoped status，优先使用与当前上下文匹配的 status，而非全局 status
+0. "Retired" entries with pitfall_description or failure_lesson (avoiding pitfalls takes priority over reusing successes)
+1. findings.md of the current task (task-local experience)
+2. Global strategy-effect library in references/experience-registry.md (cross-task experience)
+3. "Recommended" strategies where (same template OR applicable_templates contains current template OR applicable_templates is `[*]`) + context_tags overlap (ordered by success_rate descending)
+   - applicable_templates match: the `[templates: ...]` fragment in strategy description includes the current template identifier or `*`
+   - context_tags overlap = the current task tags and the strategy's context_tags share at least 2 tags
+   - Strategies with no tag overlap are not recommended, avoiding incorrect migration across contexts
+   - If a strategy has a context-scoped status, prefer the status matching the current context instead of the global status
 
-首轮冷启动时：
-- 无任务本地经验
-- 读取全局经验库中 (同模板 OR applicable_templates匹配) + context_tags重叠的推荐策略
-- 以全局经验作为首轮策略选择依据
-- 有 pitfall_description/failure_lesson 的已废弃条目始终展示（避免踩坑比复用成功更重要）
+At first-round cold start:
+- No task-local experience
+- Read recommended strategies from the global experience library where (same template OR applicable_templates matches) + context_tags overlap
+- Use global experience as the basis for first-round strategy selection
+- Retired entries with pitfall_description / failure_lesson are always shown (avoiding pitfalls is more important than reusing success)
 ```
 
 ---
 
-## 经验淘汰机制
+## Experience Retirement Mechanism
 
-- 连续 2 次在不同任务中验证无效（delta ≤ 0）→ status 改为"已废弃"
-- "已废弃"状态持续 5 次任务未被重新验证 → 移至归档区
-- 废弃经验不删除，保留在归档区供审计
+- 2 consecutive failed validations (`delta <= 0`) across different tasks → change `status` to "Retired"
+- If "Retired" remains unvalidated for 5 tasks → move it to the archive section
+- Retired experience is not deleted; it remains in the archive section for auditability
 
 ---
 
-## 协议变更效果追踪表（v2 预留）
+## Protocol-change Effect Tracking Table (reserved for v2)
 
-记录每次协议变更的预期目标和实际效果，支持结果验证。v1 中协议变更通过 git commit history 追踪。
+Record the intended goal and actual effect of each protocol change to support outcome validation. In v1, protocol changes are tracked via git commit history.
 
-| change_id          | protocol_version | 变更内容 | 预期目标 | 验证窗口 | 实际效果 | 状态 |
-|--------------------|------------------|----------|----------|----------|----------|------|
-| （随协议变更积累） |                  |          |          |          |          |      |
+| change_id          | protocol_version | change | intended_goal | validation_window | actual_effect | status |
+|--------------------|------------------|--------|---------------|-------------------|---------------|--------|
+| (accumulates as protocol changes occur) |                  |        |               |                   |               |        |
 
-**状态枚举**：验证中 / 已达标（固化）/ 未达标（回滚评估中）/ 已回滚
+**Status enum**: In Validation / Met (solidified) / Not Met (rollback under evaluation) / Rolled Back
 
-**change_id格式**：CH{NNN}-{简短描述}（如 CH001-anchor-t4）。前缀 CH = Change，与组合策略的 C{NN} 前缀（C = Composed）区分，避免命名冲突。
+**`change_id` format**: `CH{NNN}-{short-description}` (for example `CH001-anchor-t4`). Prefix `CH = Change`, distinct from the composed-strategy prefix `C{NN}` (`C = Composed`) to avoid naming collisions.

@@ -1,33 +1,33 @@
 #!/bin/bash
-# AutoLoop MCP Server 安装脚本
+# AutoLoop MCP Server installation script
 
 set -e
 
-echo "=== AutoLoop MCP Server 安装 ==="
+echo "=== AutoLoop MCP Server Installation ==="
 echo ""
 
-# 检查 Python
+# Check Python
 if ! command -v python3 &> /dev/null; then
-    echo "ERROR: python3 未安装"
+    echo "ERROR: python3 is not installed"
     exit 1
 fi
 
-# 安装 mcp 包
-echo "1. 安装 mcp 包..."
+# Install the mcp package
+echo "1. Installing the mcp package..."
 pip install mcp 2>/dev/null || pip3 install mcp
-echo "   ✓ mcp 已安装"
+echo "   ✓ mcp installed"
 
-# 验证 server 可启动
+# Verify the server can start
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-echo "2. 验证 server..."
-python3 -c "import mcp; print(f'   ✓ mcp {mcp.__version__}')" 2>/dev/null || echo "   ⚠ 无法导入 mcp"
+echo "2. Verifying the server..."
+python3 -c "import mcp; print(f'   ✓ mcp {mcp.__version__}')" 2>/dev/null || echo "   ⚠ Could not import mcp"
 
-# 输出配置指引
+# Print configuration guidance
 SKILL_DIR="$(dirname "$SCRIPT_DIR")"
 echo ""
-echo "3. 将以下配置添加到 Claude Code MCP 设置："
+echo "3. Add the following configuration to your Claude Code MCP settings:"
 echo ""
-echo "   文件: ~/.claude/settings.json 或 .claude/settings.json"
+echo "   File: ~/.claude/settings.json or .claude/settings.json"
 echo ""
 echo '   "mcpServers": {'
 echo '     "autoloop": {'
@@ -36,6 +36,6 @@ echo "       \"args\": [\"$SCRIPT_DIR/server.py\"]"
 echo '     }'
 echo '   }'
 echo ""
-echo "   或运行: claude mcp add autoloop python3 $SCRIPT_DIR/server.py"
+echo "   Or run: claude mcp add autoloop python3 $SCRIPT_DIR/server.py"
 echo ""
-echo "=== 安装完成 ==="
+echo "=== Installation Complete ==="

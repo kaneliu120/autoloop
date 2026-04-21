@@ -1,32 +1,32 @@
-"""Evaluator Audit Middleware — 评分准确性追踪
+"""Evaluator Audit Middleware — scoring accuracy tracking
 
-P1-05 Phase 2 的独立模块：追踪 autoloop-score.py 的评分准确性，
-检测评分膨胀/漂移，为评分校准提供数据支撑。
+Standalone P1-05 Phase 2 module: track scoring accuracy in autoloop-score.py,
+detect score inflation/drift, and provide data for score calibration.
 
-当前为文档+接口定义，实际逻辑仍在 autoloop-controller.py 中。
+This file currently provides docs and interface definitions; the real logic still lives in autoloop-controller.py.
 
-对应 controller.py 中的逻辑：
+Corresponding controller.py logic:
 - _metadata_append_audit_structured()  → EvaluatorAuditMiddleware.on_score
-- VERIFY 阶段的评分记录            → EvaluatorAuditMiddleware.on_score
-- metadata.audit[] 中的评分事件     → EvaluatorAuditMiddleware 内部存储
+- VERIFY-stage score recording          → EvaluatorAuditMiddleware.on_score
+- scoring events in metadata.audit[]    → internal storage in EvaluatorAuditMiddleware
 
-未来扩展方向：
-- 交付后问题追踪（post_delivery_issue）反馈评分偏差
-- 评分膨胀检测（连续多轮评分单调递增但无实质改进）
-- 跨任务评分一致性比较
+Future extension directions:
+- Feedback from post-delivery issue tracking (post_delivery_issue) to calibrate scoring bias
+- Score inflation detection (monotonic multi-round score increases without substantive improvement)
+- Cross-task score consistency comparison
 """
 
 
 class EvaluatorAuditMiddleware:
-    """评估审计 Middleware
+    """Evaluation-audit middleware.
 
-    职责：
-    - 记录每次评分事件（维度、分数、轮次）
-    - 记录人工覆写事件（原始分数 vs 覆写分数）
-    - 追踪交付后问题（评分通过但实际存在问题）
-    - 计算评分准确率
+    Responsibilities:
+    - Record each scoring event (dimension, score, round)
+    - Record manual override events (original score vs overridden score)
+    - Track post-delivery issues (scores passed but real issues existed)
+    - Compute scoring accuracy
 
-    接口：
+    Interface:
     - on_score(round_num, dimension, score, max_score, gate_passed) -> None
     - on_override(round_num, dimension, original_score, override_score, reason) -> None
     - on_post_delivery_issue(task_id, dimension, expected_score, actual_quality) -> None
@@ -34,7 +34,7 @@ class EvaluatorAuditMiddleware:
     """
 
     def __init__(self):
-        """初始化评估审计 Middleware。"""
+        """Initialize the evaluation-audit middleware."""
         self._score_events: list[dict] = []
         self._overrides: list[dict] = []
         self._post_delivery_issues: list[dict] = []
@@ -47,16 +47,16 @@ class EvaluatorAuditMiddleware:
         max_score: float,
         gate_passed: bool,
     ) -> None:
-        """评分事件发生时调用。
+        """Called when a scoring event occurs.
 
         Args:
-            round_num: 当前轮次
-            dimension: 评分维度（如 "completeness", "accuracy"）
-            score: 实际得分
-            max_score: 该维度满分
-            gate_passed: 是否通过门禁阈值
+            round_num: current round
+            dimension: scoring dimension (e.g. "completeness", "accuracy")
+            score: actual score
+            max_score: max score for this dimension
+            gate_passed: whether the gate threshold was passed
         """
-        pass  # 未来从 controller VERIFY 阶段迁移
+        pass  # Future migration from the controller VERIFY phase
 
     def on_override(
         self,
@@ -66,16 +66,16 @@ class EvaluatorAuditMiddleware:
         override_score: float,
         reason: str,
     ) -> None:
-        """人工覆写评分时调用。
+        """Called when a score is manually overridden.
 
         Args:
-            round_num: 当前轮次
-            dimension: 评分维度
-            original_score: 系统评分
-            override_score: 人工覆写分数
-            reason: 覆写原因
+            round_num: current round
+            dimension: scoring dimension
+            original_score: system score
+            override_score: manually overridden score
+            reason: override reason
         """
-        pass  # 未来扩展
+        pass  # Future extension
 
     def on_post_delivery_issue(
         self,
@@ -84,26 +84,26 @@ class EvaluatorAuditMiddleware:
         expected_score: float,
         actual_quality: str,
     ) -> None:
-        """交付后发现问题时调用（用于校准评分准确性）。
+        """Called when a post-delivery issue is discovered (used to calibrate scoring accuracy).
 
         Args:
-            task_id: 任务标识
-            dimension: 出问题的维度
-            expected_score: 评分系统给出的分数
-            actual_quality: 实际质量描述（"pass"/"fail"/"partial"）
+            task_id: task identifier
+            dimension: problematic dimension
+            expected_score: score reported by the scoring system
+            actual_quality: actual quality description ("pass"/"fail"/"partial")
         """
-        pass  # 未来扩展
+        pass  # Future extension
 
     def get_accuracy(self) -> dict:
-        """计算评分准确率。
+        """Compute scoring accuracy.
 
         Returns:
             {
                 "total_scores": int,
                 "overrides": int,
-                "override_rate": float,        # 覆写率
+                "override_rate": float,        # override rate
                 "post_delivery_issues": int,
-                "false_positive_rate": float,  # 评分通过但实际有问题的比率
+                "false_positive_rate": float,  # rate of passing scores that still had issues
                 "per_dimension": {
                     "dimension_name": {
                         "avg_score": float,
@@ -123,9 +123,9 @@ class EvaluatorAuditMiddleware:
         }
 
     def __call__(self, phase: str, state: dict, work_dir: str, **kwargs) -> dict:
-        """统一 Middleware 接口。
+        """Unified middleware interface.
 
-        仅在 VERIFY 阶段后激活，其他阶段直通。
+        Enabled only after the VERIFY phase; all other phases pass through.
 
         Returns:
             {"proceed": True, "modifications": {}}

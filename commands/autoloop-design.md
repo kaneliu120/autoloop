@@ -1,185 +1,198 @@
 ---
 name: autoloop-design
 description: >
-  AutoLoop T3: 产品设计模板。从 T1/T2 调研结论出发，通过需求分析、方案设计、可行性评审三个阶段，
-  产出可直接交给 T4 开发交付的确认方案文档。
-  方法论：JTBD 问题界定 + RICE 优先级 + Shape Up 范围控制 + Spec-Driven 产出。
-  质量门禁阈值见 references/gate-manifest.json T3。
-  触发：/autoloop:design 或任何需要产品设计/方案文档化的任务。
+  AutoLoop T3: Product design template. Starting from T1/T2 research conclusions, it produces a confirmed solution document that can be handed directly to T4 for delivery through requirement analysis, solution design, and feasibility review.
+  Methodology: JTBD problem framing + RICE prioritization + Shape Up scope control + spec-driven output.
+  Quality gate thresholds are in references/gate-manifest.json T3.
+  Triggered by /autoloop:design or any task that needs product design / solution documentation.
 ---
 
-# AutoLoop T3: Design — 产品设计
+# AutoLoop T3: Design — Product Design
 
-## 执行前提
-读取 `autoloop-plan.md` 获取任务参数。
+## Execution Prerequisites
+Read `autoloop-plan.md` to obtain the task parameters.
 
-Round 2+ 的 OBSERVE 起点：先读取 `autoloop-findings.md` 反思章节和 `references/experience-registry.md`。
+For Round 2+, the OBSERVE starting point is to first read the reflection section in `autoloop-findings.md` and `references/experience-registry.md`.
 
-## Phase 1: 需求分析与提炼
+## Phase 1: Requirement Analysis and Extraction
 
-### 目标
-从 T1/T2 产出 + 用户需求中提取结构化需求。
+### Goal
+Extract structured requirements from T1/T2 outputs and user requirements.
 
-### 方法论
-- JTBD 问题界定：When [situation], I want [motivation], so I can [outcome]
-- RICE 优先级：Reach × Impact / Confidence / Effort
+### Methodology
+- JTBD framing: When [situation], I want [motivation], so I can [outcome]
+- RICE prioritization: Reach × Impact / Confidence / Effort
 
-### 执行
+### Execution
 
-**并行 subagent**：
+**Parallel subagents**:
 
-planner subagent：
-- 读取 T1 findings 和 T2 决策推荐
-- 提取核心需求和用户痛点
-- 生成 JTBD 定义
-- 按 RICE 排序需求清单
-- 生成用户故事（As a/I want/So that + Given-When-Then 验收标准，INVEST 标准）
-- 定义范围边界（IN/OUT 列表）
+planner subagent:
+- Read T1 findings and T2 decision recommendations
+- Extract core requirements and user pain points
+- Generate JTBD definitions
+- Rank the requirement list by RICE
+- Generate user stories (As a / I want / So that + Given-When-Then acceptance criteria, INVEST standard)
+- Define scope boundaries (IN/OUT list)
 
-researcher subagent（如有信息缺口）：
-- 补充 T1/T2 未覆盖的技术或市场信息
+researcher subagent (if there are information gaps):
+- Supplement technical or market information not covered by T1/T2
 
-### 产出
+### Output
 
-- **问题重述（Problem Restatement）**：用一段话重述用户的需求，确认理解。格式：
-  - "用户想要解决的问题是：{...}"
-  - "范围内（IN）：{列表}"
-  - "范围外（OUT）：{列表}"
-  - "关键假设：{列表}"
-  
-  此重述在 Phase 2 开始前由用户确认。如果 planner 对需求有疑问，应在此阶段主动列出。
-- 问题陈述（Problem Statement）
-- JTBD 定义
-- 需求清单（RICE 排序）
-- 用户故事 + 验收标准
-- 范围定义（IN/OUT）
+- **Problem Restatement**: restate the user's request in one paragraph to confirm understanding. Format:
+  - "The problem the user wants to solve is: {...}"
+  - "In scope (IN): {...}"
+  - "Out of scope (OUT): {...}"
+  - "Key assumptions: {...}"
 
-### Phase 1 门禁
-- [ ] 问题陈述明确（1 段话：什么问题、为谁、为什么现在、成功指标）
-- [ ] 至少 3 条用户故事，每条有 Given-When-Then 验收标准
-- [ ] 范围边界已定义（IN + OUT + 理由）
-- [ ] 需求按优先级排序
+  This restatement must be confirmed by the user before Phase 2 begins. If the planner has questions about the requirements, it should raise them here.
+- Problem Statement
+- JTBD definition
+- Requirement list (RICE-ranked)
+- User stories + acceptance criteria
+- Scope definition (IN/OUT)
 
-## Phase 2: 方案设计
+### Phase 1 Gate
+- [ ] Problem statement is clear (one paragraph: what problem, for whom, why now, success metric)
+- [ ] At least 3 user stories, each with Given-When-Then acceptance criteria
+- [ ] Scope boundaries are defined (IN + OUT + rationale)
+- [ ] Requirements are prioritized
 
-### 目标
-技术方案 + 产品方案，形成完整设计文档。
+## Phase 2: Solution Design
 
-### 方法论
-- Shape Up 范围控制：固定时间，可变范围
-- Spec-Driven 产出：结构化规格驱动实现
+### Goal
+Create a complete design document that combines the technical and product solution.
 
-### 执行
+### Methodology
+- Shape Up scope control: fixed time, variable scope
+- Spec-driven output: structured specifications drive implementation
 
-**并行 subagent**：
+### Execution
 
-technical-architect subagent：
-- 读取 Phase 1 需求清单
-- 读取目标代码库（如已有）
-- 设计数据模型
-- 设计 API Schema 和路由
-- 制定迁移策略
-- 评估技术风险
+**Parallel subagents**:
 
-frontend-architect subagent（如涉及前端）：
-- 组件结构设计
-- 状态管理方案
-- API 调用模式
+technical-architect subagent:
+- Read the Phase 1 requirement list
+- Read the target codebase, if one already exists
+- Design the data model
+- Design the API schema and routing
+- Define the migration strategy
+- Assess technical risk
 
-db-specialist subagent（如涉及数据库变更）：
-- 数据模型详细设计
-- 迁移脚本骨架
-- 性能影响评估
+frontend-architect subagent (if frontend is involved):
+- Design the component structure
+- Define the state management approach
+- Define the API call pattern
 
-### Phase 2 可选：多方案竞争模式
+db-specialist subagent (if database changes are involved):
+- Design the data model in detail
+- Draft the migration script skeleton
+- Assess performance impact
 
-当用户在 autoloop-plan.md 中设置 `attempt_mode: true` 时，Phase 2 采用竞争模式：
+### Optional Phase 2: Competitive Multi-Solution Mode
 
-1. **并行派遣**：同时启动 2-3 个 technical-architect subagent，每个独立设计方案
-   - 每个 subagent 收到相同的需求输入（Phase 1 产出）
-   - 每个 subagent 独立工作，互不可见
-   - 使用 `isolation: "worktree"` 确保文件隔离
+When the user sets `attempt_mode: true` in autoloop-plan.md, Phase 2 enters competitive mode:
 
-2. **评分选优**：所有方案完成后，VERIFY 阶段对每个方案独立评分
-   - 使用 T3 的 5 个质量门禁维度评分
-   - 选择总分最高的方案进入 Phase 3
+1. **Parallel dispatch**: start 2-3 technical-architect subagents, each designing an independent solution
+   - Each subagent receives the same requirement input (Phase 1 output)
+   - Each subagent works independently and cannot see the others
+   - Use `isolation: "worktree"` to keep files isolated
 
-3. **记录备选**：未选中的方案摘要记入 findings.md，作为备选参考
+2. **Scoring and selection**: after all solutions finish, the VERIFY stage scores each solution independently
+   - Score using the 5 T3 quality gate dimensions
+   - Select the highest-scoring solution to enter Phase 3
 
-**注意**：
+3. **Record alternatives**: summarize the unselected solutions in findings.md as references
 
-- 此模式消耗 2-3x 的 API 预算，仅在方案质量极为关键时启用
-- 不改变 OODA 循环的单策略隔离（经验归因仍然有效）
-- 默认不启用，需在 plan 中显式设置
+**Notes**:
 
-### 产出
-方案文档（使用 `assets/delivery-template.md` 格式）：
-- 问题描述（含 T1/T2 上下文）
-- 影响范围（修改文件、DB 变更、API 变更、前端变更）
-- 具体方案（数据模型、API Schema、路由、迁移策略）
-- 实施步骤（含依赖关系排序）
-- 风险与缓解
-- 验收标准（功能 + 技术）
+- This mode consumes 2-3x API budget and should only be used when solution quality is critical
+- It does not change the single-strategy isolation of the OODA loop (attribution still works)
+- It is off by default and must be explicitly enabled in the plan
 
-### Phase 2 门禁
-- [ ] 方案文档 5 个必要章节齐全（问题/影响/方案/步骤/验收）
-- [ ] 数据模型已定义（如涉及 DB 变更）
-- [ ] API 接口已定义（路径、方法、Schema）
-- [ ] 实施步骤有依赖关系排序
-- [ ] 风险已识别并有缓解方案
+### Output
+Solution document in `assets/delivery-template.md` format:
+- Problem description (with T1/T2 context)
+- Impact scope (files to change, DB changes, API changes, frontend changes)
+- Detailed solution (data model, API schema, routes, migration strategy)
+- Implementation steps (including dependency order)
+- Risks and mitigations
+- Acceptance criteria (functional + technical)
 
-## Phase 3: 可行性评审
+### Phase 2 Gate
+- [ ] The solution document includes all 5 required sections (problem / impact / solution / steps / acceptance)
+- [ ] Data model is defined, if DB changes are involved
+- [ ] API interfaces are defined (path, method, schema)
+- [ ] Implementation steps are ordered by dependencies
+- [ ] Risks are identified and have mitigations
 
-### 目标
-独立评审方案的完整性、可行性、需求覆盖率。
+## Phase 3: Feasibility Review
 
-### 方法论
-- Definition of Ready 检查
-- 独立评估者原则（评审 agent ≠ 设计 agent）
+### Goal
+Independently review completeness, feasibility, and requirement coverage.
 
-### 执行
+### Methodology
+- Definition of Ready check
+- Independent reviewer principle (reviewer agent ≠ designer agent)
 
-feasibility-reviewer subagent（独立评审）：
-- 逐条检查需求覆盖率（每条需求是否映射到设计方案）
-- 评估技术可行性（架构是否合理、依赖是否可控）
-- 检查范围精确度（IN/OUT 是否明确、工作量是否可估）
-- 验证风险评估完整性
-- 打出 5 维度评分
+### Execution
 
-### 产出
-- 评审报告（通过/需修改）
-- 5 维度评分
-- 最终确认的方案文档 → T4 Phase 1 的输入
+After the ACT stage generates the PRD, the VERIFY stage includes an independent review (reviewer agent ≠ designer agent).
 
-### Phase 3 门禁
-质量门禁阈值见 `references/gate-manifest.json` T3：
+feasibility-reviewer subagent (independent review):
+- Check requirement coverage line by line (whether each requirement maps to the design)
+- Evaluate technical feasibility (whether the architecture is reasonable and dependencies are identified and manageable)
+- Check scope precision (whether IN/OUT is clear and the work is estimable)
+- Validate the completeness of risk assessment
+- Produce 5-dimension scores and write them to `autoloop-findings.md` and `iterations[-1].scores`
+
+**Review dimensions** (corresponding to the T3 gate-manifest checks):
+1. **design_completeness**: whether every requirement has a corresponding design
+2. **feasibility_score**: whether the technical architecture is feasible and dependencies are identified
+3. **requirement_coverage**: whether the traceability chain from requirement to design is complete
+4. **scope_precision**: whether the IN/OUT boundary is clear
+5. **validation_evidence**: whether there is an independent feasibility check record
+
+**Writeback rules**:
+- Write review results into the `autoloop-findings.md` findings section, using the five dimension names above in the `dimension` field
+- Write scores into `iterations[-1].scores` (for example, `design_completeness: 8.5`)
+- If Phase 2 and Phase 3 complete in the same OODA round, Phase 3 happens in the VERIFY stage (score.py automatic scoring + feasibility-reviewer agent supplemental manual review)
+
+### Output
+- Review report (pass / needs revision), with the concrete issues and scoring basis for each dimension
+- 5-dimension scores (written to findings + iterations[-1].scores)
+- The final confirmed solution document → direct input for T4 Phase 1
+
+### Phase 3 Gate
+Quality gate thresholds are in `references/gate-manifest.json` T3:
 - Hard: design_completeness ≥ 7, feasibility_score ≥ 7, requirement_coverage ≥ 7
 - Soft: scope_precision ≥ 7, validation_evidence ≥ 7
 
-## 质量门禁评分
+## Quality Gate Scoring
 
-CHECK 阶段由独立 evaluator 按以下维度评分（0-10）：
+CHECK stage is scored by an independent evaluator on the following dimensions (0-10):
 
-| 维度 | 1-3 (不通过) | 4-6 (部分) | 7-8 (通过) | 9-10 (优秀) |
+| Dimension | 1-3 (fail) | 4-6 (partial) | 7-8 (pass) | 9-10 (excellent) |
 |------|-------------|-----------|-----------|------------|
-| design_completeness | 多数需求无设计映射 | 部分需求有设计 | ≥90% 需求有完整设计 | 100% + 边界情况 |
-| feasibility_score | 技术方案不可行 | 部分可行有风险 | 架构合理，风险可控 | 已验证 + POC |
-| requirement_coverage | 需求断裂严重 | 50-80% 可追溯 | ≥95% 可追溯 | 100% 双向追溯 |
-| scope_precision | 无范围定义 | 部分 IN/OUT | 完整 + 依赖已识别 | + 工作量估算 |
-| validation_evidence | 无评审 | 自评审 | 独立评审 + 风险评估 | + POC 验证 |
+| design_completeness | Most requirements have no design mapping | Some requirements have a design | ≥90% of requirements have a complete design | 100% + edge cases |
+| feasibility_score | Technical solution is not feasible | Partially feasible, with risks | Architecture is reasonable and risks are manageable | Verified + POC |
+| requirement_coverage | Requirement traceability is badly broken | 50-80% traceable | ≥95% traceable | 100% bidirectional traceability |
+| scope_precision | No scope definition | Partial IN/OUT | Complete + dependencies identified | + effort estimate |
+| validation_evidence | No review | Self-review | Independent review + risk assessment | + POC validation |
 
-## 每轮 REFLECT 执行规范
+## REFLECT Execution Rules for Each Round
 
-T3 Phase 1（探索期）的 REFLECT 与 T1 类似：策略归因可选，重点写反思摘要。
-Phase 2-3 的 REFLECT 推荐写完整结构化反思（strategy_id + effect + delta）。
+T3 Phase 1 (exploration) REFLECT is similar to T1: strategy attribution is optional; the focus is on the reflection summary.
+Phase 2-3 REFLECT should preferably write the full structured reflection (strategy_id + effect + delta).
 
-写入 `autoloop-findings.md` 的 4 层反思结构表。
+Write the four-layer reflection table into `autoloop-findings.md`.
 
-## 交付物
+## Deliverables
 
-T3 完成后产出的核心文件：
-- 方案文档（`{doc_output_path}/{功能名}-{date}.md`，delivery-template.md 格式）
-- `autoloop-findings.md`（需求分析过程、设计决策、评审结论）
-- `autoloop-progress.md`（每阶段进度记录）
+Core files produced after T3 completes:
+- Solution document (`{doc_output_path}/{feature_name}-{date}.md`, delivery-template.md format)
+- `autoloop-findings.md` (requirement analysis process, design decisions, review conclusions)
+- `autoloop-progress.md` (per-phase progress log)
 
-方案文档作为 T4 Deliver Phase 1 的直接输入。
+The solution document is the direct input for T4 Deliver Phase 1.

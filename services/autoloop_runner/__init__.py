@@ -1,3 +1,3 @@
-"""AutoLoop L1 Runner — 无人值守切片调用 controller + OpenAI（可选）。"""
+"""AutoLoop L1 Runner — unattended slice execution of controller + OpenAI (optional)."""
 
 __version__ = "0.1.0"

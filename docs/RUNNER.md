@@ -1,131 +1,131 @@
-# AutoLoop L1 Runner（无人值守）
+# AutoLoop L1 Runner (Unattended)
 
-精简版实施说明；完整需求见 Obsidian：《AutoLoop-无人值守与多模型-开发实施手册-2026-03-30》。
+Condensed implementation notes; the full requirements are in Obsidian: `AutoLoop-Unattended-and-Multi-Model-Implementation-Handbook-2026-03-30`.
 
-## 策略（已选定）
+## Selected Strategy
 
-采用手册 **§5.1 策略 α 变体**：薄 Runner + `autoloop-controller.py --stop-after <PHASE>` 切片；在 **ORIENT 之后** 由 Runner 调用模型写入 `plan.decide_act_handoff`，再启动 controller 跑 **DECIDE**；**ACT** 前由 Runner 执行 `planned_commands`（allowlist + `shell=False`）。
+Use handbook **§5.1 Strategy Alpha variant**: a thin Runner plus `autoloop-controller.py --stop-after <PHASE>` slicing; **after ORIENT**, the Runner calls the model to write `plan.decide_act_handoff`, then starts the controller to run **DECIDE**; before **ACT**, the Runner executes `planned_commands` (allowlist + `shell=False`).
 
-## 安装
+## Installation
 
 ```bash
 pip install -e ".[runner]"
 ```
 
-`[runner]` 包含 `openai`。仅跑无需模型的切片（如首个 `tick`）时可只装本体。
+`[runner]` includes `openai`. If you only run slices that do not need a model (such as the first `tick`), installing the core package alone is enough.
 
-## 命令
+## Commands
 
 ```bash
-# 单步推进（读 checkpoint.last_completed_phase）
+# Single-step advance (reads checkpoint.last_completed_phase)
 PYTHONPATH=services autoloop-runner tick /path/to/work_dir
-# 或已 editable 安装且包在 PYTHONPATH 时：
+# Or, if installed editable and on PYTHONPATH:
 autoloop-runner tick /path/to/work_dir
 
-# 连续 tick（可用 RUNNER_MAX_WALL_SECONDS / RUNNER_MAX_TICKS 限制）
+# Continuous tick loop (can be limited with RUNNER_MAX_WALL_SECONDS / RUNNER_MAX_TICKS)
 autoloop-runner loop /path/to/work_dir --max-ticks 50
 
-# Prometheus 文本（P2-2）
+# Prometheus text (P2-2)
 autoloop-runner metrics /path/to/work_dir
 ```
 
-## 环境变量
+## Environment Variables
 
-| 变量 | 说明 |
-|------|------|
-| `OPENAI_API_KEY` | DECIDE / REFLECT 调用模型时必需 |
-| `OPENAI_BASE_URL` | 兼容代理/Azure |
-| `OPENAI_MODEL` | 默认 `gpt-4o-mini` |
-| `RUNNER_MOCK_LLM` | `1` 时不调 API，用手册验收用 mock handoff |
-| `AUTOLOOP_STRICT` | Runner 默认对子进程注入 `1`（可用 `tick --no-strict` 关闭） |
-| `AUTOLOOP_EXIT_CODES` / `autoloop-controller --exit-codes` | controller：`0` 正常，`1` 中止，`10` 暂停 |
-| `RUNNER_MAX_WALL_SECONDS` | `loop` 墙钟上限（P1-5） |
-| `RUNNER_MAX_ESTIMATED_USD` | 累计 API 粗算费用上限，超出则 tick 退出 `12`（P1-5） |
-| `RUNNER_PRICE_INPUT_PER_1K` / `RUNNER_PRICE_OUTPUT_PER_1K` | 美元/1K tokens，用于粗算（默认贴近 gpt-4o-mini 量级） |
-| `RUNNER_VERIFY_RETRY` | VERIFY 切片失败时的额外重试次数，默认 `0`（P1-1） |
-| `RUNNER_VERIFY_RETRY_DELAY_SEC` | 重试间隔秒，默认 `2` |
-| `RUNNER_SYNTHESIZE_MODE` | `minimal`（默认）\|`llm`\|`skip` — SYNTHESIZE 前写回 findings（P1-3） |
-| `RUNNER_JSON_LOG` / `RUNNER_JSON_LOG_FILE` | `1` 时结构化 JSON 日志（stderr 或文件）（P2-1） |
-| `RUNNER_SKIP_AUTO_TSV` | `1` 时关闭 VERIFY 后自动 TSV（P2-3） |
-| `RUNNER_ACT_TIMEOUT` | 单条 shell 命令超时（秒） |
-| `AUTOLOOP_EXPERIENCE_REQUIRE_MECHANISM` | `1`/`true`/`yes`：经验库 `write` 在合并后 **use_count≥2** 时必须带 `--mechanism`（默认不启用；收紧 D-03） |
+| Variable | Description |
+|----------|-------------|
+| `OPENAI_API_KEY` | Required when DECIDE / REFLECT call the model |
+| `OPENAI_BASE_URL` | Proxy / Azure compatibility |
+| `OPENAI_MODEL` | Default `gpt-4o-mini` |
+| `RUNNER_MOCK_LLM` | When `1`, skip API calls and use the mock handoff for handbook validation |
+| `AUTOLOOP_STRICT` | Runner injects `1` into subprocesses by default (disable with `tick --no-strict`) |
+| `AUTOLOOP_EXIT_CODES` / `autoloop-controller --exit-codes` | controller: `0` success, `1` abort, `10` pause |
+| `RUNNER_MAX_WALL_SECONDS` | Wall-clock limit for `loop` (P1-5) |
+| `RUNNER_MAX_ESTIMATED_USD` | Estimated cumulative API cost limit; when exceeded, tick exits with `12` (P1-5) |
+| `RUNNER_PRICE_INPUT_PER_1K` / `RUNNER_PRICE_OUTPUT_PER_1K` | USD per 1K tokens for rough cost estimation (defaults approximate gpt-4o-mini) |
+| `RUNNER_VERIFY_RETRY` | Extra retry count when a VERIFY slice fails; default `0` (P1-1) |
+| `RUNNER_VERIFY_RETRY_DELAY_SEC` | Delay between retries in seconds; default `2` |
+| `RUNNER_SYNTHESIZE_MODE` | `minimal` (default) \| `llm` \| `skip` - write back findings before SYNTHESIZE (P1-3) |
+| `RUNNER_JSON_LOG` / `RUNNER_JSON_LOG_FILE` | Structured JSON logs when `1` (stderr or file) (P2-1) |
+| `RUNNER_SKIP_AUTO_TSV` | Disable automatic TSV writing after VERIFY when `1` (P2-3) |
+| `RUNNER_ACT_TIMEOUT` | Timeout for a single shell command, in seconds |
+| `AUTOLOOP_EXPERIENCE_REQUIRE_MECHANISM` | `1` / `true` / `yes`: after merge, experience `write` must include `--mechanism` when **use_count≥2** (disabled by default; tightens D-03) |
 
-## P1 — 跑稳与可恢复
+## P1 - Stability and Recovery
 
-### VERIFY 与 `AUTOLOOP_STRICT`（P1-1）
+### VERIFY and `AUTOLOOP_STRICT` (P1-1)
 
-- `last_completed_phase == ACT` 时，Runner **只**通过 `autoloop-controller.py --stop-after VERIFY` 执行完整 VERIFY（`autoloop-score` / `autoloop-validate` / `autoloop-variance`），与 IDE 人工跑圈一致。
-- `strict`（默认）下 VERIFY 失败 → controller 退出码 `1`，Runner 写入 `metadata.runner_status=ERROR`、`pause_reason=controller_exit_1`。
-- 可选重试：`RUNNER_VERIFY_RETRY=N`（第 1 次失败后最多再试 N 次）。
+- When `last_completed_phase == ACT`, the Runner **only** executes the full VERIFY slice through `autoloop-controller.py --stop-after VERIFY` (`autoloop-score` / `autoloop-validate` / `autoloop-variance`), matching manual IDE runs.
+- In `strict` mode (default), a VERIFY failure causes controller exit code `1`, and the Runner writes `metadata.runner_status=ERROR` and `pause_reason=controller_exit_1`.
+- Optional retries: `RUNNER_VERIFY_RETRY=N` (retry up to N more times after the first failure).
 
-### REFLECT（P1-2）
+### REFLECT (P1-2)
 
-- 模型输出经校验：`strategy_id`、`effect`（`保持`/`避免`/`待验证`）、`score`、`dimension`、`context`；再 `update iterations[-1].reflect`，以便 REFLECT 阶段触发经验库 write。
+- Validate model output fields: `strategy_id`, `effect` (`keep` / `avoid` / `to verify`), `score`, `dimension`, `context`; then `update iterations[-1].reflect` so the REFLECT stage can trigger experience writes.
 
-### SYNTHESIZE 最小写回（P1-3）
+### Minimal SYNTHESIZE write-back (P1-3)
 
-- 默认 `RUNNER_SYNTHESIZE_MODE=minimal`：在跑 controller 的 SYNTHESIZE 切片**之前**，调用 `autoloop-state.py add-finding` 写入一条 `dimension=runner_synthesize` 的摘要（末轮 scores + gates）。
-- `llm`：用 OpenAI 生成 `dimension`+`content` 再 add-finding（`RUNNER_MOCK_LLM=1` 时退回 minimal）。
-- `skip`：不写 findings。
+- Default `RUNNER_SYNTHESIZE_MODE=minimal`: before running the controller's SYNTHESIZE slice, call `autoloop-state.py add-finding` to write a summary with `dimension=runner_synthesize` (final round scores + gates).
+- `llm`: use OpenAI to generate `dimension` + `content`, then add the finding back (`RUNNER_MOCK_LLM=1` falls back to minimal).
+- `skip`: do not write findings.
 
-### 暂停与恢复（P1-4）
+### Pause and Resume (P1-4)
 
-1. Runner 退出码 **`10`**，或 `metadata.runner_status=PAUSED`（含 `EVOLVE: pause`、T3 KPI 未就绪、费用上限 `12` 等）。
-2. 查看 `checkpoint.json` 的 `pause_state`、`metadata.pause_reason`。
-3. 人工修正 SSOT（如补 `plan.gates` KPI、改 `plan.budget`）后执行：  
-   `autoloop-controller.py <work_dir> --resume`（清除 checkpoint 暂停语义、继续循环）。  
-4. 再执行 `autoloop-runner tick` 或 `loop`。
+1. Runner exit code **`10`**, or `metadata.runner_status=PAUSED` (including `EVOLVE: pause`, unfinished T3 KPI, budget cap `12`, etc.).
+2. Inspect `checkpoint.json` for `pause_state` and `metadata.pause_reason`.
+3. After manually fixing the SSOT (for example, adding `plan.gates` KPIs or changing `plan.budget`), run:  
+   `autoloop-controller.py <work_dir> --resume` (clears checkpoint pause semantics and continues the loop).  
+4. Then run `autoloop-runner tick` or `loop` again.
 
-### 全局预算（P1-5）
+### Global Budget (P1-5)
 
-- **墙钟**：`RUNNER_MAX_WALL_SECONDS` 或 `autoloop-runner loop --max-wall-seconds`。
-- **费用（粗算）**：每次 Chat Completions 的 `usage` 累计到 `metadata.runner_api_prompt_tokens` / `runner_api_completion_tokens` / `runner_estimated_cost_usd`；超过 `RUNNER_MAX_ESTIMATED_USD` 时 **tick 退出 `12`**（不发起新切片）。
-- 可选：`metadata.runner_api_request_log` 保留近期 `request_id`（上限 500 条）。
+- **Wall clock**: `RUNNER_MAX_WALL_SECONDS` or `autoloop-runner loop --max-wall-seconds`.
+- **Cost (rough estimate)**: each Chat Completions `usage` is accumulated into `metadata.runner_api_prompt_tokens` / `runner_api_completion_tokens` / `runner_estimated_cost_usd`; once `RUNNER_MAX_ESTIMATED_USD` is exceeded, tick exits with **`12`** (no new slice is started).
+- Optional: `metadata.runner_api_request_log` can retain recent `request_id` values (up to 500 entries).
 
-## 退出码摘要
+## Exit Code Summary
 
-| 码 | 含义 |
-|----|------|
-| 0 | 本步成功 |
-| 1 | 错误（含 strict VERIFY 失败） |
-| 10 | 暂停（与 controller `--exit-codes` 对齐） |
-| 11 | work_dir 锁未获取 |
-| 12 | 费用/预算上限（P1-5） |
+| Code | Meaning |
+|------|---------|
+| 0 | Step succeeded |
+| 1 | Error (including strict VERIFY failure) |
+| 10 | Paused (aligned with controller `--exit-codes`) |
+| 11 | work_dir lock not acquired |
+| 12 | Cost / budget cap (P1-5) |
 
-## P2 — 可运营
+## P2 - Operability
 
-### 结构化日志（P2-1）
+### Structured Logging (P2-1)
 
-- `RUNNER_JSON_LOG=1`：每行一条 JSON 到 **stderr**（或 `RUNNER_JSON_LOG_FILE` 指向文件）。
-- 字段包含：`event`、`task_id`、`round`、`checkpoint_phase`、`phase`（若传入）、`request_id`（OpenAI 成功时）、`latency_ms`、`ts`。
-- 事件示例：`tick_slice`、`openai_chat_complete`、`openai_chat_error`、`verify_auto_tsv`。
+- `RUNNER_JSON_LOG=1`: emit one JSON object per line to **stderr** (or to the file pointed to by `RUNNER_JSON_LOG_FILE`).
+- Fields include: `event`, `task_id`, `round`, `checkpoint_phase`, `phase` (if provided), `request_id` (when OpenAI succeeds), `latency_ms`, `ts`.
+- Example events: `tick_slice`, `openai_chat_complete`, `openai_chat_error`, `verify_auto_tsv`.
 
-### 指标 / Prometheus（P2-2）
+### Metrics / Prometheus (P2-2)
 
-- SSOT：`metadata.runner_metrics`（`api_calls_total`、`api_latency_ms_sum`、`pauses_total`、`failures_total`、`lock_denied_total`）；成功切片数仍用 `runner_tick_count`。
-- 导出：`autoloop-runner metrics <work_dir>` 打印 **Prometheus 文本**，可由 sidecar 写入文件供 `file_sd` 或 `textfile collector` 抓取。
-- **OpenTelemetry**：未内置；可在外层用 OTel SDK 包装子进程或解析 JSON 日志（见手册 §4.3）。
+- SSOT: `metadata.runner_metrics` (`api_calls_total`, `api_latency_ms_sum`, `pauses_total`, `failures_total`, `lock_denied_total`); successful slice count still uses `runner_tick_count`.
+- Export: `autoloop-runner metrics <work_dir>` prints **Prometheus text**, which a sidecar can write to a file for `file_sd` or the `textfile collector`.
+- **OpenTelemetry**: not built in; wrap subprocesses externally with the OTel SDK or parse JSON logs (see handbook §4.3).
 
-### TSV / `side_effect`（P2-3）
+### TSV / `side_effect` (P2-3)
 
-- 若 `plan.decide_act_handoff` 含非空 `impacted_dimensions`（或 `target_dimensions`），在 **VERIFY 切片成功** 后 Runner 自动追加一行 `results_tsv`：`side_effect` 为 `跨维影响: dim1,dim2,...`，以满足 `autoloop-validate.py --strict` 与 handoff 一致性。
-- 若末行 TSV 已有合法 `side_effect`，则跳过。
-- `RUNNER_SKIP_AUTO_TSV=1` 关闭；strict 下 `add-tsv-row` 失败 → tick 返回 **`1`**。
+- If `plan.decide_act_handoff` includes non-empty `impacted_dimensions` (or `target_dimensions`), after a **successful VERIFY slice** the Runner automatically appends a `results_tsv` row whose `side_effect` is `cross-dimension impact: dim1,dim2,...`, keeping `autoloop-validate.py --strict` consistent with the handoff.
+- If the last TSV row already has a valid `side_effect`, skip the append.
+- `RUNNER_SKIP_AUTO_TSV=1` disables this; in strict mode, a failed `add-tsv-row` makes tick return **`1`**.
 
-## Controller 新增 CLI
+## Controller New CLI
 
-- `--stop-after OBSERVE|…|REFLECT`：执行到该阶段结束并更新 `checkpoint.json` 后退出。
-- `--exit-codes` 或 `AUTOLOOP_EXIT_CODES=1`：按上表退出码退出进程。
+- `--stop-after OBSERVE|...|REFLECT`: stop after that stage finishes and `checkpoint.json` is updated.
+- `--exit-codes` or `AUTOLOOP_EXIT_CODES=1`: exit the process using the codes listed above.
 
-## 互斥
+## Mutual Exclusion
 
-同一 `work_dir` 使用 `.autoloop-runner.lock`（fcntl）；第二个 `tick --no-wait-lock` 得退出码 `11`。
+The same `work_dir` uses `.autoloop-runner.lock` (`fcntl`); a second `tick --no-wait-lock` exits with code `11`.
 
 ## SSOT
 
-Runner **不**维护第二套任务状态；以 `autoloop-state.json` 与 `checkpoint.json` 为准。`plan.decide_act_handoff` 在 `init` 时预置为 `null`，便于 `autoloop-state.py update` 写入。
+The Runner does **not** maintain a second task state; `autoloop-state.json` and `checkpoint.json` are the source of truth. `plan.decide_act_handoff` is initialized to `null` during `init`, which makes it easy for `autoloop-state.py update` to write into it.
 
-## 测试
+## Testing
 
 ```bash
 PYTHONPATH=services python -m unittest tests.test_runner_unattended -v

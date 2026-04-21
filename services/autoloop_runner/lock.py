@@ -1,4 +1,4 @@
-"""单 work_dir 互斥锁（fcntl），满足实施手册 P0-2。"""
+"""Per-work-dir mutex lock (fcntl), satisfying implementation manual P0-2."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import os
 
 
 class WorkdirLock:
-    """非阻塞尝试或阻塞等待独占锁。"""
+    """Non-blocking attempt or blocking wait for an exclusive lock."""
 
     def __init__(self, work_dir: str, name: str = ".autoloop-runner.lock"):
         self.path = os.path.join(os.path.abspath(work_dir), name)
@@ -44,7 +44,7 @@ class WorkdirLock:
 
     def __enter__(self) -> WorkdirLock:
         if not self.acquire(blocking=True):
-            raise RuntimeError("无法获取锁")
+            raise RuntimeError("unable to acquire lock")
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:

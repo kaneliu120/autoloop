@@ -1,4 +1,4 @@
-"""P1-5：API token 累计与粗略费用上限。"""
+"""P1-5: API token accumulation and a rough cost cap."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import Any
 
 from autoloop_runner import stateutil
 
-# 默认定价：gpt-4o-mini 量级（美元/1K tokens），可用环境变量覆盖
+# Default pricing: gpt-4o-mini scale (USD / 1K tokens), overridable via env vars
 _DEFAULT_IN_1K = float(os.environ.get("RUNNER_PRICE_INPUT_PER_1K", "0.00015"))
 _DEFAULT_OUT_1K = float(os.environ.get("RUNNER_PRICE_OUTPUT_PER_1K", "0.0006"))
 
@@ -60,7 +60,7 @@ def accumulate_usage(
 
 
 def check_cost_budget(work_dir: str) -> tuple[bool, str]:
-    """若超过 RUNNER_MAX_ESTIMATED_USD 返回 (False, reason)。"""
+    """Return (False, reason) if RUNNER_MAX_ESTIMATED_USD is exceeded."""
     cap = os.environ.get("RUNNER_MAX_ESTIMATED_USD", "").strip()
     if not cap:
         return True, ""

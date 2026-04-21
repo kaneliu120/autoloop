@@ -1,339 +1,339 @@
-# Enterprise Standard — 企业级标准定义
+# Enterprise Standard — Enterprise-Grade Standard Definition
 
-## 概述
+## Overview
 
-本文档是 quality-gates.md 的评分细则组件，定义 T7/T8 各维度的评分计算方法。通过标准见 quality-gates.md §门禁分类总览。
+This document is the scoring-detail component referenced by `quality-gates.md`. It defines the scoring methods for the T7/T8 dimensions. For pass thresholds, see `quality-gates.md` under "Gate Classification Overview".
 
-本文档定义 AutoLoop T7（Quality）和 T8（Optimize）使用的企业级标准评分体系。所有评分规则是具体、可量化的，消除主观判断。
+It defines the enterprise-grade scoring system used by AutoLoop T7 (Quality) and T8 (Optimize). All scoring rules are concrete and measurable, eliminating subjective judgment.
 
-> **客观化原则**：本文档所有扣分条目均使用可量化阈值或可grep验证的规则，不使用"清晰""重要""关键""频繁"等主观判断词。具体阈值可在 `parameters.md` 中调整。
+> **Objectivity principle**: every deduction item in this document uses a measurable threshold or a rule that can be verified by grep or equivalent tooling. Subjective wording such as "clear", "important", "critical", or "frequent" must not be used. Thresholds may be tuned in `parameters.md`.
 
-评分维度（Security / Reliability / Maintainability / Architecture / Performance / Stability）及其通过标准均为**技术栈无关**的通用标准。各维度下设"技术栈特定检测"子节，列出针对具体技术栈的检测命令示例。
+The scoring dimensions (Security / Reliability / Maintainability / Architecture / Performance / Stability) and their pass standards are **tech-stack-agnostic**. Each dimension includes a "tech-stack-specific checks" subsection with example detection commands.
 
-> **Domain Pack 扩展**：当 `autoloop-plan.md` 指定 `domain_pack`（如 `python-fastapi`）时，T7/T8 OBSERVE 阶段应读取 `references/domain-pack-{pack名}.md`，其中的检测命令替换本文档的通用命令，权重调整覆盖通用权重，新增检测项追加到扣分规则。详见 `references/domain-pack-spec.md`。
+> **Domain Pack extension**: when `autoloop-plan.md` specifies `domain_pack` (for example, `python-fastapi`), the T7/T8 OBSERVE phase should load `references/domain-pack-{pack_name}.md`. Commands from that pack replace the generic commands in this document, pack-specific weight adjustments override the generic weights, and any extra checks are appended to the deduction rules. See `references/domain-pack-spec.md`.
 
 ---
 
-## 安全性评分体系（Security）
+## Security Scoring System
 
-### 通过标准：见 quality-gates.md 门禁矩阵
+### Pass Standard
+See the gate matrix in `quality-gates.md`.
 
-### 满分条件（10/10）
+### Full-Score Condition (10/10)
 
-全部满足：
+All of the following must hold:
 
-- 零已知注入漏洞（SQL注入/命令注入/XSS/路径穿越）
-- 所有外部输入有结构化验证（类型检查/Schema 校验）
-- 无敏感数据（密码/密钥/令牌）出现在日志/API 响应中
-- 生产环境 CORS 配置了具体域名（非通配符）
-- 文件上传有类型检查和大小限制
-- 有安全相关的操作审计日志
+- zero known injection vulnerabilities (SQL injection / command injection / XSS / path traversal)
+- all external input has structured validation (type checks / schema validation)
+- no sensitive data (passwords / keys / tokens) appears in logs or API responses
+- production CORS is configured with explicit domains, not wildcards
+- file uploads include type checks and size limits
+- security-relevant operations produce audit logs
 
-### 扣分规则（通用）
+### Deduction Rules (Generic)
 
-| 问题 | 扣分 | 严重级别 |
+| Issue | Deduction | Severity |
 |------|------|---------|
-| SQL 注入（原始字符串拼接构造 SQL）| -4 | P1 |
-| 命令注入（shell 执行用户输入）| -4 | P1 |
-| 密钥/密码出现在 API 响应中 | -3 | P1 |
-| 密钥/密码出现在日志中 | -3 | P1 |
-| XSS（前端直接注入未转义用户输入）| -3 | P1 |
-| 路径穿越（未验证文件路径）| -3 | P1 |
-| 外部输入无结构化验证 | -2 | P2 |
-| 生产环境 CORS 允许通配符来源 | -1 | P3 |
-| 文件上传无类型/大小限制 | -1 | P2 |
-| 缺少操作审计日志（敏感操作）| -0.5 | P3 |
+| SQL injection (raw string concatenation used to build SQL) | -4 | P1 |
+| Command injection (user input executed in the shell) | -4 | P1 |
+| Keys/passwords in API responses | -3 | P1 |
+| Keys/passwords in logs | -3 | P1 |
+| XSS (frontend directly injects unescaped user input) | -3 | P1 |
+| Path traversal (file paths not validated) | -3 | P1 |
+| External input lacks structured validation | -2 | P2 |
+| Production CORS allows wildcard origins | -1 | P3 |
+| File upload lacks type/size limits | -1 | P2 |
+| Missing audit log for sensitive operations | -0.5 | P3 |
 
-### 技术栈特定检测
+### Tech-Stack-Specific Checks
 
-> Node.js/TypeScript 和其他技术栈的检测命令见对应的 `references/domain-pack-*.md`。
+> For Node.js/TypeScript and other stacks, see the relevant `references/domain-pack-*.md`.
 
 #### Python/FastAPI
 
 ```bash
-# SQL 注入检测
-grep -rn "execute(f\|execute(\".*{" {路径}
-grep -rn "text(f\|text(\".*{" {路径}
+# SQL injection checks
+grep -rn "execute(f\|execute(\".*{" {path}
+grep -rn "text(f\|text(\".*{" {path}
 
-# 命令注入检测
-grep -rn "subprocess\|os.system\|os.popen" {路径}
-grep -rn "shell=True" {路径}
+# Command injection checks
+grep -rn "subprocess\|os.system\|os.popen" {path}
+grep -rn "shell=True" {path}
 
-# 敏感数据检测
-grep -rn "password\|secret\|api_key\|token" {路径} | grep -i "log\|print\|response"
+# Sensitive-data checks
+grep -rn "password\|secret\|api_key\|token" {path} | grep -i "log\|print\|response"
 
-# CORS 检测
-grep -rn "allow_origins" {路径}
+# CORS checks
+grep -rn "allow_origins" {path}
 
-# 外部输入验证检测（Pydantic）
-grep -rn "def .*request\|Body(\|Query(\|Path(" {路径}
+# External input validation checks (Pydantic)
+grep -rn "def .*request\|Body(\|Query(\|Path(" {path}
 ```
-
-
 
 ---
 
-## 可靠性评分体系（Reliability）
+## Reliability Scoring System
 
-### 通过标准：见 quality-gates.md 门禁矩阵
+### Pass Standard
+See the gate matrix in `quality-gates.md`.
 
-### 满分条件（10/10）
+### Full-Score Condition (10/10)
 
-全部满足：
+All of the following must hold:
 
-- 所有外部调用（HTTP/缓存/DB/文件/第三方 API）有错误处理
-- 无静默失败（只有空 except/catch 或仅 debug 日志的关键路径）
-- 所有外部依赖有降级回退（缓存服务宕机不崩溃主流程）
-- 关键写操作有事务保护
-- 所有 HTTP 客户端调用有超时配置
-- 外部调用重试：所有外部API调用和数据库写入有重试逻辑（≥ 1次重试，含指数退避或固定间隔）
-- 服务有健康检查端点（验证关键依赖连通性）
+- all external calls (HTTP / cache / DB / files / third-party APIs) have error handling
+- no silent failures (no empty `except`/`catch`, and no critical paths that only log at debug level)
+- all external dependencies have fallback / degradation behavior (cache service failure must not crash the primary flow)
+- critical write operations are protected by transactions
+- all HTTP client calls have timeout configuration
+- external call retries: every third-party API call and DB write has retry logic (>= 1 retry, with exponential backoff or fixed interval)
+- the service exposes a health check endpoint that validates critical dependencies
 
-### 扣分规则（通用）
+### Deduction Rules (Generic)
 
-| 问题 | 扣分 | 严重级别 |
+| Issue | Deduction | Severity |
 |------|------|---------|
-| 静默失败（空 catch/except 吞掉异常）| -2 | P1 |
-| 未处理的外部 HTTP 调用 | -2 | P1 |
-| 未处理的缓存操作 | -2 | P1 |
-| 缓存失败导致主流程崩溃（无降级）| -2 | P1 |
-| 外部 API 调用无超时 | -1 | P2 |
-| 关键写操作无事务 | -1 | P2 |
-| 外部调用无重试：外部API调用或数据库写入缺少重试逻辑 | -1/处 | P2 |
-| 无健康检查端点 | -1 | P2 |
-| 错误日志缺少上下文 | -0.5 | P3 |
-| 资源泄漏（连接/文件未正确关闭）| -1 | P2 |
+| Silent failure (empty `catch`/`except` swallows the exception) | -2 | P1 |
+| Unhandled external HTTP call | -2 | P1 |
+| Unhandled cache operation | -2 | P1 |
+| Cache failure crashes the primary flow (no fallback) | -2 | P1 |
+| External API call without timeout | -1 | P2 |
+| Critical write without transaction | -1 | P2 |
+| External call without retry: third-party API call or DB write lacks retry logic | -1 each | P2 |
+| Missing health check endpoint | -1 | P2 |
+| Error logs lack context | -0.5 | P3 |
+| Resource leak (connection/file not closed correctly) | -1 | P2 |
 
-### 技术栈特定检测
+### Tech-Stack-Specific Checks
 
 #### Python/FastAPI
 
 ```bash
-# 静默失败检测
-grep -rn "except.*pass" {路径}
-grep -rn "except:" {路径}
+# Silent failure checks
+grep -rn "except.*pass" {path}
+grep -rn "except:" {path}
 
-# HTTP 调用检测（然后检查是否有 try/except）
-grep -rn "httpx\|aiohttp\|requests\." {路径}
+# HTTP call checks (then verify try/except coverage)
+grep -rn "httpx\|aiohttp\|requests\." {path}
 
-# Redis/缓存操作检测
-grep -rn "redis\." {路径}
+# Redis/cache operation checks
+grep -rn "redis\." {path}
 
-# 超时检测（HTTP 调用）
-grep -rn "httpx.get\|httpx.post\|client.get" {路径} | grep -v "timeout"
+# Timeout checks (HTTP calls)
+grep -rn "httpx.get\|httpx.post\|client.get" {path} | grep -v "timeout"
 
-# 健康检查检测
-grep -rn "/health\|health_check\|healthcheck" {路径}
+# Health-check checks
+grep -rn "/health\|health_check\|healthcheck" {path}
 ```
-
 
 ---
 
-## 可维护性评分体系（Maintainability）
+## Maintainability Scoring System
 
-### 通过标准：见 quality-gates.md 门禁矩阵
+### Pass Standard
+See the gate matrix in `quality-gates.md`.
 
-### 满分条件（10/10）
+### Full-Score Condition (10/10)
 
-全部满足：
+All of the following must hold:
 
-- 类型标注完整，无 `any`/`Any` 滥用
-- 无重复代码块（> 10 行完全相同的代码）
-- 所有配置通过配置管理机制获取（无硬编码 URL/密钥/数字常量）
-- 新模块/文件已在入口文件/导出文件中注册
-- 函数单一职责（主要逻辑函数 < 50 行）
-- 命名规范：变量/函数名 ≥ 3字符，无未在项目缩写表中注册的缩写，无连续数字后缀（如 temp1/temp2）
-- 有测试覆盖（关键路径）
+- complete type annotations, no abuse of `any`/`Any`
+- no duplicated code blocks (> 10 lines of identical code)
+- all configuration is loaded through configuration management (no hard-coded URLs / secrets / numeric constants)
+- new modules/files are registered in the entry file / export file
+- functions have a single responsibility (main logic functions under 50 lines)
+- naming follows conventions: variable/function names >= 3 characters, no unregistered abbreviations, no sequential numeric suffixes such as `temp1`/`temp2`
+- tests cover critical paths
 
-### 扣分规则（通用）
+### Deduction Rules (Generic)
 
-| 问题 | 扣分 | 严重级别 |
+| Issue | Deduction | Severity |
 |------|------|---------|
-| 新模块/路由未在入口文件注册 | -2 | P1 |
-| 新文件未在导出文件注册 | -1 | P1 |
-| `any` 类型（TypeScript）| -1/处，最多 -3 | P2 |
-| `Any` 类型（Python）| -1/处，最多 -3 | P2 |
-| `# type: ignore` / `@ts-ignore` | -0.5/处，最多 -2 | P2 |
-| 重复代码块（> 10 行）| -1/处，最多 -3 | P2 |
-| 硬编码 URL/端口 | -0.5/处 | P2 |
-| 硬编码超时/限制数字 | -0.5/处 | P3 |
-| 函数过长（> 80 行）| -0.5/处，最多 -2 | P3 |
-| 命名违规：变量/函数名 < 3字符，或含未注册缩写，或使用连续数字后缀 | -0.5/处 | P3 |
-| 无返回类型标注（关键函数）| -0.5/函数，最多 -1.5 | P3 |
-| 测试覆盖率 < 60%（关键路径）| -1 | P2 |
-| 测试覆盖率 < 40%（关键路径）| -2 | P2 |
+| New module/route not registered in the entry file | -2 | P1 |
+| New file not registered in the export file | -1 | P1 |
+| `any` type (TypeScript) | -1 each, up to -3 | P2 |
+| `Any` type (Python) | -1 each, up to -3 | P2 |
+| `# type: ignore` / `@ts-ignore` | -0.5 each, up to -2 | P2 |
+| Duplicated code block (> 10 lines) | -1 each, up to -3 | P2 |
+| Hard-coded URL/port | -0.5 each | P2 |
+| Hard-coded timeout/limit constants | -0.5 each | P3 |
+| Overlong function (> 80 lines) | -0.5 each, up to -2 | P3 |
+| Naming violation: variable/function name < 3 chars, contains unregistered abbreviations, or uses sequential numeric suffixes | -0.5 each | P3 |
+| Missing return type annotation on a critical function | -0.5 each, up to -1.5 | P3 |
+| Test coverage < 60% on critical paths | -1 | P2 |
+| Test coverage < 40% on critical paths | -2 | P2 |
 
-### 技术栈特定检测
-
-#### Python/FastAPI
-
-```bash
-# Any 类型检测
-grep -rn "from typing import.*Any\|: Any\b" {路径}
-
-# type: ignore 检测
-grep -rn "# type: ignore" {路径}
-
-# 入口注册检测（main.py）
-grep -n "include_router" {main.py路径}
-
-# __init__.py 导出检测
-find {路径} -name "__init__.py" -exec grep -l "." {} \;
-
-# 硬编码 URL 检测
-grep -rn "http://\|https://" {路径} | grep -v ".md\|test\|#\|来源"
-
-# 长函数检测（粗略）
-awk '/^    def |^def /{if(lines>50)print FILENAME":"fn": "lines" lines"; fn=$0; lines=0} {lines++}' {文件}
-```
-
-
----
-
-## 架构评分体系（Architecture）
-
-### 通过标准：见 quality-gates.md 门禁矩阵
-
-### 满分条件（10/10）
-
-- 清晰分层：入口层 → 业务逻辑层 → 数据层，各层职责不越界
-- 零循环依赖
-- API 命名和响应格式统一
-- 所有配置集中管理（无分散硬编码）
-- 功能按域划分（不是按技术类型混合）
-- 新功能通过注册表添加（注册表驱动架构）
-
-### 扣分规则（通用）
-
-| 问题 | 扣分 |
-|------|------|
-| 循环依赖 | -2/个 |
-| 入口层直接访问数据库 | -2 |
-| 业务逻辑在入口层（不在逻辑层）| -1 |
-| API 命名不一致（RESTful 混用 RPC）| -1 |
-| 响应格式不一致 | -1 |
-| 功能按技术类型混合（不按业务域）| -0.5 |
-| 配置硬编码（非集中管理）| -0.5/处 |
-| 巨型文件（> 500 行）| -1/个 |
-
-### 技术栈特定检测
+### Tech-Stack-Specific Checks
 
 #### Python/FastAPI
 
 ```bash
-# 路由层直接访问 DB 检测
-grep -rn "session.execute\|session.query" {api路径}
+# Any type checks
+grep -rn "from typing import.*Any\|: Any\b" {path}
 
-# 循环依赖检测
-python3 -c "import {模块名}" 2>&1 | grep "circular\|ImportError"
+# type: ignore checks
+grep -rn "# type: ignore" {path}
 
-# API 命名一致性检测
-grep -rn "@router\.\(get\|post\|put\|delete\)" {路径} | grep -E "/[a-z]+[A-Z]"
+# Entry registration checks (main.py)
+grep -n "include_router" {main_py_path}
+
+# __init__.py export checks
+find {path} -name "__init__.py" -exec grep -l "." {} \;
+
+# Hard-coded URL checks
+grep -rn "http://\|https://" {path} | grep -v ".md\|test\|#\|source"
+
+# Long-function detection (rough)
+awk '/^    def |^def /{if(lines>50)print FILENAME":"fn": "lines" lines"; fn=$0; lines=0} {lines++}' {file}
 ```
-
 
 ---
 
-## 性能评分体系（Performance）
+## Architecture Scoring System
 
-### 通过标准：见 quality-gates.md 门禁矩阵
+### Pass Standard
+See the gate matrix in `quality-gates.md`.
 
-### 满分条件（10/10）
+### Full-Score Condition (10/10)
 
-- 零 N+1 查询（包括隐藏的 ORM 懒加载）
-- 数据库连接池配置合理（生产环境 pool_size ≥ 10）
-- 缓存连接池（不每次新建连接）
-- 高频查询缓存：被调用 ≥ 10次/请求 且更新频率 ≤ 1次/分钟 的数据查询有缓存层
-- 分页查询（列表接口不一次性返回所有数据）
-- 无异步函数中混用同步调用
-- 索引覆盖高频查询字段
+- clear layering: entry layer -> business logic layer -> data layer, with boundaries respected
+- zero circular dependencies
+- consistent API naming and response format
+- all configuration managed centrally (no scattered hard-coding)
+- functionality grouped by business domain rather than by technical type
+- new features added through a registry-driven architecture
 
-### 扣分规则（通用）
+### Deduction Rules (Generic)
 
-| 问题 | 扣分 |
+| Issue | Deduction |
 |------|------|
-| N+1 查询（明显的循环查询）| -2/处，最多 -6 |
-| 无连接池（每次请求新建连接）| -3 |
-| 异步函数中混用同步调用 | -2/处 |
-| 高频查询无缓存：符合 ≥ 10次/请求 + ≤ 1次/分钟更新条件但无缓存层的查询 | -1/处 |
-| 分页缺失（大量数据无限制返回）| -1/处 |
-| 缓存层无连接池 | -1 |
-| 高频查询字段无索引（EXPLAIN 验证）| -1 |
+| Circular dependency | -2 each |
+| Entry layer accesses the database directly | -2 |
+| Business logic placed in the entry layer instead of the logic layer | -1 |
+| Inconsistent API naming (REST mixed with RPC) | -1 |
+| Inconsistent response format | -1 |
+| Functionality mixed by technical type rather than business domain | -0.5 |
+| Hard-coded config outside centralized management | -0.5 each |
+| Giant file (> 500 lines) | -1 each |
 
-### 技术栈特定检测
-
-#### Python/FastAPI（SQLAlchemy）
-
-```bash
-# 同步混用检测
-grep -rn "time.sleep\|requests.get\|requests.post" {路径}
-
-# 无连接池检测
-grep -rn "create_engine\|create_async_engine" {路径} | grep -v "pool_size\|NullPool"
-
-# 无分页检测（粗略）
-grep -rn "\.all()\|fetchall()" {路径}
-```
-
-
----
-
-## 稳定性评分体系（Stability）
-
-### 通过标准：见 quality-gates.md 门禁矩阵
-
-### 满分条件（10/10）
-
-- 所有外部依赖有超时 + 降级 + 重试
-- 健康检查验证所有关键依赖
-- 结构化日志（含请求追踪 ID）
-- 关键操作有告警机制
-- 服务进程崩溃自动重启
-- 数据库连接池有连接预检（pool_pre_ping 或等效配置）
-
-### 扣分规则（通用）
-
-| 问题 | 扣分 |
-|------|------|
-| 外部依赖无降级（失败 = 500）| -2/个 |
-| 无健康检查端点 | -2 |
-| 健康检查不验证依赖 | -1 |
-| HTTP 调用无超时 | -1/处 |
-| 缓存服务无超时配置 | -1 |
-| 无自动重启配置 | -1 |
-| 日志无请求上下文 | -0.5 |
-| （同上方可靠性维度"外部调用无重试"规则，不重复扣分）| — |
-| 缺少告警：错误率 > 1% 的端点或 P95延迟 > 5s 的操作无告警配置 | -1/处 |
-| 数据库连接池无预检 | -0.5 |
-
-### 技术栈特定检测
+### Tech-Stack-Specific Checks
 
 #### Python/FastAPI
 
 ```bash
-# 健康检查检测
-grep -rn "/health\|healthcheck" {路径}
+# Route-layer direct DB access
+grep -rn "session.execute\|session.query" {api_path}
 
-# 自动重启检测（systemd）
-systemctl status {服务名} | grep "Restart="
+# Circular dependency detection
+python3 -c "import {module_name}" 2>&1 | grep "circular\|ImportError"
 
-# 连接池预检检测
-grep -rn "create_async_engine" {路径} | grep -v "pool_pre_ping"
+# API naming consistency checks
+grep -rn "@router\.\(get\|post\|put\|delete\)" {path} | grep -E "/[a-z]+[A-Z]"
+```
 
-# HTTP 调用无超时检测
-grep -rn "httpx.get\|httpx.post\|client.get\|client.post" {路径} | grep -v "timeout"
+---
+
+## Performance Scoring System
+
+### Pass Standard
+See the gate matrix in `quality-gates.md`.
+
+### Full-Score Condition (10/10)
+
+- zero N+1 queries, including hidden ORM lazy-loading cases
+- database connection pool configured reasonably (`pool_size >= 10` in production)
+- cache connection pooling enabled instead of creating a fresh connection on every use
+- hot-read queries cached: any query invoked >= 10 times per request and updated <= once per minute has a cache layer
+- pagination on list endpoints instead of returning everything at once
+- no synchronous calls inside async functions
+- high-frequency query fields are covered by indexes
+
+### Deduction Rules (Generic)
+
+| Issue | Deduction |
+|------|------|
+| N+1 query (clear loop-query pattern) | -2 each, up to -6 |
+| No connection pool (new connection for every request) | -3 |
+| Synchronous call inside an async function | -2 each |
+| Hot query not cached: query meets the >= 10 calls/request and <= 1 update/minute rule but has no cache layer | -1 each |
+| Missing pagination (large datasets returned without limits) | -1 each |
+| Cache layer has no connection pool | -1 |
+| High-frequency query field lacks an index (verified by `EXPLAIN`) | -1 |
+
+### Tech-Stack-Specific Checks
+
+#### Python/FastAPI (SQLAlchemy)
+
+```bash
+# Sync/async mixing checks
+grep -rn "time.sleep\|requests.get\|requests.post" {path}
+
+# Missing connection pool checks
+grep -rn "create_engine\|create_async_engine" {path} | grep -v "pool_size\|NullPool"
+
+# Missing pagination checks (rough)
+grep -rn "\.all()\|fetchall()" {path}
+```
+
+---
+
+## Stability Scoring System
+
+### Pass Standard
+See the gate matrix in `quality-gates.md`.
+
+### Full-Score Condition (10/10)
+
+- all external dependencies have timeout + fallback + retry
+- health checks verify all critical dependencies
+- structured logging includes request tracing IDs
+- critical operations have alerting
+- service processes auto-restart after crashes
+- database connection pool uses pre-ping or an equivalent health-check setting
+
+### Deduction Rules (Generic)
+
+| Issue | Deduction |
+|------|------|
+| External dependency has no fallback (failure => 500) | -2 each |
+| Missing health check endpoint | -2 |
+| Health check does not validate dependencies | -1 |
+| HTTP call without timeout | -1 each |
+| Cache service lacks timeout configuration | -1 |
+| Missing auto-restart configuration | -1 |
+| Logs lack request context | -0.5 |
+| Same issue as "external call without retry" in the reliability dimension | — |
+| Missing alerting: endpoint with error rate > 1% or operation with P95 latency > 5s has no alert configuration | -1 each |
+| DB connection pool lacks pre-ping | -0.5 |
+
+### Tech-Stack-Specific Checks
+
+#### Python/FastAPI
+
+```bash
+# Health-check detection
+grep -rn "/health\|healthcheck" {path}
+
+# Auto-restart detection (systemd)
+systemctl status {service_name} | grep "Restart="
+
+# Connection-pool pre-ping detection
+grep -rn "create_async_engine" {path} | grep -v "pool_pre_ping"
+
+# HTTP call without timeout
+grep -rn "httpx.get\|httpx.post\|client.get\|client.post" {path} | grep -v "timeout"
 ```
 
 #### Node.js/TypeScript
 
 ```bash
-# 健康检查检测
-grep -rn "/health\|healthCheck" {路径}
+# Health-check detection
+grep -rn "/health\|healthCheck" {path}
 
-# 自动重启检测（PM2/systemd）
-cat {路径}/ecosystem.config.js 2>/dev/null | grep "restart"
-systemctl status {服务名} 2>/dev/null | grep "Restart="
+# Auto-restart detection (PM2/systemd)
+cat {path}/ecosystem.config.js 2>/dev/null | grep "restart"
+systemctl status {service_name} 2>/dev/null | grep "Restart="
 
-# HTTP 调用无超时检测
-grep -rn "fetch(\|axios\." {路径} | grep -v "timeout\|signal\|AbortController"
+# HTTP call without timeout
+grep -rn "fetch(\|axios\." {path} | grep -v "timeout\|signal\|AbortController"
 ```

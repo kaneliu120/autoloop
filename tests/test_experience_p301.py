@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P3-01：主表 upsert + experience-audit.md。"""
+"""P3-01: main-table upsert + `experience-audit.md`."""
 
 import importlib.util
 import os
@@ -34,12 +34,12 @@ class TestExperienceP301UpsertAudit(unittest.TestCase):
     def test_two_writes_one_main_row_and_two_audit_blocks(self):
         m = self.mod
         ok1 = m.cmd_write(
-            self.reg, "S99-p301", "保持", "0.5", None,
+            self.reg, "S99-p301", "Keep", "0.5", None,
             status=None, template="T1", dimension="coverage", tags=None,
         )
         self.assertTrue(ok1)
         ok2 = m.cmd_write(
-            self.reg, "S99-p301", "保持", "0.3", None,
+            self.reg, "S99-p301", "Keep", "0.3", None,
             status=None, template="T1", dimension="coverage", tags=None,
         )
         self.assertTrue(ok2)
@@ -61,7 +61,7 @@ class TestExperienceP301UpsertAudit(unittest.TestCase):
             before = m._parse_strategy_table(f.read())
         n_before = len(before)
         ok = m.cmd_write(
-            self.reg, "multi:{S01-a,S02-b}", "待验证", "0", None,
+            self.reg, "multi:{S01-a,S02-b}", "Pending Validation", "0", None,
             template="T1", dimension="—", tags=None,
         )
         self.assertTrue(ok)
@@ -76,7 +76,7 @@ class TestExperienceP301UpsertAudit(unittest.TestCase):
     def test_consolidate_merges_duplicate_rows(self):
         m = self.mod
         m.cmd_write(
-            self.reg, "S98-dup", "保持", "1", None,
+            self.reg, "S98-dup", "Keep", "1", None,
             template="T2", dimension="x", tags=None,
         )
         with open(self.reg, encoding="utf-8") as f:
@@ -88,7 +88,7 @@ class TestExperienceP301UpsertAudit(unittest.TestCase):
                 break
         self.assertIsNotNone(insert_at)
         dup_line = (
-            "| S98-dup | T2 | x | [保持] @2099-01-01 | 0 | — | 1 | 50% | 观察 |"
+            "| S98-dup | T2 | x | [Keep] @2099-01-01 | 0 | — | 1 | 50% | Observation |"
         )
         lines.insert(insert_at, dup_line)
         with open(self.reg, "w", encoding="utf-8") as f:
@@ -101,7 +101,7 @@ class TestExperienceP301UpsertAudit(unittest.TestCase):
             raw2 = m._parse_strategy_table(f.read())
         dup_after = [r for r in raw2 if r.get("strategy_id") == "S98-dup"]
         self.assertEqual(len(dup_after), 1)
-        # 审计仅 1 次 write(score=1)；合并后 avg_delta 须为历次 delta 平均 = 1，而非两行 avg 的算术平均
+        # Only one audited write(score=1); after consolidation avg_delta must stay the mean of the round deltas (=1), not the mean of the two row averages.
         self.assertEqual(dup_after[0].get("use_count"), "1")
         self.assertEqual(dup_after[0].get("avg_delta"), "1")
 
@@ -113,8 +113,8 @@ class TestExperienceListDedupe(unittest.TestCase):
         self.addCleanup(lambda: shutil.rmtree(td, ignore_errors=True))
         reg = os.path.join(td, "experience-registry.md")
         shutil.copy(SRC_REG, reg)
-        mod.cmd_write(reg, "S97-l", "保持", "1", None, template="T1", dimension="d", tags=None)
-        mod.cmd_write(reg, "S97-l", "避免", "-1", None, template="T1", dimension="d", tags=None)
+        mod.cmd_write(reg, "S97-l", "Keep", "1", None, template="T1", dimension="d", tags=None)
+        mod.cmd_write(reg, "S97-l", "Avoid", "-1", None, template="T1", dimension="d", tags=None)
         lst = mod.cmd_list(reg)
         s97 = [x for x in lst if x.get("strategy_id") == "S97-l"]
         self.assertEqual(len(s97), 1)

@@ -1,4 +1,4 @@
-"""ACT：按计划命令 allowlist 执行子进程（shell=False）。"""
+"""ACT: execute planned commands through an allowlist (shell=False)."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ def _command_allowed(cmd: str, patterns: Sequence[str]) -> bool:
     for p in patterns:
         if fnmatch.fnmatch(cmd, p) or fnmatch.fnmatch(cmd.strip(), p):
             return True
-        # 也允许 pattern 为子串（手册：片段）
+        # Also allow the pattern as a substring (manual: fragment matching)
         if p in cmd:
             return True
     return False
@@ -41,7 +41,7 @@ def run_planned_commands(
     timeout_per_cmd: int = 300,
     env: dict[str, str] | None = None,
 ) -> list[CommandResult]:
-    """执行 planned_commands；未通过 allowlist 的命令记错但不抛异常。"""
+    """Execute planned_commands; commands failing the allowlist are recorded as errors but not raised."""
     wd = os.path.abspath(work_dir)
     merged_env = {**os.environ, **(env or {})}
     results: list[CommandResult] = []
@@ -125,7 +125,7 @@ def run_planned_commands(
 
 
 def summarize_act_for_state(results: list[CommandResult]) -> dict[str, Any]:
-    """写入 iterations[-1].act 的精简摘要（JSON 可序列化）。"""
+    """Write a compact JSON-serializable summary into iterations[-1].act."""
     return {
         "runner_executed": True,
         "commands": [

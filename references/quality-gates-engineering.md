@@ -1,167 +1,168 @@
-# Quality Gates (Engineering) — T4/T7/T8 工程质量门禁
+# Quality Gates (Engineering) — T4/T7/T8 Engineering Quality Gates
 
-> 从 quality-gates.md 分离。评分通用规范、语义词汇表、知识类门禁(T1/T2/T5/T6) 见 `references/quality-gates.md`。
-> 评分锚点和扣分规则详见 `references/enterprise-standard.md`。
+> Split out from `quality-gates.md`. For the shared scoring conventions, semantic vocabulary, and knowledge-task gates (T1/T2/T5/T6), see `references/quality-gates.md`.
+> For scoring anchors and deduction rules, see `references/enterprise-standard.md`.
 
-## 工程类任务门禁（T4/T7/T8）
+## Engineering Task Gates (T4/T7/T8)
 
-### 语法验证门禁（强制，阶段 1 结束前）
+### Syntax Validation Gate (Mandatory, before Phase 1 ends)
 
 ```bash
-# 使用 plan 中定义的 syntax_check_cmd 验证所有修改文件
-# syntax_check_file_arg=true:  {syntax_check_cmd} {文件路径}（逐文件验证）
-# syntax_check_file_arg=false: {syntax_check_cmd}（项目级验证，不附加文件名）
+# Use the syntax_check_cmd defined in the plan to validate all modified files
+# syntax_check_file_arg=true:  {syntax_check_cmd} {file_path} (validate file by file)
+# syntax_check_file_arg=false: {syntax_check_cmd} (project-level validation, no file argument)
 
-# 通过标准：零错误（有 warning 可以接受，但必须记录）
+# Pass condition: zero errors (warnings are acceptable, but must be recorded)
 ```
 
-### 路由注册门禁（强制，有新路由时）
+### Route Registration Gate (Mandatory when new routes are added)
 
 ```bash
-# 验证新路由已注册（{new_router_name} = plan 中定义的 router 变量名）
-# 按技术栈选择对应命令：
+# Verify that the new route has been registered ({new_router_name} = the router variable name defined in the plan)
+# Choose the command based on the tech stack:
 # Python/FastAPI: grep -n "include_router.*{new_router_name}" {main_entry_file}
 # Node.js: grep -n "use\|route" {main_entry_file}
-# 其他: 按项目规范检查主入口的路由注册
+# Other: check route registration in the main entrypoint according to project conventions
 
-# 通过标准：grep 找到该 router 的具体注册语句
+# Pass condition: grep finds the exact registration statement for that router
 ```
 
-### 安全性门禁（T4/T7）
+### Security Gate (T4/T7)
 
-> 注意：安全严重度分类以 `references/enterprise-standard.md` 为准。
+> Note: security severity classification follows `references/enterprise-standard.md`.
 
-| 严重级别 | 问题类型 | 通过标准 |
-|---------|---------|---------|
-| P1（必须修复）| SQL注入、命令注入、敏感数据暴露、XSS、路径穿越 | = 0 个 |
-| P2（必须修复）| 缺少输入验证 | = 0 个 |
-| P3（记录）| CORS 配置、过宽的错误消息 | 记录，不影响交付 |
+| Severity | Issue Type | Pass Condition |
+|---------|------------|----------------|
+| P1 (must fix) | SQL injection, command injection, sensitive data exposure, XSS, path traversal | = 0 |
+| P2 (must fix) | Missing input validation | = 0 |
+| P3 (record only) | CORS configuration, overly broad error messages | Record only; does not block delivery |
 
-T7 企业级标准：安全性得分 ≥ 9/10
+T7 enterprise standard: security score >= 9/10
 
-### 可靠性门禁（T4/T7）
+### Reliability Gate (T4/T7)
 
-| 严重级别 | 问题类型 | 通过标准 |
-|---------|---------|---------|
-| P1（必须修复）| 静默失败 (except: pass)、关键路径无异常处理 | = 0 个 |
-| P2（必须修复）| 无超时配置、缺少降级回退 | = 0 个（T4）；T7 见下方复合判定规则（≤ 3 个）|
-| P3（记录）| 日志不完整、重试逻辑缺失 | 记录，不影响交付 |
+| Severity | Issue Type | Pass Condition |
+|---------|------------|----------------|
+| P1 (must fix) | Silent failure (`except: pass`), missing exception handling on critical paths | = 0 |
+| P2 (must fix) | No timeout configuration, missing fallback/degradation | = 0 for T4; for T7 see the compound rule below (<= 3) |
+| P3 (record only) | Incomplete logging, missing retry logic | Record only; does not block delivery |
 
-T7 企业级标准：可靠性得分 ≥ 8/10
+T7 enterprise standard: reliability score >= 8/10
 
-### 可维护性门禁（T4/T7）
+### Maintainability Gate (T4/T7)
 
-| 严重级别 | 问题类型 | 通过标准 |
-|---------|---------|---------|
-| P1（必须修复）| 新路由未注册、新文件未导出 | = 0 个 |
-| P2（建议）| `any` 类型滥用、重复代码 | ≤ 3 个（T4）|
-| P3（记录）| 命名不规范、注释缺失 | 记录，不影响交付 |
+| Severity | Issue Type | Pass Condition |
+|---------|------------|----------------|
+| P1 (must fix) | New routes not registered, new files not exported | = 0 |
+| P2 (recommended) | Abuse of `any`, duplicated code | <= 3 for T4 |
+| P3 (record only) | Naming violations, missing comments | Record only; does not block delivery |
 
-T7 企业级标准：可维护性得分 ≥ 8/10
+T7 enterprise standard: maintainability score >= 8/10
 
-### 架构门禁（T8）
+### Architecture Gate (T8)
 
-| 问题类型 | 通过标准 |
-|---------|---------|
-| 循环依赖 | = 0 个 |
-| 跨层直接访问 | = 0 个（路由层直接操作 DB）|
-| API 不一致（同类路由格式不同）| ≤ 2 处（记录，计划重构）|
+| Issue Type | Pass Condition |
+|------------|----------------|
+| Circular dependencies | = 0 |
+| Direct cross-layer access | = 0 (for example, route layer accessing the DB directly) |
+| API inconsistency (same class of routes formatted differently) | <= 2 cases (recorded, scheduled for refactor) |
 
-T8 企业级标准：架构得分 ≥ 8/10
+T8 enterprise standard: architecture score >= 8/10
 
-### 性能门禁（T8）
+### Performance Gate (T8)
 
-| 问题类型 | 通过标准 |
-|---------|---------|
-| N+1 查询 | = 0 个（生产路径）|
-| 连接池配置缺失 | = 0 个 |
-| 热路径无缓存（高频读，低更新）| ≤ 2 处（记录，计划添加）|
+| Issue Type | Pass Condition |
+|------------|----------------|
+| N+1 queries | = 0 on production paths |
+| Missing connection pool configuration | = 0 |
+| No cache on hot paths (high read frequency, low update rate) | <= 2 cases (recorded, scheduled for addition) |
 
-T8 企业级标准：性能得分 ≥ 8/10
+T8 enterprise standard: performance score >= 8/10
 
-### 稳定性门禁（T8）
+### Stability Gate (T8)
 
-| 问题类型 | 通过标准 |
-|---------|---------|
-| 外部依赖无降级 | = 0 个（Redis / 第三方 API）|
-| 健康检查端点缺失 | = 0 个 |
-| 关键操作无超时 | = 0 个 |
+| Issue Type | Pass Condition |
+|------------|----------------|
+| External dependencies without fallback | = 0 (Redis / third-party APIs) |
+| Missing health check endpoint | = 0 |
+| Critical operations without timeout | = 0 |
 
-T8 企业级标准：稳定性得分 ≥ 8/10
+T8 enterprise standard: stability score >= 8/10
 
 ---
 
-> T4 交付任务评分锚点：详见 `references/enterprise-standard.md` 对应维度。
-> T7 企业级质量评分锚点：详见 `references/enterprise-standard.md` 对应维度。
-> T8 优化任务评分锚点：详见 `references/enterprise-standard.md` 对应维度。
+> T4 delivery-task scoring anchors: see the corresponding dimension in `references/enterprise-standard.md`.
+> T7 enterprise-quality scoring anchors: see the corresponding dimension in `references/enterprise-standard.md`.
+> T8 optimization-task scoring anchors: see the corresponding dimension in `references/enterprise-standard.md`.
+
 ---
 
-## 门禁评估矩阵（快速查阅）
+## Gate Evaluation Matrix (Quick Reference)
 
-| 模板 | 硬门禁 | 软门禁 |
+| Template | Hard Gates | Soft Gates |
 | ---- | ------ | ------ |
-| T1 | 覆盖率>=85%, 可信度>=80% | 一致性>=90%, 完整性>=85% |
-| T2 | 覆盖率100%, 可信度>=80%, 偏见<0.15 | 敏感性(+-20%排名不变) |
-| T5 | KPI达plan目标值 | -- |
-| T6 | 通过率>=95%, 平均分>=7/10 | -- |
-| T4 | 语法零错误, P1/P2=0, 人工验收 | 服务健康检查 |
-| T7 | 安全>=9, 可靠>=8, 可维护>=8, P1=0, 安全P2=0 | 可靠P2<=3, 可维护P2<=5 |
-| T8 | 架构>=8, 性能>=8, 稳定>=8 | -- |
+| T1 | coverage >= 85%, credibility >= 80% | consistency >= 90%, completeness >= 85% |
+| T2 | coverage = 100%, credibility >= 80%, bias < 0.15 | sensitivity (top-ranked option unchanged under +/-20%) |
+| T5 | KPI meets the target value in the plan | -- |
+| T6 | pass_rate >= 95%, avg_score >= 7/10 | -- |
+| T4 | zero syntax errors, P1/P2 = 0, manual acceptance | service health check |
+| T7 | security >= 9, reliability >= 8, maintainability >= 8, P1 = 0, security P2 = 0 | reliability P2 <= 3, maintainability P2 <= 5 |
+| T8 | architecture >= 8, performance >= 8, stability >= 8 | -- |
 
 ---
 
-## T4 N/A 处理规则
+## T4 N/A Handling Rules
 
 ```text
-如果 service_list 为空或 N/A：Phase 4 服务检查标记为 N/A（跳过）
-如果 health_check_url 为空：Phase 4 健康检查标记为 N/A（跳过）
-合法性约束：service_list 和 health_check_url 至少须提供其中一项，否则 plan 不合法
-Phase 5：始终需要用户输入 '用户确认（线上验收）'，不受 N/A 影响
+If service_list is empty or N/A: mark the Phase 4 service check as N/A (skip it)
+If health_check_url is empty: mark the Phase 4 health check as N/A (skip it)
+Validity constraint: at least one of service_list or health_check_url must be provided, otherwise the plan is invalid
+Phase 5: always requires the user to input 'User confirmed (production acceptance)' and is not affected by N/A
 ```
 
 ---
 
-## T7 复合判定规则（唯一规则，所有文件以此为准）
+## T7 Compound Pass Rule (Single Source of Truth)
 
-T7 达标条件为复合判定，以下两个条件**必须同时满足**：
+T7 passes only when the following two conditions are both satisfied:
 
-**条件一：分数达标**
-
-```text
-安全性 ≥ 9/10
-可靠性 ≥ 8/10
-可维护性 ≥ 8/10
-```
-
-**条件二：计数达标**
+**Condition 1: score thresholds met**
 
 ```text
-P1 问题 = 0（所有维度）          ← (Hard Gate)
-安全 P2 问题 = 0                 ← (Hard Gate)
-可靠性 P2 问题 ≤ 3              ← (Soft Gate)
-可维护性 P2 问题 ≤ 5            ← (Soft Gate)
+Security >= 9/10
+Reliability >= 8/10
+Maintainability >= 8/10
 ```
 
-**计数优先原则**：即使分数已达标，P1 问题 > 0 则不达标，必须继续修复 P1 后才能终止。
+**Condition 2: issue counts within tolerance**
 
-> 本规则是 T7 达标的唯一判定标准。`delivery-phases.md` Phase 2 中 P2=0 是 T4 的交付标准，不适用于 T7。两者不冲突：T4 要求交付代码零 P2，T7 允许遗留少量低风险 P2 问题。
+```text
+P1 issues = 0 (all dimensions)           <- (Hard Gate)
+Security P2 issues = 0                   <- (Hard Gate)
+Reliability P2 issues <= 3               <- (Soft Gate)
+Maintainability P2 issues <= 5           <- (Soft Gate)
+```
+
+**Count-first principle**: even if the scores meet the threshold, any P1 issue > 0 means the task still fails. P1 issues must be fixed before termination is allowed.
+
+> This rule is the only valid definition of T7 pass/fail. The `P2=0` rule in `delivery-phases.md` Phase 2 is the T4 delivery standard and does not apply to T7. There is no conflict: T4 requires zero P2 issues for delivered code, while T7 allows a small number of residual low-risk P2 issues.
 
 ---
 
-> 硬门禁与软门禁的完整分类见本文件顶部「门禁分类总览」章节。
+> For the full hard-gate/soft-gate classification, see the "Gate Classification Overview" section at the top of this file.
 
 ---
 
-## 门禁豁免规则
+## Gate Exemption Rules
 
-在以下情况可以记录豁免（不是跳过，是明确说明为什么可以接受）：
+The following cases may be exempted if they are explicitly recorded and justified:
 
-1. **遗留代码豁免**：不在本次修改范围内的遗留问题，可以记录但不强制修复
-2. **技术债豁免**：P3 级别的问题，在预算耗尽时可以记录到"遗留问题"，不影响交付
-3. **环境限制豁免**：线上验收因环境问题无法执行的步骤，需要说明替代验证方法
+1. **Legacy-code exemption**: issues outside the scope of the current change may be recorded without being mandatory to fix.
+2. **Technical-debt exemption**: P3-level issues may be recorded under "open issues" when the budget is exhausted, without blocking delivery.
+3. **Environment-limitation exemption**: if a production acceptance step cannot run because of the environment, the alternative validation method must be stated.
 
-**豁免必须**：
-- 明确说明豁免原因
-- 评估影响（是否影响核心功能）
-- 记录到 progress.md 和最终报告的"遗留问题"部分
-- 不得隐藏（不是"忘了"，是"知道了，决定不修复，原因是..."）
+**Every exemption must**:
+- explicitly state the reason for the exemption
+- assess the impact (including whether core functionality is affected)
+- be recorded in `progress.md` and in the "open issues" section of the final report
+- remain visible; this is not "forgotten", it is "known, intentionally not fixed, because ..."

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""无人值守 Runner、--stop-after、文件锁（实施手册）。"""
+"""Unattended runner, `--stop-after`, and file locks (implementation guide)."""
 
 import json
 import os
@@ -35,7 +35,7 @@ class TestTsvAutoP2(unittest.TestCase):
         self.assertTrue(tsv_auto.needs_auto_tsv_row(st))
         row = tsv_auto.build_verify_tsv_row(st)
         self.assertIsNotNone(row)
-        self.assertIn("跨维影响", row["side_effect"])
+        self.assertIn("Cross-dimension impact", row["side_effect"])
 
     def test_skip_when_side_effect_ok(self):
         try:
@@ -52,7 +52,7 @@ class TestTsvAutoP2(unittest.TestCase):
             },
             "iterations": [{"scores": {}}],
             "results_tsv": [
-                {"side_effect": "跨维影响: syntax,coverage", "iteration": 1}
+                {"side_effect": "Cross-dimension impact: syntax,coverage", "iteration": 1}
             ],
         }
         self.assertFalse(tsv_auto.needs_auto_tsv_row(st))
@@ -102,7 +102,7 @@ class TestTsvAutoP2(unittest.TestCase):
             st2 = json.loads(Path(td, "autoloop-state.json").read_text(encoding="utf-8"))
             self.assertTrue(len(st2.get("results_tsv", [])) >= 1)
             last = st2["results_tsv"][-1]
-            self.assertIn("跨维影响", last.get("side_effect", ""))
+            self.assertIn("Cross-dimension impact", last.get("side_effect", ""))
 
 
 class TestPrometheusMetrics(unittest.TestCase):
@@ -201,7 +201,7 @@ class TestReflectValidate(unittest.TestCase):
         r = normalize_reflect(
             {
                 "strategy_id": "S01-a",
-                "effect": "待验证",
+                "effect": "Pending Validation",
                 "score": 0,
                 "dimension": "syntax",
             }
@@ -332,7 +332,7 @@ class TestDecideHandoffValidate(unittest.TestCase):
 
 
 def _runner_subprocess_env():
-    """子进程需能 import autoloop_runner（editable 安装或 PYTHONPATH=services）。"""
+    """Child processes must be able to import `autoloop_runner` (editable install or `PYTHONPATH=services`)."""
     e = dict(os.environ)
     p = str(SERVICES)
     prev = e.get("PYTHONPATH", "")
@@ -341,7 +341,7 @@ def _runner_subprocess_env():
 
 
 class TestRunnerTickFirstStep(unittest.TestCase):
-    """INIT → tick 仅需 controller 切片，无需 OpenAI。"""
+    """`INIT -> tick` only needs controller slicing and does not require OpenAI."""
 
     def test_tick_from_init_completes_orient(self):
         env = _runner_subprocess_env()

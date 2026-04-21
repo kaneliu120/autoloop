@@ -5,23 +5,21 @@ Used by autoloop-score (kpi_target gate) and autoloop-controller (check_gates_pa
 
 from __future__ import annotations
 
-_KPI_PASS_STATUS = frozenset({"达标", "豁免", "通过", "pass", "passed"})
+_KPI_PASS_STATUS = frozenset({"met", "exempt", "pass", "passed"})
 
 
 def plan_gate_is_exempt(gate_row):
-    """plan.gates 行 status=豁免 / Exempt 时 rollup 视同移除该门禁（quality-gates.md）。"""
+    """When a plan.gates row has status=exempt, roll it up as if the gate were removed (quality-gates.md)."""
     if not isinstance(gate_row, dict):
         return False
     s = (gate_row.get("status") or "").strip()
-    if s == "豁免":
-        return True
     return s.lower() == "exempt"
 
 
 def results_tsv_last_row_fail_closed(state):
-    """与 autoloop-variance / controller EVOLVE 一致：末行 TSV 方差≥2 或 0<置信度<50% 为 fail-closed。
+    """Aligned with autoloop-variance / controller EVOLVE: the last TSV row is fail-closed if variance≥2 or 0<confidence<50%.
 
-    返回 (is_fail_closed, reason_or_none)。
+    Returns (is_fail_closed, reason_or_none).
     """
     rows = state.get("results_tsv") or []
     if not rows:
@@ -32,11 +30,11 @@ def results_tsv_last_row_fail_closed(state):
     try:
         var = float(sv) if sv and sv != "—" else 0.0
     except ValueError:
-        return True, "score_variance 非数字"
+        return True, "score_variance is not numeric"
     try:
         c = float(conf) if conf and conf != "—" else 100.0
     except ValueError:
-        return True, "confidence 非数字"
+        return True, "confidence is not numeric"
     if var >= 2.0:
         return True, "score_variance≥2.0"
     if c < 50 and c != 0:
@@ -52,7 +50,7 @@ def kpi_row_satisfied(gate_row, current_override=None):
     """
     if not isinstance(gate_row, dict):
         return False
-    status = (gate_row.get("status") or "").strip()
+    status = (gate_row.get("status") or "").strip().lower()
     if status in _KPI_PASS_STATUS:
         return True
     target = gate_row.get("target")
@@ -61,7 +59,20 @@ def kpi_row_satisfied(gate_row, current_override=None):
         current = current_override
     if current is not None and target is not None:
         try:
-            return float(current) >= float(target)
+            c, t = float(current), float(target)
+            comparator = gate_row.get("comparator", ">=")
+            if comparator == ">=":
+                return c >= t
+            elif comparator == "<=":
+                return c <= t
+            elif comparator == "==":
+                return c == t
+            elif comparator == "<":
+                return c < t
+            elif comparator == ">":
+                return c > t
+            else:
+                return c >= t  # default fallback
         except (ValueError, TypeError):
             return False
     return False

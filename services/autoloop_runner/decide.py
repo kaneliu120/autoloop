@@ -1,4 +1,4 @@
-"""DECIDE：校验并序列化 plan.decide_act_handoff。"""
+"""DECIDE: validate and serialize plan.decide_act_handoff."""
 
 from __future__ import annotations
 
@@ -32,5 +32,5 @@ def validate_handoff(obj: dict[str, Any]) -> tuple[bool, str]:
 
 
 def handoff_to_state_json(obj: dict[str, Any]) -> str:
-    """单行 JSON 供 autoloop-state.py update 使用。"""
+    """Single-line JSON for autoloop-state.py update."""
     return json.dumps(obj, ensure_ascii=False, separators=(",", ":"))

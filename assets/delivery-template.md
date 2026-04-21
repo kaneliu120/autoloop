@@ -1,179 +1,177 @@
-> **注意**：此模板原为 T4 Phase 0.5（文档化）的产出格式。T4 已瘦身为 Phase 1-5（开发→验收），
-> 分析和文档化阶段已移至独立的产品设计模板（T3）。此模板现供**产品设计阶段**使用，
-> T4 接收已确认的方案文档作为 Phase 1 的输入。
+> **Note**: This template was originally the output format for T4 Phase 0.5 (documentation). T4 has since been slimmed down to Phase 1-5 (development → acceptance), and the analysis/documentation phase now lives in the separate product design template (T3). This template is now used for the **product design phase**. T4 consumes the confirmed design document as input for Phase 1.
 
-# {功能名} 实施方案
+# {Feature Name} Implementation Plan
 
-**日期**：{YYYY-MM-DD}
-**状态**：暂停等待确认
-**任务 ID**：autoloop-{YYYYMMDD-HHMMSS}
-**作者**：AutoLoop T4 Deliver
-**审阅者**：{审阅者}
+**Date**: {YYYY-MM-DD}
+**Status**: Paused awaiting confirmation
+**Task ID**: autoloop-{YYYYMMDD-HHMMSS}
+**Author**: AutoLoop T4 Deliver
+**Reviewer**: {Reviewer}
 
 ---
 
-## 问题描述
+## Problem Statement
 
-{用自己的话重述用户需求，确认理解正确。包含：背景、现状、期望结果}
+{Restate the user request in your own words and confirm the understanding is correct. Include background, current state, and expected outcome.}
 
-**核心目标**：{一句话}
+**Primary goal**: {one sentence}
 
-**不在本次范围内**：
-- {排除项 1}
-- {排除项 2}
-
----
-
-## 影响范围
-
-### 修改文件
-
-| 文件路径（绝对）| 改动类型 | 改动内容摘要 |
-|--------------|---------|------------|
-| {路径} | 修改 | {改什么} |
-| {路径} | 新建 | {实现什么} |
-
-### 数据库变更
-
-{数据库变更SQL — 根据实际技术栈编写。如有新增表、新增列、新增索引，在此写出完整 DDL 语句（包含幂等保护，如 IF NOT EXISTS）。无数据库变更则填写"无"。}
-
-使用 `{migration_check_cmd}` 验证迁移状态。
-
-### API 变更
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| {方法} | {路径} | {说明} |
-
-### 前端变更（如有）
-
-| 页面/组件 | 路径 | 改动说明 |
-|---------|------|---------|
-| {组件名} | {前端路径} | {改动} |
+**Out of scope for this round**:
+- {exclusion 1}
+- {exclusion 2}
 
 ---
 
-## 具体方案
+## Impact Scope
 
-### 后端实现
+### Files to Modify
 
-{描述后端实现方案，包括数据模型设计、路由逻辑、关键函数签名。使用通用描述，不依赖特定框架语法。}
+| Absolute file path | Change type | Summary of changes |
+|--------------------|-------------|--------------------|
+| {path} | Modify | {what to change} |
+| {path} | Add | {what to implement} |
 
-#### 数据模型
+### Database Changes
 
-{描述数据模型的字段和关系。具体实现语法参见附录技术栈示例。}
+{Database change SQL - write it according to the actual tech stack. If you add tables, columns, or indexes, write the full DDL here, including idempotent guards such as IF NOT EXISTS. If there are no database changes, write "None".}
 
-#### API 路由
+Use `{migration_check_cmd}` to verify migration status.
 
-{描述新增路由的路径、方法、请求参数、响应格式。}
+### API Changes
 
-在 `{main_entry_file}` 注册 `{new_router_name}`。
+| Method | Path | Description |
+|--------|------|-------------|
+| {method} | {path} | {description} |
 
-### 前端实现（如有）
+### Frontend Changes (if any)
 
-{描述前端实现方案，包括组件结构、状态管理、API 调用方式。具体实现语法参见附录技术栈示例。}
-
-### 数据库迁移
-
-{描述迁移方案：需要创建哪些新表/列/索引，迁移文件如何组织，如何支持回滚（downgrade）。具体迁移工具用法参见附录技术栈示例。}
-
----
-
-## 实施步骤
-
-**Step 0**：读取现有相关代码，确认理解现有架构
-
-**Step 1**：创建数据库迁移脚本（数据库先行，其他开发依赖此步骤）
-- 迁移文件包含 upgrade 和 downgrade 实现
-- 使用幂等操作防止重复执行报错
-
-**Step 2**：实现数据模型（{model 文件路径}）
-
-**Step 3**：实现请求/响应 Schema（{schema 文件路径}）
-
-**Step 4**：实现路由函数（{路由文件路径}）
-- 所有外部调用有异常处理，不允许静默失败
-- 新文件在模块导出文件中声明
-
-**Step 5**：在 `{main_entry_file}` 注册 `{new_router_name}`
-- 按项目技术栈的路由注册规范操作
-
-**Step 6**：实现前端组件（如有，可与 Step 2-5 并行）
-
-**Step 7**：对所有修改文件运行语法检查（`{syntax_check_cmd}`，按 `{syntax_check_file_arg}` 决定是否附加单文件参数）
-
-**Step 8**：代码审查（安全 / 可靠性 / 接口一致性），P1/P2 = 0 才可继续
-
-**Step 9**：提交代码并部署（`{deploy_command}`）
-
-**Step 10**：线上验收（访问 `{acceptance_url}`，人工确认）
+| Page / component | Path | Change summary |
+|------------------|------|----------------|
+| {component name} | {frontend path} | {change} |
 
 ---
 
-## 风险与缓解
+## Detailed Plan
 
-| 风险 | 影响 | 概率 | 缓解措施 |
-|------|------|------|---------|
-| {风险 1} | P1/P2/P3 | P1/P2/P3 | {缓解措施} |
-| 数据库迁移失败 | 高 | 低 | downgrade 支持回滚 |
-| 前后端接口不一致 | 中 | 中 | 开发前确认接口定义 |
+### Backend Implementation
 
----
+{Describe the backend implementation plan, including data model design, routing logic, and key function signatures. Use general language and avoid framework-specific syntax.}
 
-## 验收标准
+#### Data Model
 
-**功能验收**：
-- [ ] {验收标准 1}
-- [ ] {验收标准 2}
-- [ ] {验收标准 3}
+{Describe the model fields and relationships. See the appendix for technology-stack-specific examples.}
 
-**技术验收**：
-- [ ] 所有修改文件通过语法检查（`{syntax_check_cmd}`）
-- [ ] 新路由已注册：`grep -n "{new_router_name}" {main_entry_file}`
-- [ ] 数据库迁移状态正确：`{migration_check_cmd}`（无迁移则 N/A）
-- [ ] 代码审查 P1/P2 = 0
-- [ ] Health check（`{health_check_url}`）返回 200（N/A 则跳过）
-- [ ] `{service_list}` 中所有服务全部 active（N/A 则跳过）
+#### API Routes
 
-**线上验收**：
-- [ ] 浏览器（桌面）功能正常
-- [ ] 浏览器（手机）布局正常
-- [ ] Console 零红色错误
-- [ ] 现有功能无回归
+{Describe the path, method, request parameters, and response format for any new routes.}
+
+Register `{new_router_name}` in `{main_entry_file}`.
+
+### Frontend Implementation (if any)
+
+{Describe the frontend implementation plan, including component structure, state management, and API calls. See the appendix for technology-stack-specific examples.}
+
+### Database Migration
+
+{Describe the migration plan: which new tables / columns / indexes need to be created, how the migration files should be organized, and how rollback (downgrade) will be supported. See the appendix for tool-specific examples.}
 
 ---
 
-## 回滚方案
+## Implementation Steps
 
-**触发条件**：部署后发现严重 Bug，影响生产
+**Step 0**: Read the existing related code and confirm understanding of the current architecture
 
-**回滚步骤**：
+**Step 1**: Create the database migration script first; all later development depends on it
+- The migration file must include both upgrade and downgrade implementations
+- Use idempotent operations to avoid duplicate-execution failures
 
-1. Git 回滚：`git revert {commit_hash} && git push origin main`
-2. 线上重新部署：**执行命令见 delivery-phases.md §Phase 4 部署**
-3. 数据库回滚（如有迁移）：**执行命令见 delivery-phases.md §Phase 4 迁移回滚**
+**Step 2**: Implement the data model ({model file path})
 
-**回滚预计耗时**：{N} 分钟
+**Step 3**: Implement the request / response schema ({schema file path})
+
+**Step 4**: Implement the route function ({route file path})
+- Handle exceptions for all external calls; no silent failures
+- Declare the new file in the module export file
+
+**Step 5**: Register `{new_router_name}` in `{main_entry_file}`
+- Follow the project's route registration conventions
+
+**Step 6**: Implement frontend components (if any; this can run in parallel with Steps 2-5)
+
+**Step 7**: Run syntax checks on all modified files (`{syntax_check_cmd}`, append a single-file argument only if `{syntax_check_file_arg}` is true)
+
+**Step 8**: Code review (security / reliability / interface consistency); proceed only if P1/P2 = 0
+
+**Step 9**: Commit and deploy (`{deploy_command}`)
+
+**Step 10**: Online acceptance check (visit `{acceptance_url}` and confirm manually)
 
 ---
 
-## 审阅记录
+## Risks and Mitigations
 
-| 时间 | 审阅者 | 意见 | 状态 |
-|------|--------|------|------|
-| {时间} | {审阅者} | {意见} | 待审查 / 通过 / 未通过 |
+| Risk | Impact | Probability | Mitigation |
+|------|--------|-------------|------------|
+| {risk 1} | P1/P2/P3 | P1/P2/P3 | {mitigation} |
+| Database migration failure | High | Low | Support rollback in downgrade |
+| Frontend/backend API mismatch | Medium | Medium | Confirm the API contract before development |
 
 ---
 
-## 附录：技术栈示例（仅供参考）
+## Acceptance Criteria
 
-> 以下内容为特定技术栈的实现示例，仅供参考。实际实现以项目技术栈为准，不得将此附录内容照搬至主体方案中。
+**Functional acceptance**:
+- [ ] {acceptance criterion 1}
+- [ ] {acceptance criterion 2}
+- [ ] {acceptance criterion 3}
 
-### Python/FastAPI 示例
+**Technical acceptance**:
+- [ ] All modified files pass syntax checks (`{syntax_check_cmd}`)
+- [ ] New route is registered: `grep -n "{new_router_name}" {main_entry_file}`
+- [ ] Database migration status is correct: `{migration_check_cmd}` (skip if N/A)
+- [ ] Code review P1/P2 = 0
+- [ ] Health check (`{health_check_url}`) returns 200 (skip if N/A)
+- [ ] All services in `{service_list}` are active (skip if N/A)
 
-**数据模型（SQLAlchemy）**：
+**Online acceptance**:
+- [ ] Desktop browser flow works correctly
+- [ ] Mobile browser layout works correctly
+- [ ] No red console errors
+- [ ] No regressions in existing functionality
+
+---
+
+## Rollback Plan
+
+**Trigger condition**: a severe bug is found after deployment and affects production
+
+**Rollback steps**:
+
+1. Git rollback: `git revert {commit_hash} && git push origin main`
+2. Redeploy in production: **see delivery-phases.md §Phase 4 deployment commands**
+3. Roll back the database, if migrations were applied: **see delivery-phases.md §Phase 4 migration rollback**
+
+**Estimated rollback time**: {N} minutes
+
+---
+
+## Review Log
+
+| Time | Reviewer | Comments | Status |
+|------|----------|----------|--------|
+| {time} | {reviewer} | {comments} | Pending / Approved / Rejected |
+
+---
+
+## Appendix: Technology-Stack Examples (reference only)
+
+> The following examples are for specific tech stacks and are for reference only. The actual implementation must follow the project's stack and must not copy this appendix into the main plan.
+
+### Python / FastAPI Example
+
+**Data model (SQLAlchemy)**:
 ```python
-# 示例，按实际技术栈调整
+# Example, adjust to the actual tech stack
 class ExampleModel(Base):
     __tablename__ = "examples"
     id = mapped_column(BigInteger, primary_key=True)
@@ -181,16 +179,16 @@ class ExampleModel(Base):
     created_at = mapped_column(DateTime(timezone=True), server_default=func.now())
 ```
 
-**API 路由注册（main.py）**：
+**API route registration (main.py)**:
 ```python
-# 示例：在 main.py 中注册新路由
+# Example: register a new route in main.py
 from backend.api.example import example_router
 app.include_router(example_router, prefix="/api/v1")
 ```
 
-**数据库迁移（Alembic）**：
+**Database migration (Alembic)**:
 ```python
-# 示例：alembic/versions/xxxx_add_examples.py
+# Example: alembic/versions/xxxx_add_examples.py
 def upgrade():
     op.create_table("examples", ...)
 
@@ -198,17 +196,17 @@ def downgrade():
     op.drop_table("examples")
 ```
 
-**迁移验证命令**：`python -m alembic current && python -m alembic check`
+**Migration verification command**: `python -m alembic current && python -m alembic check`
 
-**语法检查命令**：`python3 -m py_compile {文件路径}`
+**Syntax check command**: `python3 -m py_compile {file path}`
 
 ---
 
-### Node.js/TypeScript 示例
+### Node.js / TypeScript Example
 
-**数据模型（Prisma）**：
+**Data model (Prisma)**:
 ```typescript
-// 示例：schema.prisma
+// Example: schema.prisma
 model Example {
   id        Int      @id @default(autoincrement())
   name      String
@@ -216,15 +214,15 @@ model Example {
 }
 ```
 
-**路由注册（app.ts）**：
+**Route registration (app.ts)**:
 ```typescript
-// 示例：在 app.ts/index.ts 中注册新路由
+// Example: register a new route in app.ts/index.ts
 import { exampleRouter } from './routes/example'
 app.use('/api/v1/examples', exampleRouter)
 ```
 
-**数据库迁移（Prisma）**：`npx prisma migrate dev --name add_examples`
+**Database migration (Prisma)**: `npx prisma migrate dev --name add_examples`
 
-**迁移验证命令**：`npx prisma migrate status`
+**Migration verification command**: `npx prisma migrate status`
 
-**语法检查命令**：`npx tsc --noEmit`
+**Syntax check command**: `npx tsc --noEmit`

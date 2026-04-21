@@ -21,11 +21,11 @@
     },
     "T3": {
       "gates": [
-        {"dimension": "design_completeness", "threshold": 7, "unit": "score", "type": "hard", "comparator": ">=", "note": "需求清单中条目有对应设计方案的比例", "llm_grader": {"enabled": false, "prompt_file": "graders/design-feasibility.md", "trigger": "when_confidence_is_heuristic"}},
-        {"dimension": "feasibility_score", "threshold": 7, "unit": "score", "type": "hard", "comparator": ">=", "note": "技术可行性（架构、依赖、风险）", "llm_grader": {"enabled": false, "prompt_file": "graders/design-feasibility.md", "trigger": "when_confidence_is_heuristic"}},
-        {"dimension": "requirement_coverage", "threshold": 7, "unit": "score", "type": "hard", "comparator": ">=", "note": "每条需求可追溯到设计文档章节", "llm_grader": {"enabled": false, "prompt_file": "graders/design-feasibility.md", "trigger": "when_confidence_is_heuristic"}},
-        {"dimension": "scope_precision", "threshold": 7, "unit": "score", "type": "soft", "comparator": ">=", "note": "IN/OUT 明确、依赖已识别", "llm_grader": {"enabled": false, "prompt_file": "graders/design-feasibility.md", "trigger": "when_confidence_is_heuristic"}},
-        {"dimension": "validation_evidence", "threshold": 7, "unit": "score", "type": "soft", "comparator": ">=", "note": "可行性检查 + 风险评估已完成", "llm_grader": {"enabled": false, "prompt_file": "graders/design-feasibility.md", "trigger": "when_confidence_is_heuristic"}}
+        {"dimension": "design_completeness", "threshold": 7, "unit": "score", "type": "hard", "comparator": ">=", "note": "Proportion of requirements that have a corresponding design", "llm_grader": {"enabled": false, "prompt_file": "graders/design-feasibility.md", "trigger": "when_confidence_is_heuristic"}},
+        {"dimension": "feasibility_score", "threshold": 7, "unit": "score", "type": "hard", "comparator": ">=", "note": "Technical feasibility (architecture, dependencies, risks)", "llm_grader": {"enabled": false, "prompt_file": "graders/design-feasibility.md", "trigger": "when_confidence_is_heuristic"}},
+        {"dimension": "requirement_coverage", "threshold": 7, "unit": "score", "type": "hard", "comparator": ">=", "note": "Each requirement can be traced to a design-document section", "llm_grader": {"enabled": false, "prompt_file": "graders/design-feasibility.md", "trigger": "when_confidence_is_heuristic"}},
+        {"dimension": "scope_precision", "threshold": 7, "unit": "score", "type": "soft", "comparator": ">=", "note": "IN/OUT are clear and dependencies are identified", "llm_grader": {"enabled": false, "prompt_file": "graders/design-feasibility.md", "trigger": "when_confidence_is_heuristic"}},
+        {"dimension": "validation_evidence", "threshold": 7, "unit": "score", "type": "soft", "comparator": ">=", "note": "Feasibility checks and risk assessment are complete", "llm_grader": {"enabled": false, "prompt_file": "graders/design-feasibility.md", "trigger": "when_confidence_is_heuristic"}}
       ]
     },
     "T4": {
@@ -99,12 +99,12 @@
     "window": 3,
     "band": 0.5
   },
-  "experience_status_enum": ["推荐", "候选默认", "观察", "已废弃"],
-  "strategy_effect_enum": ["保持", "避免", "待验证"],
+  "experience_status_enum": ["recommended", "candidate default", "observing", "retired"],
+  "strategy_effect_enum": ["keep", "avoid", "to be validated"],
   "phase_enum": ["OBSERVE", "ORIENT", "DECIDE", "ACT", "VERIFY", "SYNTHESIZE", "EVOLVE", "REFLECT"],
-  "task_status_enum": ["准备开始", "进行中", "暂停等待确认", "已完成"],
-  "gate_status_enum": ["达标", "未达标", "豁免"],
-  "tsv_status_enum": ["通过", "未通过", "待检查", "待审查"],
+  "task_status_enum": ["ready to start", "in progress", "paused awaiting confirmation", "completed"],
+  "gate_status_enum": ["pass", "fail", "exempt"],
+  "tsv_status_enum": ["pass", "fail", "pending_check", "pending_review"],
   "default_rounds": {
     "T1": 3, "T2": 2, "T3": 3, "T4": 5, "T5": 99,
     "T6": 99, "T7": 99, "T8": 99

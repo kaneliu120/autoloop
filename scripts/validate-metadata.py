@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""SKILL.md 元数据校验工具
+"""SKILL.md metadata validation tool
 
-用法:
+Usage:
   validate-metadata.py --name "autoloop" --description "..."
   validate-metadata.py --file SKILL.md
 """
@@ -11,7 +11,7 @@ import sys
 
 
 def parse_yaml_frontmatter(content):
-    """从 Markdown 文件解析 YAML frontmatter（简易解析，无需 PyYAML）。"""
+    """Parse YAML frontmatter from a Markdown file (simple parser, no PyYAML required)."""
     if not content.startswith("---"):
         return {}
     end = content.find("\n---", 3)
@@ -30,59 +30,59 @@ def parse_yaml_frontmatter(content):
 
 
 def validate(name, description, full_content=None):
-    """校验元数据，返回 (ok: bool, errors: list[str])。"""
+    """Validate metadata and return (ok: bool, errors: list[str])."""
     errors = []
 
-    # --- name 校验 ---
+    # --- name validation ---
     if not name:
-        errors.append("name: 缺失")
+        errors.append("name: missing")
     else:
         if len(name) < 1 or len(name) > 64:
-            errors.append(f"name: 长度必须 1-64 字符，当前 {len(name)}")
+            errors.append(f"name: must be 1-64 characters long, got {len(name)}")
         if not re.match(r'^[a-z0-9]+(-[a-z0-9]+)*$', name):
             errors.append(
-                "name: 只允许小写字母+数字+连字符，不允许连续连字符，"
-                f"当前值: '{name}'"
+                "name: only lowercase letters, digits, and hyphens are allowed; "
+                f"current value: '{name}'"
             )
         if '--' in name:
-            errors.append(f"name: 不允许连续连字符，当前值: '{name}'")
+            errors.append(f"name: consecutive hyphens are not allowed, current value: '{name}'")
 
-    # --- description 校验 ---
+    # --- description validation ---
     if not description:
-        errors.append("description: 缺失")
+        errors.append("description: missing")
     else:
         if len(description) >= 1024:
             errors.append(
-                f"description: 必须 < 1024 字符，当前 {len(description)}"
+                f"description: must be < 1024 characters, got {len(description)}"
             )
-        # 人称代词检查
+        # Pronoun checks
         person_patterns = [
-            (r'\bI\b', "第一人称 'I'"),
-            (r'\bme\b', "第一人称 'me'"),
-            (r'\bmy\b', "第一人称 'my'"),
-            (r'\byou\b', "第二人称 'you'"),
-            (r'\byour\b', "第二人称 'your'"),
-            (r'我', "第一人称 '我'"),
-            (r'你', "第二人称 '你'"),
+            (r'\bI\b', "first person 'I'"),
+            (r'\bme\b', "first person 'me'"),
+            (r'\bmy\b', "first person 'my'"),
+            (r'\byou\b', "second person 'you'"),
+            (r'\byour\b', "second person 'your'"),
+            ("\u6211", "first person 'I'"),
+            ("\u4f60", "second person 'you'"),
         ]
         for pattern, label in person_patterns:
             if re.search(pattern, description):
-                errors.append(f"description: 包含{label}（禁止第一/第二人称）")
+                errors.append(f"description: contains {label} (first/second person is forbidden)")
 
-    # --- 触发器检查（仅当有完整内容时）---
+    # --- Trigger checks (only when full content is available) ---
     if full_content is not None:
         has_positive = bool(re.search(
-            r'[Uu]se\s+when|适用场景|正向触发|positive\s+trigger',
+            r'[Uu]se\s+when|use case|positive trigger|positive\s+trigger',
             full_content, re.IGNORECASE,
         ))
         has_negative = bool(re.search(
-            r'[Dd]o\s+not\s+use|不适用|负向触发|negative\s+trigger',
+            r'[Dd]o\s+not\s+use|do not use|negative trigger|negative\s+trigger',
             full_content, re.IGNORECASE,
         ))
         if not has_positive:
-            errors.append("触发器: 缺少正向触发条件（Use when / 适用场景）")
+            errors.append("triggers: missing positive trigger condition (Use when / use case)")
         if not has_negative:
-            errors.append("触发器: 缺少负向触发条件（Do not use / 不适用）")
+            errors.append("triggers: missing negative trigger condition (Do not use / do not use)")
 
     return len(errors) == 0, errors
 
@@ -113,7 +113,7 @@ def main():
             with open(file_path, 'r', encoding='utf-8') as f:
                 full_content = f.read()
         except FileNotFoundError:
-            print(f"ERROR: 文件不存在: {file_path}", file=sys.stderr)
+            print(f"ERROR: File does not exist: {file_path}", file=sys.stderr)
             sys.exit(1)
 
         meta = parse_yaml_frontmatter(full_content)
@@ -127,7 +127,7 @@ def main():
     ok, errors = validate(name, description, full_content)
 
     if ok:
-        print("SUCCESS: Metadata valid")
+        print("SUCCESS: metadata valid")
         sys.exit(0)
     else:
         for e in errors:

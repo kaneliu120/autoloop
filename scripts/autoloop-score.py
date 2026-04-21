@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""AutoLoop 多模板评分器 — 支持 SSOT JSON + markdown 双模式
+"""AutoLoop multi-template scorer — supports dual SSOT JSON + markdown modes
 
-用法:
-  autoloop-score.py <工作目录>              从 SSOT JSON 评分（优先）或 markdown 回退
-  autoloop-score.py <文件路径>              兼容旧模式，直接评分 findings.md
-  autoloop-score.py <工作目录> --json       JSON 输出
+Usage:
+  autoloop-score.py <Work Directory>              Score from SSOT JSON()or markdown 
+  autoloop-score.py <file>              Pattern,  findings.md
+  autoloop-score.py <Work Directory> --json       JSON 
 """
 
 import json
@@ -24,10 +24,10 @@ from autoloop_kpi import (
 )
 
 # ---------------------------------------------------------------------------
-# 门禁定义 — 从 gate-manifest.json（SSOT）加载
+# Gate Definitions —  gate-manifest.json(SSOT)
 # ---------------------------------------------------------------------------
 
-# manifest dimension → scorer internal dim 映射（处理命名差异）
+# manifest dimension → scorer internal dim (handling naming differences)
 _MANIFEST_DIM_MAP = {
     "security": "security_score",
     "reliability": "reliability_score",
@@ -36,40 +36,40 @@ _MANIFEST_DIM_MAP = {
     "syntax_errors": "syntax",
 }
 
-# manifest dimension → 中文标签
+# manifest dimension → English label
 _MANIFEST_LABEL_MAP = {
-    "coverage": "覆盖率",
-    "credibility": "可信度",
-    "consistency": "一致性",
-    "completeness": "完整性",
-    "bias_check": "偏见检查",
-    "sensitivity": "敏感性分析",
-    "kpi_target": "KPI达标",
-    "pass_rate": "通过率",
-    "avg_score": "平均分",
-    "syntax_errors": "语法验证",
-    "p1_p2_issues": "P1/P2问题",
-    "service_health": "服务健康",
-    "user_acceptance": "人工验收",
-    "security": "安全性",
-    "reliability": "可靠性",
-    "maintainability": "可维护性",
-    "p1_count": "P1问题(全维度)",
-    "security_p2": "安全P2问题",
-    "reliability_p2": "可靠性P2问题",
-    "maintainability_p2": "可维护性P2问题",
-    "architecture": "架构",
-    "performance": "性能",
-    "stability": "稳定性",
-    # T3 产品设计类
-    "design_completeness": "设计完整度",
-    "feasibility_score": "技术可行性",
-    "requirement_coverage": "需求覆盖度",
-    "scope_precision": "范围精确度",
-    "validation_evidence": "验证证据",
+    "coverage": "Coverage",
+    "credibility": "Credibility",
+    "consistency": "Consistency",
+    "completeness": "Completeness",
+    "bias_check": "Bias Check",
+    "sensitivity": "Sensitivity Analysis",
+    "kpi_target": "KPI Met",
+    "pass_rate": "Pass Rate",
+    "avg_score": "Average Score",
+    "syntax_errors": "Syntax Validation",
+    "p1_p2_issues": "P1/P2 Issues",
+    "service_health": "Service Health",
+    "user_acceptance": "Manual Acceptance",
+    "security": "Security",
+    "reliability": "Reliability",
+    "maintainability": "Maintainability",
+    "p1_count": "P1Issues(Dimension)",
+    "security_p2": "Security P2 Issues",
+    "reliability_p2": "ReliabilityP2Issues",
+    "maintainability_p2": "MaintainabilityP2Issues",
+    "architecture": "Architecture",
+    "performance": "Performance",
+    "stability": "Stability",
+    # T3 
+    "design_completeness": "Design Completeness",
+    "feasibility_score": "Technical Feasibility",
+    "requirement_coverage": "Requirement Coverage",
+    "scope_precision": "Scope Precision",
+    "validation_evidence": "Validation Evidence",
 }
 
-# manifest unit → scorer unit 映射
+# manifest unit → scorer unit 
 _MANIFEST_UNIT_MAP = {
     "%": "%",
     "/10": "/10",
@@ -117,7 +117,7 @@ def _manifest_to_scorer_gates(manifest):
 _MANIFEST = _load_gate_manifest()
 TEMPLATE_GATES = _manifest_to_scorer_gates(_MANIFEST)
 
-# 模板别名映射（用户可能写 "T1 Research" 而非 "T1"）
+# Template(Users may write "T1 Research" instead of "T1")
 _TEMPLATE_ALIAS = {}
 for _k in TEMPLATE_GATES:
     _TEMPLATE_ALIAS[_k] = _k
@@ -135,7 +135,7 @@ _TEMPLATE_ALIAS.update({
 
 
 def resolve_template(raw):
-    """将模板字符串标准化为 T1-T8 键"""
+    """Template T1-T8 """
     if not raw:
         return None
     key = raw.strip().lower()
@@ -143,9 +143,9 @@ def resolve_template(raw):
 
 
 def plan_gates_for_ssot_init(template_raw):
-    """从 manifest 生成 plan.gates，dim 与 scorer JSON dimension / iterations.scores 键一致。
+    """Generate plan.gates from the manifest, aligning dim with scorer JSON dimensions / iterations.scores keys.
 
-    每条含 manifest_dimension 供 controller 反查 manifest comparator。
+    Each row includes manifest_dimension so the controller can look up the manifest comparator.
     """
     tkey = resolve_template(template_raw)
     if not tkey:
@@ -170,7 +170,7 @@ def plan_gates_for_ssot_init(template_raw):
             "gate": g["type"],
             "comparator": g.get("comparator", ">="),
             "current": None,
-            "status": "未达标",
+            "status": "Fail",
         }
         if g["threshold"] is None:
             row["target"] = None
@@ -179,13 +179,13 @@ def plan_gates_for_ssot_init(template_raw):
 
 
 # =====================================================================
-# 模式检测
+# Mode Detection
 # =====================================================================
 
 def detect_mode(path):
-    """判断输入路径的评分模式。
+    """Determine the scoring mode for an input path.
 
-    返回 ("ssot", state_dict, work_dir)
+    Returns ("ssot", state_dict, work_dir)
          ("markdown", content_str, findings_path)
          ("error", message, None)
     """
@@ -195,13 +195,13 @@ def detect_mode(path):
             with open(state_path, "r", encoding="utf-8") as f:
                 state = json.load(f)
             return "ssot", state, path
-        # 目录但无 state.json — 尝试找 findings.md 作为回退
+        # None state.json —  findings.md 
         findings_path = os.path.join(path, "autoloop-findings.md")
         if os.path.exists(findings_path):
             with open(findings_path, "r", encoding="utf-8") as f:
                 content = f.read()
             return "markdown", content, findings_path
-        return "error", "目录中未找到 autoloop-state.json 或 autoloop-findings.md: {}".format(path), None
+        return "error", "Medium: autoloop-state.json or autoloop-findings.md not found: {}".format(path), None
 
     if os.path.isfile(path):
         if path.endswith(".json"):
@@ -215,20 +215,20 @@ def detect_mode(path):
             with open(state_sidecar, "r", encoding="utf-8") as f:
                 state = json.load(f)
             return "ssot", state, dir_
-        # 无同目录 SSOT 时视为纯 markdown findings
+        # None SSOT  markdown findings
         with open(abspath, "r", encoding="utf-8") as f:
             content = f.read()
         return "markdown", content, path
 
-    return "error", "路径不存在: {}".format(path), None
+    return "error", "path does not exist: {}".format(path), None
 
 
 # =====================================================================
-# SSOT 评分引擎（主路径）
+# SSOT Scoring Engine (primary path)
 # =====================================================================
 
 def _get_latest_scores(state):
-    """从 iterations[-1].scores 获取最新评分字典"""
+    """Get the latest score dict from iterations[-1].scores"""
     iterations = state.get("iterations", [])
     if not iterations:
         return {}
@@ -236,7 +236,7 @@ def _get_latest_scores(state):
 
 
 def _finding_body_text(finding):
-    """findings 条目 canonical 正文：summary → content → description（与 loop-data-schema / validate 一致）。"""
+    """Return finding text using canonical field priority: summary -> content -> description."""
     if not isinstance(finding, dict):
         return ""
     for k in ("summary", "content", "description"):
@@ -247,7 +247,7 @@ def _finding_body_text(finding):
 
 
 def _finding_substantive_info_count(finding):
-    """每条 finding 的实质信息量（用于 coverage / completeness 严格口径）。"""
+    """Substantive information count per finding (used for strict coverage / completeness rules)."""
     body = _finding_body_text(finding) or ""
     lines = body.split("\n")
     bullets = sum(
@@ -266,7 +266,7 @@ def _finding_substantive_info_count(finding):
 
 
 def _find_plan_gate_row(plan_gates, dim, manifest_dimension=None):
-    """在 plan.gates 中查找与模板维度对应的行（dim 或 manifest_dimension）。"""
+    """Find the matching plan.gates row by canonical dim or manifest_dimension."""
     if not plan_gates:
         return None
     md = manifest_dimension or dim
@@ -280,16 +280,16 @@ def _find_plan_gate_row(plan_gates, dim, manifest_dimension=None):
 
 
 def _get_plan_gates(state):
-    """从 plan.gates 获取用户定义的门禁目标"""
+    """Return user-defined gate targets from plan.gates."""
     return state.get("plan", {}).get("gates", [])
 
 
 def _count_issues_by_severity(state, category=None):
-    """统计 findings.engineering_issues 中的问题数量。
+    """Count engineering issues from findings.engineering_issues.
 
     category: "security" / "reliability" / "maintainability" / "architecture"
-              / "performance" / "stability" / None(全部)
-    返回 {"P1": n, "P2": n, "P3": n}
+              / "performance" / "stability" / None(all)
+    Returns {"P1": n, "P2": n, "P3": n}
     """
     eng = state.get("findings", {}).get("engineering_issues", {})
     counts = {"P1": 0, "P2": 0, "P3": 0}
@@ -305,7 +305,7 @@ def _count_issues_by_severity(state, category=None):
 
 
 def _count_findings_coverage(state):
-    """从 findings.rounds 计算维度覆盖：每维至少 2 条实质信息点才算覆盖。"""
+    """Count dimensions in findings.rounds that have at least two substantive entries."""
     plan_dims = state.get("plan", {}).get("dimensions", [])
     rounds = state.get("findings", {}).get("rounds", [])
     dim_best = {}
@@ -316,6 +316,21 @@ def _count_findings_coverage(state):
                 continue
             n = _finding_substantive_info_count(finding)
             dim_best[dim] = max(dim_best.get(dim, 0), n)
+    # Detect: if plan.dimensions are gate dimension names (not research scope),
+    # fall back to counting all unique finding dimensions
+    template_raw = state.get("plan", {}).get("template", "")
+    tkey = resolve_template(template_raw)
+    if tkey and tkey in TEMPLATE_GATES and plan_dims:
+        gate_dim_names = set()
+        for g in TEMPLATE_GATES[tkey]:
+            gate_dim_names.add(g["dim"])
+            md = g.get("manifest_dimension")
+            if md:
+                gate_dim_names.add(md)
+        # If plan.dimensions are all gate dimension names → not research scope → use fallback
+        if set(plan_dims) <= gate_dim_names:
+            plan_dims = []
+
     if plan_dims:
         total = len(plan_dims)
         covered = sum(1 for d in plan_dims if dim_best.get(d, 0) >= 2)
@@ -328,7 +343,7 @@ def _count_findings_coverage(state):
 
 
 def _count_findings_credibility(state):
-    """计算有多源支撑的发现比例（多 URL、多域名或分号/逗号分隔多来源）。"""
+    """Compute the proportion of findings supported by multiple sources( URL, or/Source)."""
     rounds = state.get("findings", {}).get("rounds", [])
     total = 0
     multi_source = 0
@@ -357,7 +372,7 @@ def _count_findings_credibility(state):
 
 
 def _count_findings_consistency(state):
-    """计算无矛盾维度比例"""
+    """NoneDimension"""
     rounds = state.get("findings", {}).get("rounds", [])
     all_dims = set()
     for rnd in rounds:
@@ -379,7 +394,7 @@ def _count_findings_consistency(state):
 
 
 def _count_findings_completeness(state):
-    """有来源引用且至少 1 个实质信息点的发现比例。"""
+    """Sourceat least 1 finding."""
     rounds = state.get("findings", {}).get("rounds", [])
     total = 0
     sourced = 0
@@ -389,7 +404,7 @@ def _count_findings_completeness(state):
             source = (finding.get("source") or "").strip()
             body = _finding_body_text(finding)
             has_ref = bool(
-                source or (body and re.search(r"https?://|来源|Source|arXiv", body, re.I))
+                source or (body and re.search(r"https?://|Source|Source|arXiv", body, re.I))
             )
             if has_ref and _finding_substantive_info_count(finding) >= 1:
                 sourced += 1
@@ -397,49 +412,49 @@ def _count_findings_completeness(state):
 
 
 def _confidence_for_dim(dim):
-    """根据评分维度的数据来源，返回 (confidence, margin)。
+    """DimensionSource, Returns (confidence, margin).
 
-    三级置信度：
-    - empirical (margin ≤ 0.3): 基于工具实际输出（syntax_check_cmd、测试通过率、lint 错误数等）
-    - heuristic (margin ≤ 1.5): 基于内容分析模式匹配（来源计数、关键词覆盖率、文本模式匹配）
-    - binary (margin = None): 只能判通过/不通过（无量化工具支持时的回退）
+    Three-tier confidence: 
+    - empirical (margin ≤ 0.3): based on actual tool output(syntax_check_cmd, TestPass Rate, lint )
+    - heuristic (margin ≤ 1.5): ContentanalysisPattern(Source, keyCoverage, Pattern)
+    - binary (margin = None): can only determine pass/fail(None)
     """
-    # empirical: T4/T7/T8 中基于工具输出的维度
+    # Empirical dimensions: T4/T7/T8
     _EMPIRICAL_DIMS = {
-        "syntax",              # T4: syntax_check_cmd 实际输出
-        "p1_p2_issues",        # T4: 工程问题清单计数
-        "service_health",      # T4: 健康检查 URL 实际响应
-        "p1_all",              # T7: 全维度 P1 计数
-        "security_p2",         # T7: 安全 P2 计数
-        "reliability_p2",      # T7: 可靠性 P2 计数
-        "maintainability_p2",  # T7: 可维护性 P2 计数
+        "syntax",              # T4: syntax_check_cmd 
+        "p1_p2_issues",        # T4: Issue List
+        "service_health",      # T4: check URL should
+        "p1_all",              # T7: Dimension P1 
+        "security_p2",         # T7:  P2 
+        "reliability_p2",      # T7: Reliability P2 
+        "maintainability_p2",  # T7: Maintainability P2 
     }
-    # heuristic: T1/T2/T3/T5/T6 中基于内容分析的维度，以及 T7/T8 的评审打分
+    # Heuristic dimensions: T1/T2/T3/T5/T6 depend mainly on content analysis; T7/T8 can also fall back here.
     _HEURISTIC_DIMS = {
-        "coverage",            # T1/T2: 来源计数 / 维度覆盖率
-        "credibility",         # T1/T2: 多源支撑比例
-        "consistency",         # T1/T2: 无矛盾维度比例
-        "completeness",        # T1/T2: 来源引用比例
-        "sensitivity",         # T2: 敏感性分析
-        "kpi_target",          # T5: KPI 达标（混合判定）
-        "pass_rate",           # T6: 通过率
-        "avg_score",           # T6: 平均分
-        "security_score",      # T7: 安全性评审打分
-        "reliability_score",   # T7: 可靠性评审打分
-        "maintainability_score",  # T7: 可维护性评审打分
-        "architecture",        # T8: 架构评审打分
-        "performance",         # T8: 性能评审打分
-        "stability",           # T8: 稳定性评审打分
-        "design_completeness",      # T3: 设计完整度
-        "feasibility_score",        # T3: 技术可行性
-        "requirement_coverage",     # T3: 需求覆盖度
-        "scope_precision",          # T3: 范围精确度
-        "validation_evidence",      # T3: 验证证据
+        "coverage",            # T1/T2: Source / DimensionCoverage
+        "credibility",         # T1/T2: 
+        "consistency",         # T1/T2: NoneDimension
+        "completeness",        # T1/T2: Source
+        "sensitivity",         # T2: Sensitivity Analysis
+        "kpi_target",          # T5: KPI Pass()
+        "pass_rate",           # T6: Pass Rate
+        "avg_score",           # T6: Average Score
+        "security_score",      # T7: Security
+        "reliability_score",   # T7: Reliability
+        "maintainability_score",  # T7: Maintainability
+        "architecture",        # T8: Architecture
+        "performance",         # T8: Performance
+        "stability",           # T8: Stability
+        "design_completeness",      # T3: Design Completeness
+        "feasibility_score",        # T3: Technical Feasibility
+        "requirement_coverage",     # T3: Requirement Coverage
+        "scope_precision",          # T3: Scope Precision
+        "validation_evidence",      # T3: Validation Evidence
     }
-    # binary: 只能判 pass/fail
+    # binary:  pass/fail
     _BINARY_DIMS = {
-        "bias_check",          # T2: 偏见检查（bool 门禁）
-        "user_acceptance",     # T4: 人工验收（bool 门禁）
+        "bias_check",          # T2: Bias Check(bool Gate)
+        "user_acceptance",     # T4: Manual Acceptance(bool Gate)
     }
 
     if dim in _EMPIRICAL_DIMS:
@@ -448,14 +463,14 @@ def _confidence_for_dim(dim):
         return "heuristic", 1.5
     if dim in _BINARY_DIMS:
         return "binary", None
-    # 未知维度默认为 heuristic
+    # UnknownDimension heuristic
     return "heuristic", 1.5
 
 
 def _eval_gate(gate_def, value, evidence=""):
-    """评估单个门禁，返回结果 dict。
+    """Gate, ReturnsResult dict.
 
-    value: 实际值（百分比 / 分数 / 计数 / bool）
+    value: Value( / score /  / bool)
     """
     dim = gate_def["dim"]
     manifest_dimension = gate_def.get("manifest_dimension", dim)
@@ -465,10 +480,9 @@ def _eval_gate(gate_def, value, evidence=""):
     label = gate_def["label"]
     confidence, margin = _confidence_for_dim(dim)
 
-    # threshold 为 None 表示用户自定义（T5 KPI）
-    # T5 KPI 的数值比较在 score_from_ssot() 中完成（plan_gates 循环），
-    # value 到达此处时已是 bool（kpi_pass）。
-    # controller.py check_gates_passed 中有平行的数值比较路径（plan.gates[].target）。
+    # threshold=None indicates T5 KPI gates.
+    # T5 KPI values come from score_from_ssot() after plan_gates is finalized.
+    # controller.py check_gates_passed() reads the target from plan.gates[].target.
     if threshold is None:
         passed = value is not None and bool(value)
         return {
@@ -476,7 +490,7 @@ def _eval_gate(gate_def, value, evidence=""):
             "manifest_dimension": manifest_dimension,
             "label": label,
             "value": value,
-            "threshold": "用户定义",
+            "threshold": "User Defined",
             "unit": unit,
             "gate_type": gate_type,
             "pass": passed,
@@ -485,10 +499,10 @@ def _eval_gate(gate_def, value, evidence=""):
             "margin": margin,
         }
 
-    # 使用 manifest comparator 字段进行比较（SSOT），unit 作为回退
+    # Use the manifest comparator field for comparison(SSOT), unit 
     comparator = gate_def.get("comparator", ">=")
     if unit == "bool":
-        # bool + ==：与 threshold 严格相等（避免 float 偏见分被 bool() 误判为 True）
+        # bool + ==: and threshold (avoid misclassifying float bias scores as True via bool())
         if comparator == "==":
             passed = value == threshold
         else:
@@ -506,7 +520,7 @@ def _eval_gate(gate_def, value, evidence=""):
     else:
         passed = value >= threshold
 
-    # 格式化 threshold 显示
+    #  threshold 
     if unit == "%":
         thr_display = "{}%".format(threshold)
         val_display = "{:.1f}%".format(value)
@@ -549,15 +563,15 @@ HEURISTIC_WEIGHT = 1.0 - LLM_GRADER_WEIGHT  # 0.3
 
 
 def _prepare_llm_grader(gate_def, result, state, work_dir):
-    """为 heuristic 维度准备 LLM Grader 评估请求。
+    """Prepare an LLM-grader handoff when a heuristic-scored dimension needs review.
 
-    当 gate 有 llm_grader.enabled=true 且当前评分 confidence 为 heuristic 时：
-    1. 读取 grader prompt 文件
-    2. 构建评估上下文（从 findings 提取当前维度的相关内容）
-    3. 将 grader prompt + 评估上下文写入 state.json 的 metadata.pending_llm_grader
-    4. 打印提示让 controller 在 VERIFY 阶段委派 subagent 执行评分
+    For gates with llm_grader.enabled=true and heuristic confidence:
+    1. Read the grader prompt file
+    2. Build evaluation context from findings for the current dimension
+    3. Write the grader prompt + evaluation context to state.json metadata.pending_llm_grader
+    4. Print a prompt so the controller can delegate scoring to a subagent during VERIFY
 
-    返回 pending entry dict（供写入 state），如果不触发则返回 None。
+    Returns the pending entry dict to write into state, otherwise None.
     """
     grader_cfg = gate_def.get("llm_grader")
     if not grader_cfg or not grader_cfg.get("enabled", False):
@@ -566,14 +580,14 @@ def _prepare_llm_grader(gate_def, result, state, work_dir):
     trigger = grader_cfg.get("trigger", "when_confidence_is_heuristic")
     confidence = result.get("confidence", "")
 
-    # 仅在 confidence 匹配 trigger 时触发
+    # Apply the configured trigger to heuristic-confidence results.
     if trigger == "when_confidence_is_heuristic" and confidence != "heuristic":
         return None
 
     dim = result.get("dimension", gate_def.get("dim", "unknown"))
     prompt_file = grader_cfg.get("prompt_file", "")
 
-    # 读取 grader prompt 文件
+    # Read the grader prompt file
     prompt_content = ""
     if prompt_file:
         assets_dir = os.path.join(os.path.dirname(__file__), "..", "assets")
@@ -582,7 +596,7 @@ def _prepare_llm_grader(gate_def, result, state, work_dir):
             with open(prompt_path, "r", encoding="utf-8") as f:
                 prompt_content = f.read()
 
-    # 提取当前维度的 findings 作为评估上下文
+    # extractCurrentDimension findings 
     context_lines = []
     rounds = state.get("findings", {}).get("rounds", [])
     for rnd in rounds:
@@ -593,7 +607,7 @@ def _prepare_llm_grader(gate_def, result, state, work_dir):
                 body = "\n".join(str(b) for b in body)
             if dim in dim_tag or gate_def.get("manifest_dimension", "") in dim_tag:
                 context_lines.append(str(body)[:500])
-    # 如果没有精确匹配，取最近一轮的全部 findings 作为上下文
+    # if, roundall findings 
     if not context_lines and rounds:
         last_round = rounds[-1]
         for finding in last_round.get("findings", []):
@@ -602,7 +616,7 @@ def _prepare_llm_grader(gate_def, result, state, work_dir):
                 body = "\n".join(str(b) for b in body)
             context_lines.append(str(body)[:500])
 
-    context_text = "\n---\n".join(context_lines[:10])  # 最多10段，避免过长
+    context_text = "\n---\n".join(context_lines[:10])  # 10, Avoid
 
     print("[LLM Grader] Evaluating dimension '{}' with grader: {}".format(dim, prompt_file))
     print("[LLM Grader] → Controller should delegate a subagent in VERIFY phase.")
@@ -620,7 +634,7 @@ def _prepare_llm_grader(gate_def, result, state, work_dir):
 
 
 def score_from_ssot(state):
-    """从 SSOT JSON 评分，返回 (template, results_list)。
+    """Score from SSOT JSON, Returns (template, results_list).
 
     results_list: [{dimension, label, value, threshold, gate_type, pass, evidence, confidence, margin}, ...]
     """
@@ -628,7 +642,7 @@ def score_from_ssot(state):
     template = resolve_template(template_raw)
 
     if not template:
-        return None, [{"error": "无法识别模板类型: '{}'".format(template_raw)}]
+        return None, [{"error": "Unknown template type: '{}'".format(template_raw)}]
 
     gates = TEMPLATE_GATES[template]
     scores = _get_latest_scores(state)
@@ -650,7 +664,7 @@ def score_from_ssot(state):
                     "unit": gate_def["unit"],
                     "gate_type": gate_def["gate"],
                     "pass": True,
-                    "evidence": "plan.gates.status=豁免（rollup 视同通过）",
+                    "evidence": "plan.gates.status=Exempt (rolled up)",
                     "confidence": conf,
                     "margin": marg,
                 }
@@ -660,56 +674,55 @@ def score_from_ssot(state):
         value = None
         evidence = ""
 
-        # --- T1/T2 知识类: 从 findings 计算 ---
+        # --- T1/T2 :  findings  ---
         if dim == "coverage":
             covered, total = _count_findings_coverage(state)
             value = (covered / total * 100) if total > 0 else 0.0
-            evidence = "{}/{}维度有实质内容".format(covered, total)
+            evidence = "{}/{} dimensions covered by findings".format(covered, total)
 
         elif dim == "credibility":
             multi, total = _count_findings_credibility(state)
             value = (multi / total * 100) if total > 0 else 0.0
-            evidence = "{}/{}发现有多源支撑".format(multi, total)
+            evidence = "{}/{} findings include multi-source support".format(multi, total)
 
         elif dim == "consistency":
             consistent, total = _count_findings_consistency(state)
             value = (consistent / total * 100) if total > 0 else 0.0
-            evidence = "{}/{}维度无矛盾".format(consistent, total)
+            evidence = "{}/{} dimensions remain internally consistent".format(consistent, total)
 
         elif dim == "completeness":
             sourced, total = _count_findings_completeness(state)
             value = (sourced / total * 100) if total > 0 else 0.0
-            evidence = "{}/{}发现有来源引用".format(sourced, total)
+            evidence = "{}/{} findings include supporting sources".format(sourced, total)
 
-        # --- T2 专属 ---
+        # --- T2  ---
         elif dim == "bias_check":
-            # bool + ==1：数值须先归一为「偏见<0.15」布尔（quality-gates.md）
+            # Bool gate with ==1 semantics: values below 0.15 are treated as passing.
             raw = scores.get("bias_check", scores.get("bias_score", 0.0))
             if isinstance(raw, bool):
                 value = raw
-                evidence = "偏见检查={}".format("通过" if raw else "未通过")
+                evidence = "Bias Check={}".format(value)
             elif isinstance(raw, (int, float)):
                 value = raw < 0.15
-                evidence = "最大偏见分数={:.3f} → {}".format(
-                    raw, "通过" if value else "未通过")
+                evidence = "Bias score={:.3f} -> {}".format(raw, value)
             else:
                 value = False
-                evidence = "无偏见检查数据"
+                evidence = "No bias-check evidence available"
 
         elif dim == "sensitivity":
             value = scores.get("sensitivity", scores.get("sensitivity_pass", False))
             if isinstance(value, bool):
-                evidence = "敏感性分析{}".format("通过" if value else "未通过")
+                evidence = "Sensitivity Analysis={}".format(value)
             else:
                 value = bool(value)
-                evidence = "敏感性分析={}".format(value)
+                evidence = "Sensitivity Analysis={}".format(value)
 
         # --- T5 KPI ---
         elif dim == "kpi_target":
             kpi_rows = [pg for pg in plan_gates if pg.get("threshold") is None]
             if not kpi_rows:
                 value = False
-                evidence = "无KPI定义（plan.gates 无 threshold=null 行）"
+                evidence = "No KPI gates found (plan.gates with threshold=null)"
             else:
                 kpi_pass = True
                 kpi_details = []
@@ -728,32 +741,32 @@ def score_from_ssot(state):
                 value = kpi_pass
                 evidence = "; ".join(kpi_details)
 
-        # --- T6 生成类 ---
+        # --- T6  ---
         elif dim == "pass_rate":
             value = scores.get("pass_rate", 0.0)
             if isinstance(value, (int, float)):
-                evidence = "通过率={:.1f}%".format(value)
+                evidence = "Pass Rate={:.1f}%".format(value)
             else:
                 value = 0.0
-                evidence = "无通过率数据"
+                evidence = "NonePass Rate"
 
         elif dim == "avg_score":
             value = scores.get("avg_score", scores.get("average_score", 0.0))
             if isinstance(value, (int, float)):
-                evidence = "平均分={:.1f}/10".format(value)
+                evidence = "Average Score={:.1f}/10".format(value)
             else:
                 value = 0.0
-                evidence = "无平均分数据"
+                evidence = "NoneAverage Score"
 
-        # --- T4 交付类 ---
+        # --- T4  ---
         elif dim == "syntax":
             value = scores.get("syntax_errors", scores.get("syntax", 0))
             if isinstance(value, (int, float)):
                 value = int(value)
-                evidence = "语法错误={}个".format(value)
+                evidence = "={}".format(value)
             else:
                 value = 0
-                evidence = "无语法检查数据"
+                evidence = "Nonecheck"
 
         elif dim == "p1_p2_issues":
             counts = _count_issues_by_severity(state)
@@ -763,78 +776,141 @@ def score_from_ssot(state):
         elif dim == "service_health":
             value = scores.get("service_health", scores.get("services_healthy", False))
             if isinstance(value, bool):
-                evidence = "服务状态={}".format("健康" if value else "异常")
+                evidence = "Status={}".format("" if value else "")
             else:
                 value = bool(value)
-                evidence = "服务状态={}".format(value)
+                evidence = "Status={}".format(value)
 
         elif dim == "user_acceptance":
             value = scores.get("user_acceptance", scores.get("user_confirmed", False))
             if isinstance(value, bool):
-                evidence = "用户验收={}".format("已确认" if value else "未确认")
+                evidence = "={}".format("" if value else "")
             else:
                 value = bool(value)
-                evidence = "用户验收={}".format(value)
+                evidence = "={}".format(value)
 
-        # --- T7 质量类 ---
+        # --- T7  ---
         elif dim == "security_score":
             value = scores.get("security_score", scores.get("security", 0.0))
             value = float(value) if isinstance(value, (int, float)) else 0.0
-            evidence = "安全性得分={:.1f}/10".format(value)
+            evidence = "SecurityScores={:.1f}/10".format(value)
 
         elif dim == "reliability_score":
             value = scores.get("reliability_score", scores.get("reliability", 0.0))
             value = float(value) if isinstance(value, (int, float)) else 0.0
-            evidence = "可靠性得分={:.1f}/10".format(value)
+            evidence = "ReliabilityScores={:.1f}/10".format(value)
 
         elif dim == "maintainability_score":
             value = scores.get("maintainability_score", scores.get("maintainability", 0.0))
             value = float(value) if isinstance(value, (int, float)) else 0.0
-            evidence = "可维护性得分={:.1f}/10".format(value)
+            evidence = "MaintainabilityScores={:.1f}/10".format(value)
 
         elif dim == "p1_all":
             counts = _count_issues_by_severity(state)
             value = counts["P1"]
-            evidence = "全维度P1问题={}个".format(value)
+            evidence = "DimensionP1Issues={}".format(value)
 
         elif dim == "security_p2":
             counts = _count_issues_by_severity(state, "security")
             value = counts["P2"]
-            evidence = "安全P2问题={}个".format(value)
+            evidence = "Security P2 Issues={}".format(value)
 
         elif dim == "reliability_p2":
             counts = _count_issues_by_severity(state, "reliability")
             value = counts["P2"]
-            evidence = "可靠性P2问题={}个".format(value)
+            evidence = "ReliabilityP2Issues={}".format(value)
 
         elif dim == "maintainability_p2":
             counts = _count_issues_by_severity(state, "maintainability")
             value = counts["P2"]
-            evidence = "可维护性P2问题={}个".format(value)
+            evidence = "MaintainabilityP2Issues={}".format(value)
 
-        # --- T8 优化类 ---
+        # --- T8  ---
         elif dim == "architecture":
-            value = scores.get("architecture", scores.get("architecture_score", 0.0))
-            value = float(value) if isinstance(value, (int, float)) else 0.0
-            evidence = "架构得分={:.1f}/10".format(value)
+            raw = scores.get("architecture", scores.get("architecture_score", None))
+            if raw is not None and isinstance(raw, (int, float)) and float(raw) > 0:
+                value = float(raw)
+                evidence = "Architecture Score={:.1f}/10 (from scores)".format(value)
+            else:
+                rounds = state.get("findings", {}).get("rounds", [])
+                issues = {"P1": 0, "P2": 0, "P3": 0}
+                for rnd in rounds:
+                    for finding in rnd.get("findings", []):
+                        dim_tag = finding.get("dimension", "")
+                        body = _finding_body_text(finding)
+                        if "architect" in dim_tag.lower() or any(kw in body.lower() for kw in
+                                ("Architecture", "architecture", "", "module", "", "coupling",
+                                 "", "dependency", "", "layer")):
+                            for sev in ("P1", "P1:", "P1 ", "P1: "):
+                                issues["P1"] += body.count(sev)
+                            for sev in ("P2", "P2:", "P2 ", "P2: "):
+                                issues["P2"] += body.count(sev)
+                            for sev in ("P3", "P3:", "P3 ", "P3: "):
+                                issues["P3"] += body.count(sev)
+                deduction = issues["P1"] * 1.5 + issues["P2"] * 0.8 + issues["P3"] * 0.3
+                value = max(0.0, min(10.0, 10.0 - deduction))
+                evidence = "Architecture (findings): P1={} P2={} P3={} -> {:.1f}/10".format(
+                    issues["P1"], issues["P2"], issues["P3"], value)
 
         elif dim == "performance":
-            value = scores.get("performance", scores.get("performance_score", 0.0))
-            value = float(value) if isinstance(value, (int, float)) else 0.0
-            evidence = "性能得分={:.1f}/10".format(value)
+            raw = scores.get("performance", scores.get("performance_score", None))
+            if raw is not None and isinstance(raw, (int, float)) and float(raw) > 0:
+                value = float(raw)
+                evidence = "Performance Score={:.1f}/10 (from scores)".format(value)
+            else:
+                rounds = state.get("findings", {}).get("rounds", [])
+                issues = {"P1": 0, "P2": 0, "P3": 0}
+                for rnd in rounds:
+                    for finding in rnd.get("findings", []):
+                        dim_tag = finding.get("dimension", "")
+                        body = _finding_body_text(finding)
+                        if "performance" in dim_tag.lower() or any(kw in body.lower() for kw in
+                                ("Performance", "performance", "", "pagination", "", "index",
+                                 "", "cache", "n+1", "", "query")):
+                            for sev in ("P1", "P1:", "P1 ", "P1: "):
+                                issues["P1"] += body.count(sev)
+                            for sev in ("P2", "P2:", "P2 ", "P2: "):
+                                issues["P2"] += body.count(sev)
+                            for sev in ("P3", "P3:", "P3 ", "P3: "):
+                                issues["P3"] += body.count(sev)
+                deduction = issues["P1"] * 1.5 + issues["P2"] * 0.8 + issues["P3"] * 0.3
+                value = max(0.0, min(10.0, 10.0 - deduction))
+                evidence = "Performance (findings): P1={} P2={} P3={} -> {:.1f}/10".format(
+                    issues["P1"], issues["P2"], issues["P3"], value)
 
         elif dim == "stability":
-            value = scores.get("stability", scores.get("stability_score", 0.0))
-            value = float(value) if isinstance(value, (int, float)) else 0.0
-            evidence = "稳定性得分={:.1f}/10".format(value)
+            raw = scores.get("stability", scores.get("stability_score", None))
+            if raw is not None and isinstance(raw, (int, float)) and float(raw) > 0:
+                value = float(raw)
+                evidence = "Stability Score={:.1f}/10 (from scores)".format(value)
+            else:
+                rounds = state.get("findings", {}).get("rounds", [])
+                issues = {"P1": 0, "P2": 0, "P3": 0}
+                for rnd in rounds:
+                    for finding in rnd.get("findings", []):
+                        dim_tag = finding.get("dimension", "")
+                        body = _finding_body_text(finding)
+                        if "stabilit" in dim_tag.lower() or any(kw in body.lower() for kw in
+                                ("", "stability", "", "error", "", "logging",
+                                 "check", "health", "shutdown", "", "rate limit")):
+                            for sev in ("P1", "P1:", "P1 ", "P1: "):
+                                issues["P1"] += body.count(sev)
+                            for sev in ("P2", "P2:", "P2 ", "P2: "):
+                                issues["P2"] += body.count(sev)
+                            for sev in ("P3", "P3:", "P3 ", "P3: "):
+                                issues["P3"] += body.count(sev)
+                deduction = issues["P1"] * 1.5 + issues["P2"] * 0.8 + issues["P3"] * 0.3
+                value = max(0.0, min(10.0, 10.0 - deduction))
+                evidence = "Stability (findings): P1={} P2={} P3={} -> {:.1f}/10".format(
+                    issues["P1"], issues["P2"], issues["P3"], value)
 
-        # --- T3 产品设计类 ---
+        # --- T3  ---
         elif dim == "design_completeness":
-            # 检查 findings 中有多少需求条目有对应的设计描述
+            # Estimate design completeness from requirement and design detail coverage in findings.
             raw = scores.get("design_completeness", scores.get("design_complete", None))
             if raw is not None and isinstance(raw, (int, float)):
                 value = float(raw)
-                evidence = "设计完整度={:.1f}/10（来自 scores）".format(value)
+                evidence = "Design Completeness={:.1f}/10 (from scores)".format(value)
             else:
                 rounds = state.get("findings", {}).get("rounds", [])
                 req_entries = 0
@@ -844,25 +920,25 @@ def score_from_ssot(state):
                         body = _finding_body_text(finding)
                         dim_tag = finding.get("dimension", "")
                         if any(kw in dim_tag or kw in body for kw in
-                               ("需求", "requirement", "功能", "feature", "user story")):
+                               ("", "requirement", "", "feature", "user story")):
                             req_entries += 1
                             if any(kw in body for kw in
-                                   ("方案", "设计", "design", "spec", "实现", "架构", "approach")):
+                                   ("", "", "design", "spec", "", "Architecture", "approach")):
                                 design_entries += 1
                 if req_entries > 0:
                     value = min(10.0, (design_entries / req_entries) * 10.0)
-                    evidence = "{}/{}需求条目有设计描述 → {:.1f}/10".format(
+                    evidence = "{}/{} requirement entries include design detail -> {:.1f}/10".format(
                         design_entries, req_entries, value)
                 else:
                     value = 0.0
-                    evidence = "未找到需求条目（findings 中无需求维度标注）"
+                    evidence = "No requirement-linked design evidence found in findings"
 
         elif dim == "feasibility_score":
-            # 检查是否有技术可行性分析内容
+            # Estimate technical feasibility from findings that mention constraints, risks, or dependencies.
             raw = scores.get("feasibility_score", scores.get("feasibility", None))
             if raw is not None and isinstance(raw, (int, float)):
                 value = float(raw)
-                evidence = "技术可行性={:.1f}/10（来自 scores）".format(value)
+                evidence = "Technical Feasibility={:.1f}/10 (from scores)".format(value)
             else:
                 rounds = state.get("findings", {}).get("rounds", [])
                 feasibility_signals = 0
@@ -871,8 +947,8 @@ def score_from_ssot(state):
                         body = _finding_body_text(finding)
                         dim_tag = finding.get("dimension", "")
                         if any(kw in dim_tag or kw in body for kw in
-                               ("可行性", "feasibility", "风险", "risk", "技术约束",
-                                "constraint", "依赖", "dependency", "架构", "architecture")):
+                               ("", "feasibility", "Risk", "risk", "",
+                                "constraint", "", "dependency", "Architecture", "architecture")):
                             feasibility_signals += _finding_substantive_info_count(finding)
                 if feasibility_signals >= 6:
                     value = 9.0
@@ -884,25 +960,25 @@ def score_from_ssot(state):
                     value = 4.0
                 else:
                     value = 0.0
-                evidence = "可行性相关信息点={}个 → {:.1f}/10".format(feasibility_signals, value)
+                evidence = "{} feasibility signals in findings -> {:.1f}/10".format(feasibility_signals, value)
 
         elif dim == "requirement_coverage":
-            # 检查需求到设计的追溯链（每条需求可追溯到文档章节）
+            # Estimate requirement coverage from finding coverage counts.
             raw = scores.get("requirement_coverage", scores.get("req_coverage", None))
             if raw is not None and isinstance(raw, (int, float)):
                 value = float(raw)
-                evidence = "需求覆盖度={:.1f}/10（来自 scores）".format(value)
+                evidence = "Requirement Coverage={:.1f}/10 (from scores)".format(value)
             else:
                 covered, total = _count_findings_coverage(state)
                 value = (covered / total * 10.0) if total > 0 else 0.0
-                evidence = "{}/{}维度有追溯记录 → {:.1f}/10".format(covered, total, value)
+                evidence = "{}/{} dimensions covered in findings -> {:.1f}/10".format(covered, total, value)
 
         elif dim == "scope_precision":
-            # 检查是否有明确的 IN/OUT 范围定义
+            # check IN/OUT 
             raw = scores.get("scope_precision", scores.get("scope", None))
             if raw is not None and isinstance(raw, (int, float)):
                 value = float(raw)
-                evidence = "范围精确度={:.1f}/10（来自 scores）".format(value)
+                evidence = "Scope Precision={:.1f}/10 (from scores)".format(value)
             else:
                 rounds = state.get("findings", {}).get("rounds", [])
                 scope_signals = 0
@@ -911,8 +987,8 @@ def score_from_ssot(state):
                         body = _finding_body_text(finding)
                         dim_tag = finding.get("dimension", "")
                         if any(kw in dim_tag or kw in body for kw in
-                               ("范围", "scope", "IN scope", "OUT scope", "边界", "boundary",
-                                "不包含", "排除", "exclude", "明确")):
+                               ("", "scope", "IN scope", "OUT scope", "", "boundary",
+                                "", "", "exclude", "")):
                             scope_signals += _finding_substantive_info_count(finding)
                 if scope_signals >= 4:
                     value = 9.0
@@ -922,14 +998,14 @@ def score_from_ssot(state):
                     value = 5.0
                 else:
                     value = 0.0
-                evidence = "范围定义信息点={}个 → {:.1f}/10".format(scope_signals, value)
+                evidence = "{} scope signals in findings -> {:.1f}/10".format(scope_signals, value)
 
         elif dim == "validation_evidence":
-            # 检查是否有独立评审记录（可行性检查 + 风险评估已完成）
+            # Estimate validation evidence from review, check, and risk-assessment signals.
             raw = scores.get("validation_evidence", scores.get("validation", None))
             if raw is not None and isinstance(raw, (int, float)):
                 value = float(raw)
-                evidence = "验证证据={:.1f}/10（来自 scores）".format(value)
+                evidence = "Validation Evidence={:.1f}/10 (from scores)".format(value)
             else:
                 rounds = state.get("findings", {}).get("rounds", [])
                 validation_signals = 0
@@ -938,8 +1014,8 @@ def score_from_ssot(state):
                         body = _finding_body_text(finding)
                         dim_tag = finding.get("dimension", "")
                         if any(kw in dim_tag or kw in body for kw in
-                               ("评审", "review", "验证", "validation", "检查", "check",
-                                "风险评估", "risk assessment", "可行性检查", "feasibility check")):
+                               ("", "review", "validation", "validation", "check", "check",
+                                "Risk", "risk assessment", "check", "feasibility check")):
                             validation_signals += _finding_substantive_info_count(finding)
                 if validation_signals >= 4:
                     value = 9.0
@@ -949,18 +1025,18 @@ def score_from_ssot(state):
                     value = 5.0
                 else:
                     value = 0.0
-                evidence = "评审/验证信息点={}个 → {:.1f}/10".format(validation_signals, value)
+                evidence = "{} validation signals in findings -> {:.1f}/10".format(validation_signals, value)
 
         else:
-            # 未知维度 — 尝试从 scores 中直接读取
+            # Unknown dimension: read directly from scores as a fallback.
             value = scores.get(dim, 0)
-            evidence = "从 scores 直接读取: {}={}".format(dim, value)
+            evidence = "Scores fallback: {}={}".format(dim, value)
 
         results.append(_eval_gate(gate_def, value, evidence))
 
-    # --- LLM Grader 准备阶段 ---
-    # 遍历已评分的 gates，为启用了 llm_grader 且 confidence=heuristic 的维度
-    # 准备 grader prompt + 上下文，写入 state.metadata.pending_llm_grader
+    # --- LLM Grader Phase ---
+    #  gates,  llm_grader  confidence=heuristic Dimension
+    #  grader prompt + , write state.metadata.pending_llm_grader
     work_dir = state.get("_work_dir", "")
     pending_graders = []
     for gate_def, result in zip(gates, results):
@@ -977,19 +1053,19 @@ def score_from_ssot(state):
 
 
 # =====================================================================
-# Markdown 回退评分（兼容旧模式）
+# Markdown (Pattern)
 # =====================================================================
 
-# 非维度章节关键词
+# Dimensionkey
 _SKIP_KEYWORDS = [
-    "执行摘要", "来源清单", "策略评估", "信息缺口", "争议", "拓展方向",
-    "问题清单", "修复记录", "模式识别", "经验教训", "问题追踪",
+    "Executive Summary", "Source", "Strategy", "", "", "direction",
+    "Issue List", "record", "Pattern Recognition", "Lessons Learned", "Problem Tracking",
 ]
-_ROUND_HEADER_RE = re.compile(r'^第\s*\d+\s*轮')
+_ROUND_HEADER_RE = re.compile(r'^\s*\d+\s*round')
 
 
 def _split_all_sections(content):
-    """将 markdown 内容按 ## 和 ### 标题分割为 (level, heading, body) 列表"""
+    """ markdown Content ##  ###  (level, heading, body) """
     pattern = re.compile(r'^(#{2,3})\s+(.+)$', re.MULTILINE)
     sections = []
     matches = list(pattern.finditer(content))
@@ -1004,14 +1080,14 @@ def _split_all_sections(content):
 
 
 def _is_dimension_section(level, heading, body):
-    """判断章节是否为维度章节"""
+    """Dimension"""
     if any(skip in heading for skip in _SKIP_KEYWORDS):
         return False
     if _ROUND_HEADER_RE.match(heading):
         return False
     if level == 3 and re.search(r'\[.+\]', heading):
         return True
-    if "维度" in heading or "Dimension" in heading or "关键发现" in heading:
+    if "Dimension" in heading or "Dimension" in heading or "keyfinding" in heading:
         return True
     if level == 2 and len(body) > 20:
         return True
@@ -1019,7 +1095,7 @@ def _is_dimension_section(level, heading, body):
 
 
 def _count_info_points(body):
-    """计算章节中的信息点数量"""
+    """Count substantive information points in a markdown section body."""
     lines = body.split("\n")
     bullet_count = sum(1 for line in lines
                        if line.strip().startswith("- ") and len(line.strip()) > 10)
@@ -1027,12 +1103,12 @@ def _count_info_points(body):
         return bullet_count
     para_count = sum(1 for line in lines
                      if line.strip()
-                     and not line.strip().startswith("来源:")
-                     and not line.strip().startswith("来源：")
-                     and not line.strip().startswith("策略:")
-                     and not line.strip().startswith("策略：")
+                     and not line.strip().startswith("Source:")
+                     and not line.strip().startswith("Source: ")
+                     and not line.strip().startswith("Strategy:")
+                     and not line.strip().startswith("Strategy: ")
                      and not line.strip().startswith("ID:")
-                     and not line.strip().startswith("ID：")
+                     and not line.strip().startswith("ID: ")
                      and not line.strip().startswith("|")
                      and not line.strip().startswith("#")
                      and len(line.strip()) > 10)
@@ -1040,13 +1116,13 @@ def _count_info_points(body):
 
 
 def score_from_markdown(content):
-    """从 markdown 内容评分（旧模式回退），返回 ("T1", results_list)。
+    """ markdown Content(legacy-mode fallback), Returns ("T1", results_list).
 
-    Markdown 模式只支持 T1 的 4 个维度（覆盖率/可信度/一致性/完整性）。
+    Markdown Pattern T1  4 Dimension(Coverage/Credibility/Consistency/Completeness).
     """
     sections = _split_all_sections(content)
 
-    # --- 覆盖率 ---
+    # --- Coverage ---
     total_dims = 0
     covered_dims = 0
     for level, heading, body in sections:
@@ -1058,41 +1134,41 @@ def score_from_markdown(content):
 
     cov_pct = (covered_dims / total_dims * 100) if total_dims > 0 else 0.0
 
-    # --- 可信度 ---
-    source_markers = ["http", "来源", "Source", "arXiv", "GitHub"]
-    inline_findings = re.findall(r'- .+(?:来源|Source|http|arXiv|GitHub).+', content)
+    # --- Credibility ---
+    source_markers = ["http", "Source", "Source", "arXiv", "GitHub"]
+    inline_findings = re.findall(r'- .+(?:Source|Source|http|arXiv|GitHub).+', content)
     ssot_findings = []
     for level, heading, body in sections:
         if not _is_dimension_section(level, heading, body):
             continue
         has_source = bool(re.search(
-            r'(?:^来源[:：]|^Source[:：]|https?://)', body, re.MULTILINE))
+            r'(?:^Source[:: ]|^Source[:: ]|https?://)', body, re.MULTILINE))
         if has_source:
             ssot_findings.append(body)
 
     total_findings = max(len(inline_findings), len(ssot_findings))
     multi_source = 0
     for f_text in inline_findings:
-        if (f_text.count("http") >= 2 or "多" in f_text or "multiple" in f_text.lower()
-                or f_text.count("来源") >= 2 or f_text.count("Source") >= 2):
+        if (f_text.count("http") >= 2 or "" in f_text or "multiple" in f_text.lower()
+                or f_text.count("Source") >= 2 or f_text.count("Source") >= 2):
             multi_source += 1
     ssot_multi = 0
     for body in ssot_findings:
         url_count = len(re.findall(r'https?://', body))
-        source_line_count = len(re.findall(r'^来源[:：]', body, re.MULTILINE))
+        source_line_count = len(re.findall(r'^Source[:: ]', body, re.MULTILINE))
         if (url_count >= 2 or source_line_count >= 2
-                or "多" in body or "multiple" in body.lower()):
+                or "" in body or "multiple" in body.lower()):
             ssot_multi += 1
     multi_source = max(multi_source, ssot_multi)
     cred_pct = (multi_source / total_findings * 100) if total_findings > 0 else 0.0
 
-    # --- 一致性 ---
+    # --- Consistency ---
     contradictions = len(re.findall(
-        r'矛盾|冲突|不一致|contradictory|conflict', content, re.IGNORECASE))
+        r'|||contradictory|conflict', content, re.IGNORECASE))
     consistent_dims = max(0, total_dims - contradictions)
     cons_pct = (consistent_dims / total_dims * 100) if total_dims > 0 else 0.0
 
-    # --- 完整性 ---
+    # --- Completeness ---
     bullet_statements = re.findall(r'- .{20,}', content)
     bullet_total = len(bullet_statements)
     bullet_sourced = sum(1 for s in bullet_statements
@@ -1113,13 +1189,13 @@ def score_from_markdown(content):
         comp_sourced, comp_total = bullet_sourced, bullet_total
     comp_pct = (comp_sourced / comp_total * 100) if comp_total > 0 else 0.0
 
-    # 构建 T1 门禁结果
+    # T1 gate results
     gates = TEMPLATE_GATES["T1"]
     values = {
-        "coverage": (cov_pct, "{}/{}维度有实质内容".format(covered_dims, total_dims)),
-        "credibility": (cred_pct, "{}/{}发现有多源支撑".format(multi_source, total_findings)),
-        "consistency": (cons_pct, "{}/{}维度无矛盾".format(consistent_dims, total_dims)),
-        "completeness": (comp_pct, "{}/{}陈述有来源引用".format(comp_sourced, comp_total)),
+        "coverage": (cov_pct, "{}/{} dimensions covered".format(covered_dims, total_dims)),
+        "credibility": (cred_pct, "{}/{} findings are multi-sourced".format(multi_source, total_findings)),
+        "consistency": (cons_pct, "{}/{} dimensions are internally consistent".format(consistent_dims, total_dims)),
+        "completeness": (comp_pct, "{}/{} findings include sources".format(comp_sourced, comp_total)),
     }
 
     results = []
@@ -1131,11 +1207,11 @@ def score_from_markdown(content):
 
 
 # =====================================================================
-# 输出格式化
+# Output Formatting
 # =====================================================================
 
 def _overall_pass(results):
-    """判定总体是否通过：所有硬门禁通过即为通过"""
+    """: Gates Passed"""
     for r in results:
         if isinstance(r, dict) and r.get("gate_type") == "hard" and not r.get("pass", False):
             return False
@@ -1143,22 +1219,22 @@ def _overall_pass(results):
 
 
 def print_results(template, results, mode="ssot", state=None):
-    """格式化输出门禁结果"""
+    """GateResult"""
     payload = results_to_json(template, results, mode=mode, state=state)
     overall = payload["overall_pass"]
-    mode_label = "SSOT" if mode == "ssot" else "Markdown(回退)"
+    mode_label = "SSOT" if mode == "ssot" else "Markdown()"
 
-    print("模板: {} | 模式: {} | 总判定: {}".format(
-        template or "未知", mode_label, "PASS" if overall else "FAIL"))
+    print("Template: {} | Pattern: {} | Overall Verdict: {}".format(
+        template or "Unknown", mode_label, "PASS" if overall else "FAIL"))
     if mode == "ssot" and state is not None and payload.get("tsv_fail_closed"):
         print(
-            "TSV fail-closed: {}（与 EVOLVE 终止 rollup 一致；门禁 alone 不足以判收敛）".format(
-                payload.get("fail_closed_reason") or "方差/置信度"
+            "TSV fail-closed: {}(and EVOLVE Termination rollup ; Gate alone )".format(
+                payload.get("fail_closed_reason") or "variance/confidence"
             )
         )
     print()
     print("{:<16} {:>10} {:>10} {:>6} {:>6} {:>10} {:>6}  {}".format(
-        "维度", "得分", "阈值", "类型", "状态", "置信度", "误差", "证据"))
+        "Dimension", "Scores", "threshold", "Type", "Status", "Confidence", "Margin", ""))
     print("-" * 110)
 
     for r in results:
@@ -1179,12 +1255,12 @@ def print_results(template, results, mode="ssot", state=None):
         print("{:<16} {:>10} {:>10} {:>6} {:>6} {:>10} {:>6}  {}".format(
             label, val_display, thr_display, gate_type, status, confidence, margin_display, evidence))
 
-    # 软门禁未通过的提示
+    # Notice for failed soft gates
     soft_fails = [r for r in results
                   if isinstance(r, dict) and r.get("gate_type") == "soft" and not r.get("pass", False)]
     if soft_fails and payload.get("gates_pass"):
         print()
-        print("注意: {}个软门禁未通过（已记录，不阻塞终止判定）:".format(len(soft_fails)))
+        print("Note: {} soft gates did not pass (recorded, but do not block termination):".format(len(soft_fails)))
         for r in soft_fails:
             print("  - {}: {}".format(r.get("label", r.get("dimension")), r.get("evidence", "")))
 
@@ -1192,9 +1268,9 @@ def print_results(template, results, mode="ssot", state=None):
 
 
 def results_to_json(template, results, mode="ssot", state=None):
-    """将结果转为 JSON 可序列化的 dict。
+    """Result JSON  dict.
 
-    SSOT 模式下若 results_tsv 末行 fail-closed，则 overall_pass 为 false（与 controller phase_evolve 一致）。
+    SSOT Pattern results_tsv  fail-closed,  overall_pass  false(and controller phase_evolve ).
     """
     gate_pass = _overall_pass(results)
     tsv_fc, tsv_reason = False, None
@@ -1213,7 +1289,7 @@ def results_to_json(template, results, mode="ssot", state=None):
 
 
 # =====================================================================
-# CLI 入口
+# CLI Entry
 # =====================================================================
 
 def main():
@@ -1231,6 +1307,8 @@ def main():
         sys.exit(1)
 
     if mode == "ssot":
+        print("INFO: SSOT pattern: reading {} for scoring.".format(
+            os.path.join(context, "autoloop-state.json")), file=sys.stderr)
         template, results = score_from_ssot(data)
     else:
         template, results = score_from_markdown(data)
@@ -1241,7 +1319,7 @@ def main():
         print(json.dumps(output, ensure_ascii=False, indent=2))
     else:
         print_results(template, results, mode, state=ssot_state)
-        # 附加 JSON 行（供其他脚本消费）
+        #  JSON ()
         output = results_to_json(template, results, mode, state=ssot_state)
         print("---JSON---")
         print(json.dumps(output, ensure_ascii=False))

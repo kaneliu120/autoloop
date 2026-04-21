@@ -1,284 +1,259 @@
 ---
 name: autoloop-compare
 description: >
-  AutoLoop T2: 多方案对比模板。多维度评分 + 证据支撑 + 置信度声明 + 明确推荐。
-  每个选项独立分析，统一评分维度，敏感性检验，输出决策矩阵。
-  质量门禁阈值见 references/quality-gates.md T2 行。
-  触发：/autoloop:compare 或任何需要在多个选项中做决策的场景。
+  AutoLoop T2: multi-option comparison template. Multi-dimensional scoring + evidence support + confidence statements + explicit recommendation.
+  Each option is analyzed independently with unified scoring dimensions, sensitivity checks, and a decision matrix.
+  Quality gate thresholds are in references/quality-gates.md T2.
+  Triggered by /autoloop:compare or any task that requires deciding among multiple options.
 ---
 
-# AutoLoop T2: Compare — 多方案对比
+# AutoLoop T2: Compare — Multi-Option Comparison
 
-## 执行前提
+## Execution Prerequisites
 
-读取 `autoloop-plan.md` 获取：
-- 要比较的选项列表（必须 ≥ 2 个）
-- 评估维度列表（可自动生成）
-- 权重配置（如果用户指定了优先级）
-- key_assumptions（结构化列表，格式：假设名称 + 当前值 + 单位）
+Read `autoloop-plan.md` to obtain:
+- The list of options to compare (must be at least 2)
+- The list of evaluation dimensions (can be generated automatically)
+- Weight configuration, if the user specified priorities
+- `key_assumptions` (structured list: assumption name + current value + unit)
 
-**Round 2+ OBSERVE 起点**：先读取 `autoloop-findings.md` 反思章节，获取遗留问题、有效/无效策略、已识别模式、经验教训，再扫描当前状态。详见 `references/loop-protocol.md` OBSERVE Step 0 章节。
+**Round 2+ OBSERVE starting point**: first read the reflection section in `autoloop-findings.md` to get open issues, effective/ineffective strategies, identified patterns, and lessons learned, then scan the current state. See `references/loop-protocol.md` OBSERVE Step 0.
 
-- **经验库读取**: 读取 `references/experience-registry.md` 中与当前任务类型和目标维度匹配的条目，识别状态为「推荐」或「候选默认」的策略，传递到 DECIDE 阶段参考
-
----
-
-## 默认评估维度
-
-默认评估维度和权重见 `references/quality-gates.md` T2 默认评估维度章节。用户在 plan 中定义的维度和权重优先。
+- **Experience registry read**: read entries in `references/experience-registry.md` that match the current task type and target dimensions, identify strategies marked as "recommended" or "candidate default", and carry them into DECIDE as references
 
 ---
 
-## 第一轮：并行选项分析
+## Default Evaluation Dimensions
 
-### OBSERVE（第1轮基线采集）
+The default evaluation dimensions and weights are in the default evaluation dimensions section of `references/quality-gates.md` T2. User-defined dimensions and weights in the plan take precedence.
 
-第1轮无历史数据，执行基线采集：当前发现数 = 0，所有质量门禁得分 = 0。
-将此作为 iteration 0 基线写入 `autoloop-progress.md`。详见 `references/loop-protocol.md` 第1轮 Bootstrap 规则。
+---
 
-### 1.1 为每个选项分配独立 subagent
+## Round 1: Parallel Option Analysis
 
-- **工单生成**: 按 `references/agent-dispatch.md` 对应角色模板生成委派工单，填充任务目标、输入数据、输出格式、质量标准、范围限制、当前轮次、上下文摘要
+### OBSERVE (Round 1 baseline collection)
 
-每个候选方案分配 **2 个独立 option-analyzer subagent 并行分析**（使用不同的分析角度 prompt）。
+There is no historical data in Round 1. Collect the baseline: current issue count = 0, all quality-gate scores = 0.
+Write this as iteration 0 baseline into `autoloop-progress.md`. See the Round 1 Bootstrap rules in `references/loop-protocol.md`.
 
-这确保偏见检查门禁可达：每选项 ≥ 2 个独立 subagent 评估。偏见检查计算方法见 `references/quality-gates.md` T2偏见检查章节。subagent 调度规范见 `references/agent-dispatch.md` option-analyzer 章节。
+### 1.1 Assign an Independent Subagent to Each Option
 
-每个 analyzer subagent 的指令：
+- **Work order generation**: use the corresponding role template in `references/agent-dispatch.md` to generate dispatch work orders, filling in task goal, input data, output format, quality standards, scope limits, current round, and context summary
+
+Assign **2 independent option-analyzer subagents per candidate option** for parallel analysis (using different analysis-angle prompts).
+
+This ensures the bias-check gate is reachable: at least 2 independent subagents evaluate each option. See the bias-check calculation in the T2 bias-check section of `references/quality-gates.md`. Subagent dispatch rules are in the option-analyzer section of `references/agent-dispatch.md`.
+
+Instructions for each analyzer subagent:
 
 ```
-你是 option-analyzer subagent，负责深度分析以下选项：
+You are an option-analyzer subagent, responsible for deep analysis of the following option:
 
-选项名称：{选项 A}
-对比主题：{主题}
-评估维度：{维度列表}
-分析角度：{正向分析 / 批判性分析}（同一选项的两个 subagent 使用不同角度）
+Option name: {Option A}
+Comparison topic: {topic}
+Evaluation dimensions: {dimension list}
+Analysis angle: {positive analysis / critical analysis} (the two subagents for the same option must use different angles)
 
-任务：对这个选项在每个评估维度上进行深度分析。
+Task: Perform deep analysis of this option for each evaluation dimension.
 
-要求：
-1. 每个维度必须有具体的证据支撑（数据、引用、案例）
-2. 识别核心优势（最多 3 个）
-3. 识别核心劣势/风险（最多 3 个）
-4. 识别最适合的使用场景
-5. 识别不适合的使用场景
+Requirements:
+1. Every dimension must be backed by specific evidence (data, citations, examples)
+2. Identify the core strengths (maximum 3)
+3. Identify the core weaknesses / risks (maximum 3)
+4. Identify the most suitable use cases
+5. Identify the least suitable use cases
 
-输出格式：
-## 选项分析：{选项名称}
+Output format:
+## Option Analysis: {option name}
 
-### 维度评分
+### Dimension Scores
 
-| 维度 | 得分 (1-10) | 证据摘要 | 来源 |
+| Dimension | Score (1-10) | Evidence Summary | Source |
 |------|------------|---------|------|
-| {维度 1} | {N} | {简短证据} | {URL} |
+| {dimension 1} | {N} | {short evidence} | {URL} |
 
-### 核心优势
-1. {优势 1}：{具体说明，有数据支持}
-2. {优势 2}：...
-3. {优势 3}：...
+### Core Strengths
+1. {Strength 1}: {specific explanation with data support}
+2. {Strength 2}: ...
+3. {Strength 3}: ...
 
-### 核心劣势/风险
-1. {劣势 1}：{具体说明，评估影响}
-2. {劣势 2}：...
+### Core Weaknesses / Risks
+1. {Weakness 1}: {specific explanation, impact assessment}
+2. {Weakness 2}: ...
 
-### 适用场景
-✓ 适合：{场景描述}
-✗ 不适合：{场景描述}
+### Use Cases
+✓ Suitable: {scenario description}
+✗ Not suitable: {scenario description}
 
-### 真实用户评价
-（来自 Reddit/Stack Overflow/Hacker News 等）
-- "{引用}"（来源：{URL}）
+### Real User Feedback
+(from Reddit / Stack Overflow / Hacker News, etc.)
+- "{quote}" (source: {URL})
 
-### 综合得分（加权前）
-总分：{X}/10，置信度：{N}%（基于 {N} 个信息来源）
+### Overall Score (before weighting)
+Total: {X}/10, confidence: {N}% (based on {N} sources)
 ```
 
-### 1.2 偏见检查（所有 analyzer 返回后立即执行）
+### 1.2 Bias Check (run immediately after all analyzers return)
 
-偏见检查计算方法见 `references/quality-gates.md` T2偏见检查章节。
+See the bias-check section in `references/quality-gates.md` T2 for the calculation method.
 
-质量门禁阈值见 `references/quality-gates.md` T2 偏见检查章节（触发条件、通过标准）。简要流程：对每个选项比较两个 analyzer 的评分差，超过阈值则触发第3个独立 analyzer 重新评估该选项，以多数结论为准。
+Quality gate thresholds are in the T2 bias-check section of `references/quality-gates.md` (trigger conditions and pass criteria). In short: compare the two analyzer scores for each option; if the difference exceeds the threshold, launch a third independent analyzer to re-evaluate that option and use the majority conclusion.
 
-### 1.3 独立的中立审查
+### 1.3 Independent Neutral Review
 
-所有选项分析完成后，运行一个 neutral-reviewer subagent（调度方式见 `references/agent-dispatch.md` neutral-reviewer 章节）：
-
-```
-你是 neutral-reviewer，负责检查以下分析是否存在偏见。
-
-读取所有选项的分析结果，检查：
-1. 评分是否有明显异常（某选项在所有维度都 ≥9 或 ≤3）
-2. 证据质量是否均衡（某选项引用了更权威的来源）
-3. 是否存在选择性引用（只引用对某选项有利的信息）
-4. 评分标准是否一致（同等水平在不同选项中评分是否相同）
-
-输出：
-- 偏见风险评估（低/中/高）
-- 需要重新评估的维度（如果有）
-- 建议增补的对立证据（如果有）
-```
-
----
-
-## 第二轮：加权评分 + 敏感性分析
-
-### 2.1 加权计算
+After all option analyses are complete, run a neutral-reviewer subagent (dispatch rules in `references/agent-dispatch.md` neutral-reviewer section):
 
 ```
-综合得分 = Σ (维度得分 × 维度权重)
-```
+You are a neutral-reviewer responsible for checking whether the analysis contains bias.
 
-用户配置的权重优先，默认权重次之。
+Read the analysis results for all options and check:
+1. Whether any score is clearly abnormal (one option is ≥9 or ≤3 across all dimensions)
+2. Whether evidence quality is balanced (whether one option cites more authoritative sources)
+3. Whether selective citation is happening (only citing information favorable to one option)
+4. Whether scoring standards are consistent (whether equal-level findings are scored the same across options)
 
-计算每个选项的加权得分，生成排名。
-
-### 2.2 敏感性分析
-
-敏感性分析从 `autoloop-plan.md` 的 `key_assumptions` 字段读取关键假设列表（结构化格式：假设名称 + 当前值 + 单位）。plan 中未提供则自动从评估维度中识别成本/时间/规模类维度作为假设来源。
-
-计算方法见 `references/quality-gates.md` T2敏感性分析章节。通过标准：任意单一假设 ±20% 变动后推荐排名第1位不变。完整计算规则以 quality-gates.md 为准，不在此重新定义。
-
-```
-敏感性测试（假设来自 plan.key_assumptions）：
-
-对每个关键假设 H（从 plan.key_assumptions 读取结构化列表）：
-  场景 H+：H × 1.2 → 重新推导排名 → 与原排名对比
-  场景 H-：H × 0.8 → 重新推导排名 → 与原排名对比
-
-示例输出：
-场景 1（{假设名称} ×1.2）：
-  排名：{选项} 第一，分差 {X} 分
-
-场景 2（{假设名称} ×0.8）：
-  排名：{选项} 第一，分差 {X} 分
-
-（对 key_assumptions 中的所有假设重复上述 ±20% 测试）
-
-结论：
-- 推荐稳健性：{高（所有 ±20% 场景推荐同一选项）/ 中 / 低}
-- 临界假设：{对结果影响最大的假设}
+Output:
+- Bias risk assessment (low / medium / high)
+- Dimensions that need re-evaluation, if any
+- Suggested opposing evidence to add, if any
 ```
 
 ---
 
-## 对比矩阵生成
+## Round 2: Weighted Scoring + Sensitivity Analysis
 
-生成完整的对比矩阵：
+### 2.1 Weighted Calculation
+
+```
+Overall score = Σ (dimension score × dimension weight)
+```
+
+User-defined weights take precedence; default weights come second.
+
+Compute the weighted score for each option and generate the ranking.
+
+### 2.2 Sensitivity Analysis
+
+Sensitivity analysis reads the key assumptions list from the `key_assumptions` field in `autoloop-plan.md` (structured format: assumption name + current value + unit). If the plan does not provide assumptions, automatically infer cost / time / scale dimensions from the evaluation dimensions as assumption sources.
+
+See `references/quality-gates.md` T2 sensitivity analysis section for the calculation method. Pass criteria: after any single assumption changes by ±20%, the top recommended option must remain the same. The full calculation rules are defined in quality-gates.md and are not redefined here.
+
+```
+Sensitivity test (assumptions come from plan.key_assumptions):
+
+For each key assumption H (read the structured list from plan.key_assumptions):
+  Scenario H+: H × 1.2 → recompute ranking → compare with original ranking
+  Scenario H-: H × 0.8 → recompute ranking → compare with original ranking
+
+Example output:
+Scenario 1 ({assumption name} ×1.2):
+  Ranking: {option} first, margin {X}
+
+Scenario 2 ({assumption name} ×0.8):
+  Ranking: {option} first, margin {X}
+
+(Repeat the ±20% test above for every assumption in key_assumptions)
+
+Conclusion:
+- Recommendation robustness: {high / medium / low} (high means the same option wins in all ±20% scenarios)
+- Critical assumption: {the assumption with the biggest impact on the result}
+```
+
+---
+
+## Comparison Matrix Generation
+
+Generate the full comparison matrix:
 
 ```markdown
-## 综合对比矩阵
+## Comprehensive Comparison Matrix
 
-| 维度（权重） | {选项 A} | {选项 B} | {选项 C} |
+| Dimension (weight) | {Option A} | {Option B} | {Option C} |
 |------------|---------|---------|---------|
-| 功能匹配度 (25%) | 8/10 ✓ | 7/10 | 6/10 |
-| 技术成熟度 (20%) | 9/10 ✓ | 8/10 | 7/10 |
-| 学习曲线 (15%) | 5/10 | 8/10 ✓ | 7/10 |
-| 社区生态 (15%) | 9/10 ✓ | 7/10 | 5/10 |
-| 成本 (15%) | 4/10 | 7/10 ✓ | 9/10 |
-| 长期风险 (10%) | 8/10 ✓ | 7/10 | 6/10 |
-| **加权总分** | **7.5** | **7.3** | **6.7** |
-| **排名** | **第 1** | **第 2** | **第 3** |
+| Feature fit (25%) | 8/10 ✓ | 7/10 | 6/10 |
+| Technical maturity (20%) | 9/10 ✓ | 8/10 | 7/10 |
+| Learning curve (15%) | 5/10 | 8/10 ✓ | 7/10 |
+| Community ecosystem (15%) | 9/10 ✓ | 7/10 | 5/10 |
+| Cost (15%) | 4/10 | 7/10 ✓ | 9/10 |
+| Long-term risk (10%) | 8/10 ✓ | 7/10 | 6/10 |
+| **Weighted total** | **7.5** | **7.3** | **6.7** |
+| **Rank** | **#1** | **#2** | **#3** |
 
-注：✓ 表示该维度最佳选项
+Note: ✓ marks the best option for that dimension
 ```
 
 ---
 
-## 推荐输出格式
+## Recommended Output Format
 
 ```markdown
-## 推荐结论
+## Recommendation
 
-### 主推荐：{选项 A}
-置信度：{N}%（{基于 N 个来源}）
+### Main Recommendation: {Option A}
+Confidence: {N}% ({based on N sources})
 
-**推荐理由**：
-{选项 A} 在核心维度（功能匹配度、技术成熟度、社区生态）均排名第一，
-综合加权得分 7.5/10，领先第二名 0.2 分。
+**Why this is recommended**:
+{Option A} ranks first across the core dimensions (feature fit, technical maturity, community ecosystem),
+with a weighted score of 7.5/10, leading the second-place option by 0.2 points.
 
-主要优势：
-1. {优势 1}（数据支持：{来源}）
-2. {优势 2}
-3. {优势 3}
+Main strengths:
+1. {Strength 1} (data support: {source})
+2. {Strength 2}
+3. {Strength 3}
 
-主要风险：
-1. {风险 1}（缓解建议：{措施}）
-2. {风险 2}
+Main risks:
+1. {Risk 1} (mitigation: {measure})
+2. {Risk 2}
 
-### 适用条件
+### When to Use
 
-✓ **选择 {选项 A} 当**：
-- {条件 1}
-- {条件 2}
+✓ **Choose {Option A} when**:
+- {condition 1}
+- {condition 2}
 
-✓ **选择 {选项 B} 当**：
-- {条件 1}（尤其是 {场景}）
+✓ **Choose {Option B} when**:
+- {condition 1} (especially {scenario})
 
-### 分差分析
+### Gap Analysis
 
-选项 A vs B 差距仅 0.2 分，不稳健（成本权重提升 10% 后推荐反转）。
-**建议**：如果成本约束严格，重新权衡 A vs B。
+The gap between Option A and B is only 0.2 points, so the result is not robust (the recommendation flips if the cost weight increases by 10%).
+**Suggestion**: if cost constraints are strict, re-evaluate A vs B.
 
-### 不推荐的理由
+### Why the Others Are Not Recommended
 
-{选项 C}：{具体原因，不是笼统的"不如其他选项"}
+{Option C}: {specific reason, not a vague "worse than the others"}
 
 ---
 
-## 证据局限性
+## Evidence Limitations
 
-以下信息未能充分验证，可能影响结论：
-- {信息缺口 1}（影响维度：{维度}，影响程度：中）
-- {信息缺口 2}
+The following information could not be fully verified and may affect the conclusion:
+- {information gap 1} (affected dimension: {dimension}, impact: medium)
+- {information gap 2}
 
-建议在正式决策前验证：{具体验证建议}
+Recommended verification before final decision: {specific verification suggestion}
 ```
 
 ---
 
-## 结果文件
+## Result File
 
-生成 `autoloop-results.tsv`（TSV 格式见 `references/loop-protocol.md` 统一 TSV Schema 章节）：
+Generate `autoloop-results.tsv` (TSV format in the unified TSV schema section of `references/loop-protocol.md`):
 
 ```tsv
-（15列 TSV 格式见 references/loop-data-schema.md 统一 TSV Schema）
+ (15-column TSV format in references/loop-data-schema.md unified TSV schema)
 iteration	phase	status	dimension	metric_value	delta	strategy_id	action_summary	side_effect	evidence_ref	unit_id	protocol_version	details
-1	compare	通过	功能匹配度	8	—	S01-option-analysis	双analyzer并行评估	无	F001	选项A	1.0.0	权重0.25, 证据3条
-1	compare	通过	技术成熟度	9	—	S01-option-analysis	双analyzer并行评估	无	F002	选项A	1.0.0	权重0.20, 证据5条
-1	compare	通过	功能匹配度	7	—	S01-option-analysis	双analyzer并行评估	无	F003	选项B	1.0.0	权重0.25, 证据2条
+1	compare	pass	feature fit	8	—	S01-option-analysis	parallel dual-analyzer evaluation	none	F001	Option A	1.0.0	weight 0.25, 3 evidence items
+1	compare	pass	technical maturity	9	—	S01-option-analysis	parallel dual-analyzer evaluation	none	F002	Option A	1.0.0	weight 0.20, 5 evidence items
+1	compare	pass	feature fit	7	—	S01-option-analysis	parallel dual-analyzer evaluation	none	F003	Option B	1.0.0	weight 0.25, 2 evidence items
 ```
 
-证据来源 URL 和详细分析记录到 `autoloop-findings.md`，不放在 results.tsv。
+Evidence source URLs and detailed analysis belong in `autoloop-findings.md`, not in `results.tsv`.
 
 ---
 
-## 质量门禁检查
+## Quality Gate Checks
 
-完整门禁定义和通过标准见 `references/quality-gates.md` T2 行。在输出最终推荐前，验证：
+See the full gate definitions and pass criteria in `references/quality-gates.md` T2. Before outputting the final recommendation, verify:
 
-CHECK阶段由独立的 compare-evaluator subagent 执行评分（调度方式见 references/agent-dispatch.md 独立评分器章节）。compare-evaluator 只接收比较分析产出物，不接收执行过程信息，按 quality-gates.md 锚点盲评。
-
-评分时必须同时输出分数、判据（命中哪个锚点区间）、证据（来源URL或文件行号）。缺少任一项的评分无效，该维度记为待检查。
-
-- [ ] 每个选项在每个维度都有具体证据（覆盖率计算方法见 references/quality-gates.md 覆盖率章节）
-- [ ] 关键维度有至少 2 个独立来源（可信度 ≥ 80%，见 quality-gates.md）
-- [ ] 偏见检查已通过（计算方法见 quality-gates.md T2偏见检查章节）
-- [ ] 敏感性分析已完成（计算方法见 quality-gates.md T2敏感性分析章节）
-- [ ] 置信度已明确声明
-- [ ] 信息缺口已列出
-
-未通过则进行第三轮补充研究。
-
----
-
-## 每轮 REFLECT 执行规范
-
-每轮（包括第一轮）结束后，在 EVOLVE/终止判断之后执行。REFLECT 必须写入文件，不能只在思考中完成（规范见 `references/loop-protocol.md` REFLECT 章节）：
-
-写入 `autoloop-findings.md` 的4层反思结构表（问题登记/策略复盘/模式识别/经验教训），格式见 `assets/findings-template.md`：
-
-- **问题登记**：记录本轮发现的信息空白、来源冲突、数据质量问题、选项分析缺陷
-- **策略复盘**：搜索策略/分析方法/偏见检查方式的效果评估（保持 | 避免 | 待验证）（策略评价枚举见 references/loop-data-schema.md 统一状态枚举）
-- **模式识别**：哪些维度反复缺少证据、哪些选项总是数据质量低
-- **经验教训**：选项分析/偏见检查/敏感性分析的有效性总结
-- **经验写回**: 将本轮策略效果写入 `references/experience-registry.md`（策略ID、适用场景、效果评分、执行上下文，遵循效果记录表格式）
+The CHECK stage is scored by an independent compare-evaluator subagent (dispatch rules in the `references/agent-dispatch.md` independent scorer section). The compare-evaluator receives only the comparison artifacts, not the execution process, and performs blind scoring against the anchors in quality-gates.md.

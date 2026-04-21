@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""AutoLoop SSOT 渲染工具 — 从 autoloop-state.json 生成 4 个可读文件
+"""AutoLoop SSOT renderer — generates 4 readable files from autoloop-state.json
 
-用法:
-  autoloop-render.py <工作目录>              渲染全部 4 个文件
-  autoloop-render.py <工作目录> --file plan  只渲染 plan.md
-  autoloop-render.py <工作目录> --file progress
-  autoloop-render.py <工作目录> --file findings
-  autoloop-render.py <工作目录> --file tsv
-  autoloop-render.py <工作目录> panorama     全景视图（stdout）
+Usage:
+  autoloop-render.py <Work Directory>              render all 4 files
+  autoloop-render.py <Work Directory> --file plan  render only plan.md
+  autoloop-render.py <Work Directory> --file progress
+  autoloop-render.py <Work Directory> --file findings
+  autoloop-render.py <Work Directory> --file tsv
+  autoloop-render.py <Work Directory> panorama     Panorama View(stdout)
 """
 
 import csv
@@ -27,7 +27,7 @@ STATE_FILE = "autoloop-state.json"
 def load_state(work_dir):
     path = os.path.join(work_dir, STATE_FILE)
     if not os.path.exists(path):
-        print("ERROR: 数据源不存在: {}".format(path))
+        print("ERROR: data source does not exist: {}".format(path))
         sys.exit(1)
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -39,31 +39,31 @@ def render_plan(state, work_dir):
     lines = [
         "# AutoLoop Plan",
         "",
-        "## 基本信息",
+        "## Basic Information",
         "",
-        "| 字段 | 值 |",
+        "| Field | Value |",
         "|------|-----|",
-        "| 任务 ID | {} |".format(p.get("task_id", "")),
-        "| 模板 | {} |".format(p.get("template", "")),
-        "| 目标 | {} |".format(p.get("goal", "")),
-        "| 状态 | {} |".format(p.get("status", "")),
-        "| 协议版本 | {} |".format(meta.get("protocol_version", "")),
-        "| 创建时间 | {} |".format(meta.get("created_at", "")),
+        "| Task ID | {} |".format(p.get("task_id", "")),
+        "| Template | {} |".format(p.get("template", "")),
+        "| Target | {} |".format(p.get("goal", "")),
+        "| Status | {} |".format(p.get("status", "")),
+        "| Protocol Version | {} |".format(meta.get("protocol_version", "")),
+        "| Created At | {} |".format(meta.get("created_at", "")),
         "",
     ]
 
     if p.get("detailed_background"):
-        lines += ["## 详细背景", "", p["detailed_background"], ""]
+        lines += ["## Detailed Background", "", p["detailed_background"], ""]
 
     if p.get("dimensions"):
-        lines += ["## 调研维度", ""]
+        lines += ["## ResearchDimension", ""]
         for i, d in enumerate(p["dimensions"], 1):
             lines.append("{}. {}".format(i, d))
         lines.append("")
 
     if p.get("gates"):
-        lines += ["## 质量门禁", "",
-                   "| 维度 | 目标 | 当前 | 状态 |",
+        lines += ["## Quality Gates", "",
+                   "| Dimension | Target | Current | Status |",
                    "|------|------|------|------|"]
         hard_non_exempt_fail = 0
         hard_non_exempt = 0
@@ -71,17 +71,17 @@ def render_plan(state, work_dir):
             dim_col = g.get("dim") or g.get("dimension", "")
             st_show = g.get("status", "—")
             if plan_gate_is_exempt(g):
-                st_show = "豁免"
+                st_show = "Exempt"
             lines.append("| {} | {} | {} | {} |".format(
                 dim_col, g.get("target", ""),
                 g.get("current", "—"), st_show))
             if (g.get("gate") or "").lower() == "hard" and not plan_gate_is_exempt(g):
                 hard_non_exempt += 1
                 s = (g.get("status") or "").strip()
-                if s == "未达标":
+                if s == "Fail":
                     hard_non_exempt_fail += 1
         lines.append(
-            "*硬门禁未达标（不含豁免行）: {} / {}*".format(
+            "*Hard gates not met (excluding exempt rows): {} / {}*".format(
                 hard_non_exempt_fail, hard_non_exempt
             )
         )
@@ -89,17 +89,17 @@ def render_plan(state, work_dir):
 
     budget = p.get("budget", {})
     lines += [
-        "## 预算",
+        "## Budget",
         "",
-        "- 最大轮次: {}".format(budget.get("max_rounds", "未设定")),
-        "- 当前轮次: {}".format(budget.get("current_round", 0)),
-        "- 时间限制: {}".format(budget.get("time_limit", "无限制")),
+        "- Max Rounds: {}".format(budget.get("max_rounds", "Not Set")),
+        "- current round: {}".format(budget.get("current_round", 0)),
+        "- Time Limit: {}".format(budget.get("time_limit", "Unlimited")),
         "",
     ]
 
     if p.get("change_log"):
-        lines += ["## 变更记录", "",
-                   "| 时间 | 字段 | 变更前 | 变更后 | 原因 |",
+        lines += ["## Change Log", "",
+                   "| Time | Field | Before | After | Reason |",
                    "|------|------|--------|--------|------|"]
         for c in p["change_log"][-10:]:
             lines.append("| {} | {} | {} | {} | {} |".format(
@@ -119,39 +119,39 @@ def render_progress(state, work_dir):
 
     for it in state.get("iterations", []):
         lines += [
-            "## 第 {} 轮".format(it["round"]),
+            "## Round {}".format(it["round"]),
             "",
-            "- 状态: {}".format(it.get("status", "")),
-            "- 阶段: {}".format(it.get("phase", "")),
-            "- 开始: {}".format(it.get("start_time", "")),
+            "- Status: {}".format(it.get("status", "")),
+            "- Phase: {}".format(it.get("phase", "")),
+            "- Start: {}".format(it.get("start_time", "")),
             "",
         ]
 
         if it.get("scores"):
-            lines += ["### 得分", "",
-                       "| 维度 | 分数 |", "|------|------|"]
+            lines += ["### Scores", "",
+                       "| Dimension | score |", "|------|------|"]
             for dim, score in it["scores"].items():
                 lines.append("| {} | {} |".format(dim, score))
             lines.append("")
 
         strategy = it.get("strategy", {})
         if strategy.get("strategy_id"):
-            lines += ["### 策略: {} — {}".format(
+            lines += ["### Strategy: {} — {}".format(
                 strategy.get("strategy_id", ""), strategy.get("name", "")), ""]
 
         evolve = it.get("evolve", {})
-        if evolve.get("termination") != "继续":
-            lines.append("### 终止: {}".format(evolve.get("termination", "")))
+        if evolve.get("termination") != "Continue":
+            lines.append("### Termination: {}".format(evolve.get("termination", "")))
             lines.append("")
 
         reflect = it.get("reflect", {})
         if reflect.get("lesson_learned"):
-            lines += ["### 反思", "", reflect["lesson_learned"], ""]
+            lines += ["### Reflection", "", reflect["lesson_learned"], ""]
         sid = (reflect.get("strategy_id") or "").strip()
         eff = (reflect.get("effect") or "").strip()
         if sid or eff:
             lines += [
-                "### 结构化反思",
+                "### Structured Reflection",
                 "",
                 "- **strategy_id**: `{}`".format(sid or "—"),
                 "- **effect**: {}".format(eff or "—"),
@@ -177,37 +177,37 @@ def render_progress(state, work_dir):
 
 
 def reflect_four_layer_footer_lines(state):
-    """loop-protocol 四层 H2+表：随 findings.md 每次渲染追加，避免仅 SSOT 轮次块时被整文件重写冲掉，OBSERVE Step0 可计数。"""
+    """loop-protocol  H2+:  findings.md , Avoid SSOT Roundfile, OBSERVE Step0 ."""
     meta = state.get("metadata") or {} if isinstance(state, dict) else {}
     pv = meta.get("protocol_version")
     pv_s = str(pv).strip() if pv is not None and str(pv).strip() else "1.0.0"
     return [
         "",
-        "## 问题清单（REFLECT 第 1 层）",
+        "## Issue List (REFLECT Layer 1)",
         "",
-        "| ID | 描述 | 状态 |",
+        "| ID | Description | Status |",
         "| --- | --- | --- |",
-        "| RFL-1 | 由 render 追加；请与 SSOT findings 同步更新叙事 | open |",
+        "| RFL-1 | Appended by render; keep the narrative synchronized with SSOT findings | open |",
         "",
-        "## 策略评估（REFLECT 第 2 层）",
+        "## Strategy Evaluation (REFLECT Layer 2)",
         "",
-        "| 策略 | 结果 | 备注 |",
+        "| Strategy | Result | Notes |",
         "| --- | --- | --- |",
-        "| — | 待填 | 每轮 DECIDE 后更新 |",
+        "| — | TBD | update after each DECIDE round |",
         "",
-        "## 模式识别（REFLECT 第 3 层）",
+        "## Pattern Recognition (REFLECT Layer 3)",
         "",
-        "| 模式 | 说明 |",
+        "| Pattern | Description |",
         "| --- | --- |",
-        "| — | 待从多轮 findings 归纳 |",
+        "| — | to be summarized from multi-round findings |",
         "",
-        "## 经验教训（REFLECT 第 4 层）",
+        "## Lessons Learned (REFLECT Layer 4)",
         "",
-        "| 教训 | 后续动作 |",
+        "| Lesson | Follow-up Action |",
         "| --- | --- |",
-        "| — | 待记录 |",
+        "| — | To Record |",
         "",
-        "协议版本（findings 侧）: {}（与 SSOT metadata.protocol_version 对齐）".format(pv_s),
+        "Protocol Version(findings side): {} (aligned with SSOT metadata.protocol_version)".format(pv_s),
     ]
 
 
@@ -216,17 +216,17 @@ def render_findings(state, work_dir):
     lines = ["# AutoLoop Findings", ""]
 
     summary = findings.get("executive_summary", {})
-    if summary.get("topic") != "待填写":
+    if summary.get("topic") != "TBD":
         lines += [
-            "## 执行摘要",
+            "## Executive Summary",
             "",
-            "- 主题: {}".format(summary.get("topic", "")),
-            "- 总轮次: {}".format(summary.get("total_rounds", 0)),
+            "- Topic: {}".format(summary.get("topic", "")),
+            "- Total Rounds: {}".format(summary.get("total_rounds", 0)),
             "",
         ]
 
     for rd in findings.get("rounds", []):
-        lines += ["## 第 {} 轮发现".format(rd["round"]), ""]
+        lines += ["## Round {} Findings".format(rd["round"]), ""]
         for f in rd.get("findings", []):
             lines.append("### {} [{}]".format(
                 f.get("dimension", ""), f.get("confidence", "")))
@@ -234,21 +234,21 @@ def render_findings(state, work_dir):
             body = f.get("content", "")
             summ = f.get("summary", "")
             if summ:
-                lines.append("**摘要**: {}".format(summ))
+                lines.append("**Summary**: {}".format(summ))
                 lines.append("")
             lines.append(body)
             if f.get("source"):
                 lines.append("")
-                lines.append("来源: {}".format(f["source"]))
+                lines.append("Source: {}".format(f["source"]))
             if f.get("strategy_id"):
-                lines.append("策略: {}".format(f["strategy_id"]))
+                lines.append("Strategy: {}".format(f["strategy_id"]))
             if f.get("id"):
                 lines.append("ID: {}".format(f["id"]))
             lines.append("")
 
     if findings.get("problem_tracker"):
-        lines += ["## 问题追踪", "",
-                   "| ID | 描述 | 状态 |", "|-----|------|------|"]
+        lines += ["## Problem Tracking", "",
+                   "| ID | Description | Status |", "|-----|------|------|"]
         for p in findings["problem_tracker"]:
             lines.append("| {} | {} | {} |".format(
                 p.get("id", ""), p.get("description", "")[:50],
@@ -290,11 +290,11 @@ RENDERERS = {
 
 
 # ---------------------------------------------------------------------------
-# panorama — 全景视图（stdout only, 不写文件）
+# panorama — Panorama View (stdout only, does not write files)
 # ---------------------------------------------------------------------------
 
 def render_panorama(state):
-    """从 state.json 提取关键信息，输出全景视图到 stdout。"""
+    """Extract key information from state.json and print the panorama view to stdout."""
     plan = state.get("plan") or {}
     meta = state.get("metadata") or {}
     iterations = state.get("iterations") or []
@@ -305,45 +305,45 @@ def render_panorama(state):
     template = plan.get("template", "?")
     max_rounds = budget.get("max_rounds", 0)
     current_round = budget.get("current_round", 0)
-    status_label = plan.get("status", "未知")
+    status_label = plan.get("status", "Unknown")
 
-    # 当前阶段: 取最后一个 iteration 的 phase
+    # CurrentPhase: last iteration  phase
     last_phase = "N/A"
     if iterations:
         last_phase = iterations[-1].get("phase", "N/A")
 
-    # 完成度: current_round / max_rounds (if max_rounds > 0)
+    # Progress: current_round / max_rounds (if max_rounds > 0)
     if max_rounds > 0:
         pct = min(100, round(current_round / max_rounds * 100))
-        budget_line = "轮次: {}/{} ({}%)".format(current_round, max_rounds, pct)
+        budget_line = "Round: {}/{} ({}%)".format(current_round, max_rounds, pct)
     else:
-        budget_line = "轮次: {} (无上限)".format(current_round)
+        budget_line = "Round: {} (Unlimited)".format(current_round)
 
     lines = [
-        "## 任务全景 — {} ({})".format(task_name, template),
-        "状态: Round {}/{} | {} | {}".format(
+        "## Task Panorama — {} ({})".format(task_name, template),
+        "Status: Round {}/{} | {} | {}".format(
             current_round, max_rounds if max_rounds else "∞",
             last_phase, status_label),
         "",
     ]
 
-    # --- 门禁一览 ---
+    # --- Gate Overview ---
     gates = plan.get("gates") or []
     if gates:
         lines += [
-            "### 门禁一览",
-            "| 维度 | 当前 | 目标 | 通过? | 置信度 | 趋势(近3轮) |",
+            "### Gate Overview",
+            "| Dimension | Current | Target | Pass? | Confidence | Trend (last 3 rounds) |",
             "|------|------|------|-------|--------|------------|",
         ]
         for g in gates:
             dim = g.get("dim") or g.get("dimension", "")
             current_val = g.get("current", "—")
             target_val = g.get("target", "—")
-            passed = "✓" if g.get("status") == "达标" else "✗"
+            passed = "✓" if g.get("status") == "Pass" else "✗"
             if plan_gate_is_exempt(g):
-                passed = "豁免"
+                passed = "Exempt"
 
-            # 趋势: 从最近 3 轮 iterations 的 scores 中提取该维度
+            # Trend:  3 round iterations  scores MediumextractDimension
             recent_scores = []
             for it in iterations[-3:]:
                 scores = it.get("scores") or {}
@@ -361,43 +361,43 @@ def render_panorama(state):
             else:
                 trend_parts = "—"
 
-            # 置信度: heuristic (来自 gate 本身没有置信度字段, 用 unit 或默认)
+            # Confidence: heuristic ( gate ConfidenceField,  unit or)
             confidence = g.get("confidence", g.get("unit", "heuristic"))
 
             lines.append("| {} | {} | {} | {} | {} | {} |".format(
                 dim, current_val, target_val, passed, confidence, trend_parts))
         lines.append("")
 
-    # --- 本轮策略 ---
+    # --- Strategy This Round ---
     if iterations:
         last_it = iterations[-1]
         strategy = last_it.get("strategy") or {}
         sid = strategy.get("strategy_id", "—")
         desc = strategy.get("description") or strategy.get("name", "")
         lines += [
-            "### 本轮策略",
+            "### Strategy This Round",
             "- strategy_id: {} — {}".format(sid, desc),
         ]
-        # reflect 中的 effect
+        # reflect Medium effect
         reflect = last_it.get("reflect") or {}
         effect = reflect.get("effect") or reflect.get("strategy_review", {}).get("verdict", "")
         if effect:
             lines.append("- effect: {}".format(effect))
         lines.append("")
 
-    # --- 未解决问题 (Top 5) ---
+    # --- Open Issues (Top 5) ---
     problems = findings.get("problem_tracker") or []
-    open_problems = [p for p in problems if (p.get("status") or "").lower() in ("open", "进行中", "")]
+    open_problems = [p for p in problems if (p.get("status") or "").lower() in ("open", "In Progress", "")]
     if open_problems:
-        lines.append("### 未解决问题 (Top 5)")
+        lines.append("### Open Issues (Top 5)")
         for i, p in enumerate(open_problems[:5], 1):
             lines.append("{}. [{}] {}".format(
                 i, p.get("id", "?"), p.get("description", "")))
         lines.append("")
     else:
-        lines += ["### 未解决问题", "无", ""]
+        lines += ["### Open Issues", "None", ""]
 
-    # --- 经验教训 (从最近几轮 reflect 中提取) ---
+    # --- Lessons Learned (round reflect Mediumextract) ---
     effective = []
     avoid = []
     for it in iterations[-5:]:
@@ -413,19 +413,19 @@ def render_panorama(state):
             else:
                 effective.append(lesson[:120])
     if effective or avoid:
-        lines.append("### 经验教训")
+        lines.append("### Lessons Learned")
         if effective:
-            lines.append("- 有效: {}".format("; ".join(effective[:3])))
+            lines.append("- Effective: {}".format("; ".join(effective[:3])))
         if avoid:
-            lines.append("- 避免: {}".format("; ".join(avoid[:3])))
+            lines.append("- Avoid: {}".format("; ".join(avoid[:3])))
         lines.append("")
 
-    # --- 资源 ---
+    # --- Resources ---
     completion_authority = meta.get("completion_authority", "internal")
     lines += [
-        "### 资源",
+        "### Resources",
         "- {}".format(budget_line),
-        "- 完成权威: {}".format(completion_authority),
+        "- Completion Authority: {}".format(completion_authority),
     ]
 
     output = "\n".join(lines)
@@ -440,7 +440,7 @@ def main():
 
     work_dir = sys.argv[1]
 
-    # 检查 panorama 子命令
+    # Check the panorama subcommand
     if len(sys.argv) >= 3 and sys.argv[2] == "panorama":
         state = load_state(work_dir)
         render_panorama(state)
@@ -454,19 +454,19 @@ def main():
         if idx + 1 < len(sys.argv):
             target = sys.argv[idx + 1]
             if target not in RENDERERS:
-                print("ERROR: 未知文件类型: {}".format(target))
-                print("可选: {}".format(", ".join(RENDERERS.keys())))
+                print("ERROR: unknown file type: {}".format(target))
+                print("Options: {}".format(", ".join(RENDERERS.keys())))
                 sys.exit(1)
 
     if target:
         path = RENDERERS[target](state, work_dir)
-        print("OK: 已渲染 {}".format(path))
+        print("OK: Rendered {}".format(path))
     else:
         for name, renderer in RENDERERS.items():
             path = renderer(state, work_dir)
-            print("OK: 已渲染 {}".format(path))
+            print("OK: Rendered {}".format(path))
 
-    print("完成: 从 autoloop-state.json 生成可读文件")
+    print("Completed: generated readable files from autoloop-state.json")
 
 
 if __name__ == "__main__":
