@@ -17,7 +17,7 @@ AutoLoop is a Codex skill that implements an OODA+ 8-stage loop (OBSERVE→ORIEN
 **You must read all of the following files** (ordered by priority):
 
 Core scripts (review line by line; **line counts must follow the current repository files**, not old estimates):
-1. `scripts/autoloop-controller.py` - main loop controller (about 1100+ lines, including `run_loop`, `phase_evolve`, `check_gates_passed`, `run_tool`, the eight stages, and checkpoint handling)
+1. `scripts/autoloop-controller.py` - main loop controller (including `run_loop`, `phase_evolve`, `check_gates_passed`, `run_tool`, the eight stages, and checkpoint handling)
 2. `scripts/autoloop-experience.py` - experience registry read/write tool (use the file as the source of truth)
 3. `scripts/autoloop-score.py` - scoring engine (use the file as the source of truth, including `_eval_gate`, `plan_gates_for_ssot_init`, and `score_from_ssot`)
 
@@ -90,7 +90,7 @@ Evaluation criteria:
 #### Dimension 5: Task Model Fit (weight 10%)
 
 Evaluation criteria:
-- Do all 7 templates have differentiated gate definitions? Compare the gates list for each template in the manifest
+- Do all 8 templates have differentiated gate definitions? Compare the gates list for each template in the manifest
 - Can `_infer_template` extract the template correctly from `strategy_id`? Test `S15-T3-xxx`, `C01-composed`, `T6-scan`
 - Are the trigger words in the template routing table (SKILL.md) ambiguous?
 - Is `DEFAULT_ROUNDS` loaded from the manifest? Do T3/T6/T7 have a safe upper bound for infinite rounds?

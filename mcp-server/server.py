@@ -163,7 +163,7 @@ def autoloop_score(findings_path: str, json_output: bool = True) -> str:
     """Run `autoloop-score` against a workdir or `autoloop-state.json` path.
 
     Gate dimensions and thresholds come from `references/gate-manifest.json`
-    (SSOT) plus the current `plan.template`, covering T1-T7 rather than only
+    (SSOT) plus the current `plan.template`, covering T1-T8 rather than only
     the legacy four T1 findings dimensions.
 
     Args:

@@ -1,5 +1,8 @@
 # AutoLoop Codex Review R9 - Six-Dimension Methodology Re-review
 
+> Historical review snapshot from 2026-03-28. Its scores and findings are not
+> a current quality claim; use the current repository for implementation status.
+
 **Review date**: 2026-03-28  
 **Review tool**: OpenAI Codex CLI (xhigh reasoning effort + web_search_cached)  
 **Review scope**: the full `~/Projects/autoloop` repository (R8 repaired pass)  

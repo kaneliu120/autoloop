@@ -4,7 +4,7 @@ description: >
   AutoLoop T1: Research task. T1 remains the general research entry point; when the topic is a market/industry study, it defaults to the high-standard mode:
   fixed core chapters, every chapter must include data + analysis + conclusion, and supports adding special analysis modules by "industry + direction/topic".
   See references/quality-gates.md row T1 for the quality gate threshold.
-  Trigger: /autoloop:research or any task that requires systematic research.
+  Use this document for tasks that require systematic research.
 ---
 
 # AutoLoop T1: Research — High-Standard Research
@@ -20,7 +20,8 @@ description: >
 
 ## Prerequisites for Execution
 
-Read `autoloop-plan.md` to get the task parameters. If the file does not exist, configure it first through `/autoloop:plan`.
+Read `autoloop-plan.md` to get the task parameters. If the file does not
+exist, configure it first with the procedure in `commands/autoloop-plan.md`.
 
 Round 2+ OBSERVE starting point:
 

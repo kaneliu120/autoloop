@@ -4,7 +4,7 @@ description: >
   AutoLoop T3: Product design template. Starting from T1/T2 research conclusions, it produces a confirmed solution document that can be handed directly to T4 for delivery through requirement analysis, solution design, and feasibility review.
   Methodology: JTBD problem framing + RICE prioritization + Shape Up scope control + spec-driven output.
   Quality gate thresholds are in references/gate-manifest.json T3.
-  Triggered by /autoloop:design or any task that needs product design / solution documentation.
+  Use this document for tasks that need product design or solution documentation.
 ---
 
 # AutoLoop T3: Design — Product Design

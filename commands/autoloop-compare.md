@@ -4,7 +4,7 @@ description: >
   AutoLoop T2: multi-option comparison template. Multi-dimensional scoring + evidence support + confidence statements + explicit recommendation.
   Each option is analyzed independently with unified scoring dimensions, sensitivity checks, and a decision matrix.
   Quality gate thresholds are in references/quality-gates.md T2.
-  Triggered by /autoloop:compare or any task that requires deciding among multiple options.
+  Use this document for tasks that require deciding among multiple options.
 ---
 
 # AutoLoop T2: Compare — Multi-Option Comparison

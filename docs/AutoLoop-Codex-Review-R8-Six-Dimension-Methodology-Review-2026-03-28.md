@@ -1,5 +1,8 @@
 # AutoLoop Codex Review R8 - Six-Dimension Methodology Review
 
+> Historical review snapshot from 2026-03-28. File counts and findings reflect
+> that point in time; use the current repository for implementation status.
+
 **Review date**: 2026-03-28  
 **Review tool**: OpenAI Codex CLI (xhigh reasoning effort + web_search_cached)  
 **Review scope**: the full `~/Projects/autoloop` repository (49 files: 12 protocols + 11 commands + 6 templates + 7 scripts + 3 MCP files + 9 SKILL files + 1 document)  

@@ -1,5 +1,8 @@
 # AutoLoop Skill Standardization Improvement Framework
 
+> Historical proposal from 2026-03-28. Its file counts and T1-T7 descriptions
+> are not current implementation guidance; use the current repository for T1-T8.
+
 **Date**: 2026-03-28  
 **Basis**: agentskills.io best practices + AutoLoop structure audit  
 **Goal**: refactor AutoLoop from a "large document set" into a standardized structure that follows skill best practices

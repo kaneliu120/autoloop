@@ -4,7 +4,7 @@ description: >
 AutoLoop T8: Architecture/performance/stability optimization template. Three-dimensional parallel comprehensive diagnosis,
 Cross-dimensional collaborative repair (one repair improves multiple dimensions), rescoring every 5 repair checkpoints.
 Goal: Meet references/quality-gates.md T8 gate matrix requirements.
-Trigger: /autoloop:optimize or any task that requires system-level optimization.
+Use this document for tasks that require system-level optimization.
 ---
 
 # AutoLoop T8: Optimize — Architecture/Performance/Stability Optimization

@@ -4,7 +4,7 @@ description: >
   AutoLoop T7: Enterprise-grade quality iteration template. Run three-dimensional parallel scans (security/reliability/maintainability),
   fix issues by P1→P2→P3 priority, verify no regression after each fix, and continue until everything reaches enterprise-grade standards.
   Goal: meet the requirements of the references/quality-gates.md T7 gate matrix.
-  Trigger: /autoloop:quality or any task that needs to raise code to enterprise-grade quality.
+  Use this document for tasks that need to raise code to enterprise-grade quality.
 ---
 
 # AutoLoop T7: Quality — Enterprise-Grade Quality Iteration
