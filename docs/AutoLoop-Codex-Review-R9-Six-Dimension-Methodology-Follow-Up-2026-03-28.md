@@ -149,7 +149,7 @@
 | Round | Date | Score | Delta | Main change |
 |------|------|------|-------|-------------|
 | R2 (Codex) | 03-26 | 2.9/10 | — | Initial architecture defects |
-| R3-R7 (Claude) | 03-28 | 6.8/10 | — | Protocol documentation maturity (different review framework) |
+| R3-R7 (independent review) | 03-28 | 6.8/10 | — | Protocol documentation maturity (different review framework) |
 | R8 (Codex) | 03-28 | 3.7/10 | — | Six-dimension methodology effectiveness (new framework) |
 | **R9 (Codex)** | **03-28** | **4.9/10** | **+1.2** | **Review after 23 fixes** |
 

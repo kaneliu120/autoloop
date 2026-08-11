@@ -1,20 +1,90 @@
 #!/usr/bin/env python3
-"""AutoLoop MCP Server - wraps 10 tool scripts as MCP tools
+"""AutoLoop MCP Server - wraps 10 tool scripts as MCP tools.
 
 Install: `pip install mcp`
-Start: `python3 server.py` (usually launched by the Claude Code MCP config)
+Start: `python3 server.py` (usually launched by a Codex MCP configuration)
 """
 
 import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
 SCRIPTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts")
 
 mcp = FastMCP("autoloop", instructions="Deterministic tools for the AutoLoop autonomous iteration engine. Supports quality-gate scoring, TSV validation, and cross-file consistency checks.")
+
+MCP_WORKDIR_ROOT_ENV = "AUTOLOOP_MCP_WORKDIR_ROOT"
+MCP_ALLOW_WRITE_ENV = "AUTOLOOP_MCP_ALLOW_WRITE"
+MCP_EXPERIENCE_REGISTRY_ENV = "AUTOLOOP_MCP_EXPERIENCE_REGISTRY_PATH"
+_TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
+
+
+def _is_true(value: object) -> bool:
+    return str(value or "").strip().lower() in _TRUE_VALUES
+
+
+def _failure(message: str) -> str:
+    return json.dumps({"success": False, "error": message})
+
+
+def _guard_mcp_path(
+    path_value: str, label: str, *, write: bool = False
+) -> tuple[str | None, str | None]:
+    """Resolve a model-supplied path under an operator-configured root.
+
+    The root and write switch live in the server process environment, so task
+    data cannot broaden filesystem authority. ``resolve`` also prevents an
+    existing symlink inside the root from escaping it.
+    """
+    raw_root = os.environ.get(MCP_WORKDIR_ROOT_ENV, "").strip()
+    if not raw_root:
+        return None, (
+            f"{MCP_WORKDIR_ROOT_ENV} must be set to the trusted workspace root "
+            "before using AutoLoop MCP tools"
+        )
+    root = Path(raw_root).expanduser().resolve(strict=False)
+    if not root.is_dir():
+        return None, f"{MCP_WORKDIR_ROOT_ENV} is not an existing directory: {root}"
+
+    candidate = Path(path_value).expanduser().resolve(strict=False)
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return None, f"{label} must resolve inside {MCP_WORKDIR_ROOT_ENV}: {root}"
+
+    if write and not _is_true(os.environ.get(MCP_ALLOW_WRITE_ENV)):
+        return None, (
+            f"{MCP_ALLOW_WRITE_ENV}=1 is required for AutoLoop MCP write operations"
+        )
+    return str(candidate), None
+
+
+def _guard_work_dir(work_dir: str, *, write: bool = False) -> tuple[str | None, str | None]:
+    return _guard_mcp_path(work_dir, "work_dir", write=write)
+
+
+def _experience_write_environment() -> tuple[dict[str, str] | None, str | None]:
+    """Allow registry mutation only at an explicit path inside the MCP root."""
+    raw_registry = os.environ.get(MCP_EXPERIENCE_REGISTRY_ENV, "").strip()
+    if not raw_registry:
+        return None, (
+            f"{MCP_EXPERIENCE_REGISTRY_ENV} must point to a reviewed registry before "
+            "MCP experience writes are allowed"
+        )
+    registry, error = _guard_mcp_path(
+        raw_registry, MCP_EXPERIENCE_REGISTRY_ENV, write=True
+    )
+    if error:
+        return None, error
+    if not Path(registry).is_file():
+        return None, f"{MCP_EXPERIENCE_REGISTRY_ENV} is not a file: {registry}"
+    env = dict(os.environ)
+    env["AUTOLOOP_EXPERIENCE_REGISTRY_PATH"] = registry
+    return env, None
 
 
 def _default_mcp_timeout() -> int:
@@ -38,7 +108,9 @@ def _script_timeout_seconds(script_name: str) -> int:
     return _default_mcp_timeout()
 
 
-def _run_script(script_name: str, args: list[str]) -> str:
+def _run_script(
+    script_name: str, args: list[str], *, env: dict[str, str] | None = None
+) -> str:
     """Run a Python script from `scripts/` and return stdout."""
     script_path = os.path.join(SCRIPTS_DIR, script_name)
     timeout_sec = _script_timeout_seconds(script_name)
@@ -50,7 +122,7 @@ def _run_script(script_name: str, args: list[str]) -> str:
     try:
         result = subprocess.run(
             [sys.executable, script_path] + args,
-            capture_output=True, text=True, timeout=timeout_sec
+            capture_output=True, text=True, timeout=timeout_sec, env=env
         )
         output = result.stdout.strip()
         if result.returncode != 0:
@@ -80,7 +152,10 @@ def autoloop_init(work_dir: str, template: str, goal: str) -> str:
         template: Template type (`T1`-`T8`)
         goal: One-line task goal
     """
-    return _run_script("autoloop-init.py", [work_dir, template, goal])
+    safe_work_dir, error = _guard_work_dir(work_dir, write=True)
+    if error:
+        return _failure(error)
+    return _run_script("autoloop-init.py", [safe_work_dir, template, goal])
 
 
 @mcp.tool()
@@ -96,7 +171,10 @@ def autoloop_score(findings_path: str, json_output: bool = True) -> str:
             `autoloop-findings.md` file path
         json_output: Append `--json` when True to return structured gate data
     """
-    args = [findings_path]
+    safe_path, error = _guard_mcp_path(findings_path, "findings_path")
+    if error:
+        return _failure(error)
+    args = [safe_path]
     if json_output:
         args.append("--json")
     return _run_script("autoloop-score.py", args)
@@ -111,7 +189,11 @@ def autoloop_tsv(command: str, file_path: str, row_json: str = "") -> str:
         file_path: Path to `autoloop-results.tsv`
         row_json: JSON row payload for `append`
     """
-    args = [command, file_path]
+    writes = command not in {"validate", "summary"}
+    safe_path, error = _guard_mcp_path(file_path, "file_path", write=writes)
+    if error:
+        return _failure(error)
+    args = [command, safe_path]
     if command == "append" and row_json:
         args.append(row_json)
     return _run_script("autoloop-tsv.py", args)
@@ -124,7 +206,10 @@ def autoloop_validate(work_dir: str) -> str:
     Args:
         work_dir: Workdir containing AutoLoop runtime files
     """
-    return _run_script("autoloop-validate.py", [work_dir])
+    safe_work_dir, error = _guard_work_dir(work_dir)
+    if error:
+        return _failure(error)
+    return _run_script("autoloop-validate.py", [safe_work_dir])
 
 
 @mcp.tool()
@@ -143,7 +228,10 @@ def autoloop_variance(command: str, scores: str = "", evidence: int = 0, tsv_pat
             args.extend(["--evidence", str(evidence)])
         return _run_script("autoloop-variance.py", args)
     elif command == "check":
-        return _run_script("autoloop-variance.py", ["check", tsv_path])
+        safe_path, error = _guard_mcp_path(tsv_path, "tsv_path")
+        if error:
+            return _failure(error)
+        return _run_script("autoloop-variance.py", ["check", safe_path])
     else:
         return json.dumps({"error": f"Unknown command: {command}; expected compute / check"})
 
@@ -157,7 +245,10 @@ def autoloop_state(work_dir: str, command: str, args: str = "") -> str:
         command: `init|update|query|add-iteration|add-finding|add-tsv-row`
         args: Command arguments, format depends on `command`
     """
-    cmd_args = [command, work_dir]
+    safe_work_dir, error = _guard_work_dir(work_dir, write=command != "query")
+    if error:
+        return _failure(error)
+    cmd_args = [command, safe_work_dir]
     if args:
         import shlex
         cmd_args.extend(shlex.split(args))
@@ -172,7 +263,10 @@ def autoloop_render(work_dir: str, file_type: str = "") -> str:
         work_dir: Working directory path
         file_type: `plan|progress|findings|tsv`; blank renders all
     """
-    cmd_args = [work_dir]
+    safe_work_dir, error = _guard_work_dir(work_dir, write=True)
+    if error:
+        return _failure(error)
+    cmd_args = [safe_work_dir]
     if file_type:
         cmd_args.extend(["--file", file_type])
     return _run_script("autoloop-render.py", cmd_args)
@@ -190,11 +284,20 @@ def autoloop_experience(work_dir: str, command: str, args: str = "") -> str:
             `--strategy-id S01-xxx --effect Keep --score 0.5`;
             list: `--json`
     """
-    cmd_args = [work_dir, command]
+    writes = command not in {"query", "list"}
+    safe_work_dir, error = _guard_work_dir(work_dir, write=writes)
+    if error:
+        return _failure(error)
+    run_env = None
+    if writes:
+        run_env, error = _experience_write_environment()
+        if error:
+            return _failure(error)
+    cmd_args = [safe_work_dir, command]
     if args:
         import shlex
         cmd_args.extend(shlex.split(args))
-    return _run_script("autoloop-experience.py", cmd_args)
+    return _run_script("autoloop-experience.py", cmd_args, env=run_env)
 
 
 @mcp.tool()
@@ -205,7 +308,10 @@ def autoloop_finalize(work_dir: str, json_output: bool = False) -> str:
         work_dir: Working directory path
         json_output: Return JSON when True; otherwise write Markdown
     """
-    cmd_args = [work_dir]
+    safe_work_dir, error = _guard_work_dir(work_dir, write=not json_output)
+    if error:
+        return _failure(error)
+    cmd_args = [safe_work_dir]
     if json_output:
         cmd_args.append("--json")
     return _run_script("autoloop-finalize.py", cmd_args)
@@ -232,16 +338,28 @@ def autoloop_controller(
                 "success": False,
                 "error": "template is required when mode=init (for example T1 or T5)",
             })
-        cmd = [work_dir, "--init", "--template", template.strip()]
+        safe_work_dir, error = _guard_work_dir(work_dir, write=True)
+        if error:
+            return _failure(error)
+        cmd = [safe_work_dir, "--init", "--template", template.strip()]
         if goal.strip():
             cmd.extend(["--goal", goal.strip()])
         return _run_script("autoloop-controller.py", cmd)
     elif mode == "resume":
-        return _run_script("autoloop-controller.py", [work_dir, "--resume"])
+        safe_work_dir, error = _guard_work_dir(work_dir, write=True)
+        if error:
+            return _failure(error)
+        return _run_script("autoloop-controller.py", [safe_work_dir, "--resume"])
     elif mode == "status":
-        return _run_script("autoloop-controller.py", [work_dir, "--status"])
+        safe_work_dir, error = _guard_work_dir(work_dir)
+        if error:
+            return _failure(error)
+        return _run_script("autoloop-controller.py", [safe_work_dir, "--status"])
     else:
-        return _run_script("autoloop-controller.py", [work_dir])
+        safe_work_dir, error = _guard_work_dir(work_dir, write=True)
+        if error:
+            return _failure(error)
+        return _run_script("autoloop-controller.py", [safe_work_dir])
 
 
 if __name__ == "__main__":

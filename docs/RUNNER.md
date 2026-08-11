@@ -18,15 +18,16 @@ pip install -e ".[runner]"
 
 ```bash
 # Single-step advance (reads checkpoint.last_completed_phase)
-PYTHONPATH=services autoloop-runner tick /path/to/work_dir
+export AUTOLOOP_RUNNER_WORKDIR_ROOT=/path/to/trusted-workspaces
+PYTHONPATH=services autoloop-runner tick /path/to/trusted-workspaces/work_dir
 # Or, if installed editable and on PYTHONPATH:
-autoloop-runner tick /path/to/work_dir
+autoloop-runner tick /path/to/trusted-workspaces/work_dir
 
 # Continuous tick loop (can be limited with RUNNER_MAX_WALL_SECONDS / RUNNER_MAX_TICKS)
-autoloop-runner loop /path/to/work_dir --max-ticks 50
+autoloop-runner loop /path/to/trusted-workspaces/work_dir --max-ticks 50
 
 # Prometheus text (P2-2)
-autoloop-runner metrics /path/to/work_dir
+autoloop-runner metrics /path/to/trusted-workspaces/work_dir
 ```
 
 ## Environment Variables
@@ -37,6 +38,8 @@ autoloop-runner metrics /path/to/work_dir
 | `OPENAI_BASE_URL` | Optional HTTPS OpenAI or Azure OpenAI endpoint. A different host needs `AUTOLOOP_ALLOW_CUSTOM_OPENAI_BASE_URL=1` after operator review because the API key is sent to that host. |
 | `AUTOLOOP_ALLOW_CUSTOM_OPENAI_BASE_URL` | Explicit opt-in for a reviewed HTTPS OpenAI-compatible endpoint outside OpenAI / Azure OpenAI; unset by default. |
 | `OPENAI_MODEL` | Default `gpt-4o-mini` |
+| `AUTOLOOP_RUNNER_WORKDIR_ROOT` | Required existing directory containing trusted Runner workdirs; paths outside it are rejected, including existing symlink escapes. |
+| `AUTOLOOP_RUNNER_ALLOWED_COMMANDS_JSON` | Optional reviewed JSON string array replacing the built-in ACT command policy. It is process configuration, not task-state configuration; malformed values or `*` fail closed. |
 | `RUNNER_MOCK_LLM` | When `1`, skip API calls and use the mock handoff for handbook validation |
 | `AUTOLOOP_STRICT` | Runner injects `1` into subprocesses by default (disable with `tick --no-strict`) |
 | `AUTOLOOP_EXIT_CODES` / `autoloop-controller --exit-codes` | controller: `0` success, `1` abort, `10` pause |
@@ -56,15 +59,17 @@ autoloop-runner metrics /path/to/work_dir
 - Model output must match an entire operator-approved command glob; substring
   matches are not accepted. The default only permits bundled AutoLoop scripts
   resolved from the installed package, never `scripts/` inside the task work
-  directory.
+  directory. Task-state allowlist fields are ignored.
 - Commands are parsed with `shlex` and executed with `shell=False`. They still
   run locally, so a custom allowlist is trusted operator configuration and must
   be as narrow as possible.
 - Planned subprocesses do not inherit recognized credential variables such as
   `OPENAI_API_KEY`, `GITHUB_TOKEN`, `*_TOKEN`, `*_SECRET`, or `*_PASSWORD`.
   Do not use model-generated commands for credentialed deployments.
-- The work directory is not a sandbox. Run only trusted tasks in a dedicated
-  directory, and inspect all generated files before committing or publishing.
+- The Runner requires `AUTOLOOP_RUNNER_WORKDIR_ROOT`; it resolves the supplied
+  workdir and rejects paths outside that root, including existing symlink
+  escapes. It is not an operating-system sandbox, so inspect generated files
+  before committing or publishing.
 
 ## P1 - Stability and Recovery
 

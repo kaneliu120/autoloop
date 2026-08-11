@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Security
+- Runner workdirs now require `AUTOLOOP_RUNNER_WORKDIR_ROOT`; model-proposed
+  commands use an operator-owned environment policy rather than task state.
+- MCP calls now require `AUTOLOOP_MCP_WORKDIR_ROOT`; mutating calls require
+  `AUTOLOOP_MCP_ALLOW_WRITE=1`, and experience writes require an explicit
+  registry path inside that root.
+- Added a pinned CodeQL workflow for Python analysis.
+
+### Changed
+- Migrated skill, MCP setup, routing, and maintenance documentation to Codex.
+- Corrected template documentation to consistently describe T1 through T8.
+
 ### Fixed
 
 - Experience queries now use a matching context-scoped `last_validated` date

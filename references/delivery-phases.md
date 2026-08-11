@@ -2,13 +2,13 @@
 
 ## Overview
 
-This document defines the five delivery phases of AutoLoop T4 (Deliver), strictly aligned with the mandatory development flow in `CLAUDE.md`. Each phase has explicit inputs, outputs, quality gates, and pause conditions.
+This document defines the five delivery phases of AutoLoop T4 (Deliver), strictly aligned with the mandatory development flow in `AGENTS.md`. Each phase has explicit inputs, outputs, quality gates, and pause conditions.
 
 ---
 
 ## Phase Mapping
 
-| AutoLoop Phase | CLAUDE.md Phase | Notes |
+| AutoLoop Phase | AGENTS.md Phase | Notes |
 |-------------|--------------|------|
 | Phase 1: Development | Phase 1: Development | `backend-dev` + `frontend-dev` + `db-migrator` in parallel |
 | Phase 2: Review | Phase 2: Review | Serial review by `code-reviewer` |

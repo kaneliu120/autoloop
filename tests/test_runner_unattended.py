@@ -8,6 +8,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
@@ -297,15 +298,14 @@ class TestCostBudget(unittest.TestCase):
             Path(td, "autoloop-state.json").write_text(
                 json.dumps(st, ensure_ascii=False, indent=2), encoding="utf-8"
             )
-            old = os.environ.get("RUNNER_MAX_ESTIMATED_USD")
-            os.environ["RUNNER_MAX_ESTIMATED_USD"] = "1"
-            try:
+            with patch.dict(
+                os.environ,
+                {
+                    "RUNNER_MAX_ESTIMATED_USD": "1",
+                    "AUTOLOOP_RUNNER_WORKDIR_ROOT": td,
+                },
+            ):
                 rc = run_tick(td, strict=False, lock_blocking=True)
-            finally:
-                if old is None:
-                    os.environ.pop("RUNNER_MAX_ESTIMATED_USD", None)
-                else:
-                    os.environ["RUNNER_MAX_ESTIMATED_USD"] = old
             self.assertEqual(rc, 12)
 
 
@@ -365,7 +365,7 @@ class TestRunnerTickFirstStep(unittest.TestCase):
             r = subprocess.run(
                 [sys.executable, "-m", "autoloop_runner.cli", "tick", td],
                 cwd=ROOT,
-                env=env,
+                env={**env, "AUTOLOOP_RUNNER_WORKDIR_ROOT": td},
                 capture_output=True,
                 text=True,
             )
@@ -398,7 +398,11 @@ class TestRunnerTickMockIntegration(unittest.TestCase):
                 check=True,
                 env=env,
             )
-            env2 = {**env, "RUNNER_MOCK_LLM": "1"}
+            env2 = {
+                **env,
+                "RUNNER_MOCK_LLM": "1",
+                "AUTOLOOP_RUNNER_WORKDIR_ROOT": td,
+            }
             r1 = subprocess.run(
                 [sys.executable, "-m", "autoloop_runner.cli", "tick", td],
                 cwd=ROOT,

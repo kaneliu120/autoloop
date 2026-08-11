@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """AutoLoop Security — cross-platform security pipeline
 
-Provides three layers of protection (enabled only outside Claude Code):
+Provides three layers of protection for explicit Agent integrations:
 1. Compile-time checks: tool allowlist validation
 2. Runtime checks: sensitive path detection + write interception
 3. Audit logs: record all security events
@@ -36,7 +36,7 @@ SENSITIVE_PATH_SEGMENTS = {".ssh", "secrets", ".credentials"}
 APPROVAL_REQUIRED_PATTERNS = [
     "*.py",  # Python script changes require approval
     "*.sh",  # Shell script changes require approval
-    "SKILL.md", "CLAUDE.md", "AGENTS.md",  # Config file changes require approval
+    "SKILL.md", "AGENTS.md",  # Config file changes require approval
 ]
 
 

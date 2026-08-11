@@ -267,7 +267,7 @@ the helper can check:
 The standalone helper is not an automatic enforcement point. The unattended
 Runner instead enforces its own complete command-glob allowlist, `shell=False`,
 and credential-stripping boundary; host permission systems still remain the
-primary control in Claude Code environments.
+primary control in Codex environments.
 
 ---
 
@@ -570,7 +570,7 @@ def middleware_name(phase: str, state: dict, work_dir: str, **kwargs) -> dict:
 
 Config file: `references/model-routing.json`
 
-In the current Claude Code session, subagents share the same model and cannot switch models at runtime. P3-09 is reserved infrastructure for future pipeline execution across multiple sessions / models:
+In the current Codex session, subagents share the same model and cannot switch models at runtime. P3-09 is reserved infrastructure for future pipeline execution across multiple sessions / models:
 
 - **`template_models`**: recommended model per template (`T1-T8`) and ACT-phase overrides (for example, T1 research uses Grok `web_search`)
 - **`phase_models`**: default model strategy per phase (ACT chooses by template; VERIFY uses scripts and does not need a model)

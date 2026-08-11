@@ -37,9 +37,14 @@ def _find_registry(work_dir):
     """Find experience-registry.md.
 
     priority:
-    1. ../references/experience-registry.md next to the script
-    2. references/experience-registry.md in work_dir's parent directory
+    1. AUTOLOOP_EXPERIENCE_REGISTRY_PATH explicit operator configuration
+    2. ../references/experience-registry.md next to the script
+    3. references/experience-registry.md in work_dir's parent directory
     """
+    configured = os.environ.get("AUTOLOOP_EXPERIENCE_REGISTRY_PATH", "").strip()
+    if configured:
+        path = os.path.abspath(os.path.expanduser(configured))
+        return path if os.path.isfile(path) else None
     script_dir = os.path.dirname(os.path.abspath(__file__))
     candidates = [
         os.path.join(script_dir, "..", "references", "experience-registry.md"),
