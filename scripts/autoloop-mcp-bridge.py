@@ -1,62 +1,43 @@
 #!/usr/bin/env python3
-"""AutoLoop MCP Bridge — cross-platform MCP tool discovery and invocation
+"""AutoLoop MCP Bridge — Codex MCP configuration helper.
 
-In non-Claude Code environments (Gemini CLI, Codex CLI, etc.),
-subagents cannot use the host's MCP tools directly. This bridge provides:
-1. MCP tool discovery: list available MCP tools
-2. MCP tool invocation: call MCP tools via stdin/stdout JSON-RPC
-3. Platform detection: detect the current IDE environment and decide whether a bridge is needed
+Codex launches configured MCP servers itself. This helper reports the local
+Codex configuration command and does not impersonate an MCP client:
+1. platform detection
+2. the operator command used to list configured MCP servers
+3. a clear refusal for direct JSON-RPC invocation, which belongs to Codex
 
 Usage:
   autoloop-mcp-bridge.py discover          # List available MCP tools
   autoloop-mcp-bridge.py call <tool> <args> # Call an MCP tool
   autoloop-mcp-bridge.py detect-platform    # Detect the current platform
 """
-import os
-import sys
 import json
+import shutil
+import sys
 
 
 def detect_platform():
-    """Detect the current IDE platform."""
-    if os.environ.get("CLAUDE_CODE"):
-        return "claude-code"  # Native support; no bridge needed
-    elif os.environ.get("GEMINI_CLI"):
-        return "gemini-cli"
-    elif os.environ.get("CODEX_CLI"):
-        return "codex-cli"
-    else:
-        return "unknown"
+    """Report whether the Codex CLI is available to manage MCP servers."""
+    return "codex" if shutil.which("codex") else "unknown"
 
 
 def discover_mcp_tools():
-    """Discover available MCP tools."""
+    """Report the Codex command that lists configured MCP servers."""
     platform = detect_platform()
-    if platform == "claude-code":
-        print(json.dumps({"status": "native", "message": "Claude Code supports MCP natively; no bridge needed"}))
-        return
-
-    # Non-Claude Code environment: read MCP configuration
-    mcp_config_paths = [
-        os.path.expanduser("~/.config/claude-code/mcp.json"),
-        ".mcp.json",
-        "mcp.json",
-    ]
-    tools = []
-    for path in mcp_config_paths:
-        if os.path.exists(path):
-            with open(path) as f:
-                config = json.load(f)
-                tools.extend(config.get("tools", []))
-
-    print(json.dumps({"platform": platform, "tools": tools, "bridge_required": True}))
+    print(json.dumps({
+        "platform": platform,
+        "discovery_command": "codex mcp list",
+        "bridge_required": False,
+        "message": "Configure AutoLoop with codex mcp add; Codex owns MCP tool discovery.",
+    }))
 
 
 def call_mcp_tool(tool_name, args_json):
-    """Call an MCP tool (reserved interface)."""
+    """Refuse direct invocation; Codex must own the MCP connection."""
     print(json.dumps({
-        "status": "not_implemented",
-        "message": "The MCP call bridge will be implemented when needed",
+        "status": "unsupported",
+        "message": "Use the configured AutoLoop MCP server from Codex; this helper does not proxy JSON-RPC.",
         "tool": tool_name,
         "args": args_json,
     }))

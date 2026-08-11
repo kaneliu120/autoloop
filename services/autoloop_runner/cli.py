@@ -9,6 +9,7 @@ import sys
 import time
 
 from autoloop_runner.metrics import render_prometheus_text
+from autoloop_runner.security import resolve_trusted_work_dir
 from autoloop_runner.tick import run_tick
 
 log = logging.getLogger("autoloop_runner")
@@ -65,13 +66,18 @@ def main() -> None:
         format="%(levelname)s %(name)s %(message)s",
     )
 
+    try:
+        work_dir = resolve_trusted_work_dir(args.work_dir)
+    except ValueError as exc:
+        parser.error(str(exc))
+
     if args.cmd == "metrics":
-        print(render_prometheus_text(os.path.abspath(args.work_dir)), end="")
+        print(render_prometheus_text(work_dir), end="")
         raise SystemExit(0)
 
     if args.cmd == "tick":
         rc = run_tick(
-            args.work_dir,
+            work_dir,
             strict=not args.no_strict,
             lock_blocking=not args.no_wait_lock,
         )
@@ -93,7 +99,7 @@ def main() -> None:
             if wall and (time.monotonic() - start) >= wall:
                 log.info("max_wall_seconds reached")
                 raise SystemExit(0)
-            rc = run_tick(args.work_dir, strict=not args.no_strict)
+            rc = run_tick(work_dir, strict=not args.no_strict)
             n += 1
             if rc == 10:
                 log.info("paused (exit 10)")

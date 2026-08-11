@@ -143,14 +143,16 @@ def failure_classification_middleware(phase, state, work_dir, **kwargs):
 
 
 def security_middleware(phase, state, work_dir, **kwargs):
-    """Security check — intercept writes outside Claude Code."""
-    platform = os.environ.get("AUTOLOOP_PLATFORM", "claude-code")
-    if platform == "claude-code":
-        return {"proceed": True, "modifications": {}}  # Claude Code is handled by the host
-
-    # Non-Claude Code environment: inspect ACT-stage tool calls
+    """Mark ACT for integration-level security checks in Codex or another host."""
+    platform = os.environ.get("AUTOLOOP_PLATFORM", "codex")
     if phase == "ACT":
-        return {"proceed": True, "modifications": {"security_check_required": True}}
+        return {
+            "proceed": True,
+            "modifications": {
+                "security_check_required": True,
+                "security_platform": platform,
+            },
+        }
 
     return {"proceed": True, "modifications": {}}
 

@@ -2,7 +2,7 @@
 name: autoloop-deliver
 description: >
   AutoLoop T4: End-to-end delivery template. A complete 5-phase delivery flow from requirements to production (Phase 1-5),
-  strictly mapped to the mandatory development process in CLAUDE.md.
+  strictly mapped to the mandatory development process in AGENTS.md.
   Every phase has explicit quality gates; if a phase fails, do not proceed to the next one.
   See references/quality-gates-engineering.md row T4 for the quality gate threshold.
   Trigger: /autoloop:deliver or any task that requires end-to-end feature delivery.
@@ -14,7 +14,7 @@ description: >
 
 Read `autoloop-plan.md` to get all execution parameters. See the unified parameter glossary in `references/loop-protocol.md` for T4 parameters.
 
-**Strictly follow the mandatory development process in CLAUDE.md. Do not skip steps.**
+**Strictly follow the mandatory development process in AGENTS.md. Do not skip steps.**
 
 **Round 2+ OBSERVE starting point**: if this delivery continues an unfinished task from the previous run, first read the reflection chapter in `autoloop-findings.md` (Layer 2: strategy review) to obtain remaining issues, effective/ineffective strategies, and identified patterns before entering Phase 1 development. See the OBSERVE Step 0 section in `references/loop-protocol.md` for details.
 

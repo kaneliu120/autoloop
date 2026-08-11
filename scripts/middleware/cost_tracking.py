@@ -47,7 +47,7 @@ class CostTrackingMiddleware:
 
         Args:
             subagent_id: subagent identifier (e.g. "round_2_act_1")
-            model: model name in use (e.g. "claude-sonnet-4-20250514")
+            model: model name in use (e.g. "gpt-5.6-terra")
             task_type: task type (e.g. "research", "coding")
         """
         pass  # Future migration from controller.phase_act()

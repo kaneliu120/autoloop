@@ -116,7 +116,7 @@ autoloop/
 └── mcp-server/                    # MCP integration (optional enhancement layer)
     ├── server.py
     ├── install.sh
-    └── mcp-config.json
+    └── CODEX_SETUP.md
 ```
 
 ### Change Mapping

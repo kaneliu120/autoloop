@@ -86,7 +86,7 @@
 | Stage | Review method | Cost |
 |------|---------------|------|
 | R8-R12 | Codex CLI (xhigh reasoning) | ~350K tokens / round |
-| R13-R14 | Claude agent (`code-reviewer`) | ~50-90K tokens / round |
+| R13-R14 | Independent `code-reviewer` agent | ~50-90K tokens / round |
 
 Agent-based review was 3-5x faster than the Codex-only loop and did not require waiting on an external API, making it better suited for rapid iteration.
 

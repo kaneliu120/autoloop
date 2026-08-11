@@ -17,7 +17,11 @@ from autoloop_runner.metrics import record_api_call, record_runner_outcome
 from autoloop_scripts.locate import scripts_directory
 from autoloop_runner.reflect import normalize_reflect, validate_reflect
 from autoloop_runner import runner_log
-from autoloop_runner.security import resolve_openai_base_url
+from autoloop_runner.security import (
+    resolve_openai_base_url,
+    resolve_runner_command_patterns,
+    resolve_trusted_work_dir,
+)
 from autoloop_runner import stateutil
 from autoloop_runner import synthesize
 from autoloop_runner.tsv_auto import apply_auto_tsv_after_verify
@@ -59,7 +63,9 @@ def _chat_json(
             work_dir,
             "openai_chat_error",
             latency_ms=dt,
-            extra={"error": str(e)[:300]},
+            # Provider errors can echo request headers, URLs, or user content.
+            # Keep only the exception class in the persistent runner log.
+            extra={"error_type": type(e).__name__},
         )
         raise
     dt = (time.monotonic() - t0) * 1000.0
@@ -166,7 +172,7 @@ def run_tick(
     Execute exactly one advancement slice. Returns:
       0 success, 1 error, 10 pause required, 11 lock not acquired, 12 cost/budget cap (P1-5).
     """
-    work_dir = os.path.abspath(work_dir)
+    work_dir = resolve_trusted_work_dir(work_dir)
     ok_budget, br = check_cost_budget(work_dir)
     if not ok_budget:
         log.warning("cost budget: %s", br)
@@ -178,7 +184,8 @@ def run_tick(
 
     wl = WorkdirLock(work_dir)
     if not wl.acquire(blocking=lock_blocking):
-        log.warning("work_dir lock busy: %s", work_dir)
+        # A workdir path can itself contain sensitive project information.
+        log.warning("work_dir lock busy")
         record_runner_outcome(work_dir, 11)
         return 11
     try:
@@ -403,12 +410,13 @@ def _runner_decide(work_dir: str, python_exe: str | None) -> bool:
                 max_retries=int(os.environ.get("RUNNER_OPENAI_RETRIES", "5")),
             )
         except Exception as e:
-            log.exception("OpenAI decide failed: %s", e)
+            log.error("OpenAI decide failed (%s)", type(e).__name__)
             return False
 
     ok, reason = validate_handoff(obj)
     if not ok:
-        log.error("handoff invalid: %s %s", reason, obj)
+        # The model response is untrusted and may contain secrets or prompt data.
+        log.error("handoff invalid: %s", reason)
         return False
     payload = handoff_to_state_json(obj)
     rc = stateutil.run_state_update(
@@ -418,17 +426,15 @@ def _runner_decide(work_dir: str, python_exe: str | None) -> bool:
 
 
 def _allowed_globs(work_dir: str) -> list[str]:
-    st = stateutil.load_json(stateutil.state_path(work_dir))
-    tp = st.get("plan", {}).get("template_params") or {}
-    g = tp.get("allowed_script_globs") or tp.get("allowed_commands")
-    if isinstance(g, list):
-        return [str(x) for x in g]
-    if isinstance(g, str) and g.strip():
-        return [g.strip()]
+    """Return the process-owned policy for model-proposed ACT commands.
+
+    ``plan.template_params`` is task data and can be written through the state
+    CLI/MCP tool.  It is therefore not a suitable authorization source.
+    """
     sd = str(scripts_directory())
-    return [
-        "python3 {}/autoloop-*.py *".format(sd),
-    ]
+    return resolve_runner_command_patterns(
+        ["python3 {}/autoloop-*.py *".format(sd)]
+    )
 
 
 def _runner_act(work_dir: str, python_exe: str | None) -> bool:
@@ -438,8 +444,26 @@ def _runner_act(work_dir: str, python_exe: str | None) -> bool:
     if not isinstance(cmds, list):
         return False
     timeout = int(os.environ.get("RUNNER_ACT_TIMEOUT", "300"))
+    try:
+        allowed_globs = _allowed_globs(work_dir)
+    except ValueError as exc:
+        stateutil.run_state_update(
+            work_dir,
+            "metadata.last_error",
+            json.dumps(
+                {
+                    "script": "autoloop-runner.act",
+                    "returncode": -1,
+                    "stderr": "invalid operator command policy",
+                    "time": "",
+                },
+                ensure_ascii=False,
+            ),
+            python_exe=python_exe,
+        )
+        return False
     results = run_planned_commands(
-        work_dir, cmds, _allowed_globs(work_dir), timeout_per_cmd=timeout
+        work_dir, cmds, allowed_globs, timeout_per_cmd=timeout
     )
     bad = [r for r in results if not r.allowed or r.error]
     if bad:
@@ -474,8 +498,8 @@ def _runner_act(work_dir: str, python_exe: str | None) -> bool:
                 ],
             },
         )
-    except Exception as e:
-        log.exception("merge_iteration_act: %s", e)
+    except Exception:
+        log.exception("merge_iteration_act failed")
         return False
     return True
 
@@ -510,14 +534,14 @@ def _runner_reflect(work_dir: str, python_exe: str | None) -> bool:
                 max_tokens=int(os.environ.get("RUNNER_MAX_TOKENS", "1024")),
                 temperature=float(os.environ.get("RUNNER_TEMPERATURE", "0.2")),
             )
-        except Exception:
-            log.exception("reflect LLM failed")
+        except Exception as exc:
+            log.error("reflect LLM failed (%s)", type(exc).__name__)
             return False
 
     ref = normalize_reflect(ref)
     ok, rreason = validate_reflect(ref)
     if not ok:
-        log.error("reflect invalid: %s %s", rreason, ref)
+        log.error("reflect invalid: %s", rreason)
         return False
     payload = json.dumps(ref, ensure_ascii=False, separators=(",", ":"))
     rc = stateutil.run_state_update(

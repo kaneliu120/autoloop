@@ -327,6 +327,7 @@ def cmd_init(work_dir, template, goal):
 PROTECTED_PATH_PATTERNS = [
     re.compile(r"^plan\.gates\[\d+\]\.threshold$"),
     re.compile(r"^plan\.budget\.max_rounds$"),
+    re.compile(r"^plan\.template_params\.(allowed_script_globs|allowed_commands)$"),
 ]
 
 
@@ -335,7 +336,7 @@ def cmd_update(work_dir, field_path, value_str):
     for pat in PROTECTED_PATH_PATTERNS:
         if pat.match(field_path):
             print("WARNING: Cannot update protected path '{}' via update command.".format(field_path))
-            print("Gate thresholds can only be modified by editing gate-manifest.json directly (leaves git audit trail).")
+            print("This authorization-related field cannot be modified through the state update command.")
             sys.exit(1)
 
     state = load_state(work_dir)

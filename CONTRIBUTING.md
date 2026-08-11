@@ -1,6 +1,6 @@
 # Contributing to AutoLoop
 
-Thank you for improving AutoLoop. The project combines a Claude Code Skill,
+Thank you for improving AutoLoop. The project combines a Codex Skill,
 deterministic Python tools, an MCP server, and an optional unattended Runner,
 so changes must preserve both the documented workflow and the executable
 contracts.

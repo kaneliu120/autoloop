@@ -10,7 +10,7 @@ You are a methodology review expert. Please perform the **strictest** possible s
 
 ### Review Target
 
-AutoLoop is a Claude Code skill that implements an OODA+ 8-stage loop (OBSERVE→ORIENT→DECIDE→ACT→VERIFY→SYNTHESIZE→EVOLVE→REFLECT), supports 7 task templates (T1 Research ~ T7 Optimize), and uses quality gates to drive automatic convergence.
+AutoLoop is a Codex skill that implements an OODA+ 8-stage loop (OBSERVE→ORIENT→DECIDE→ACT→VERIFY→SYNTHESIZE→EVOLVE→REFLECT), supports 8 task templates (T1 Research through T8 Optimize), and uses quality gates to drive automatic convergence.
 
 ### Review Criteria
 
