@@ -2,41 +2,39 @@
   "_comment": "AutoLoop multi-model routing configuration (P3-09)",
   "_status": "Reserved configuration; the current pipeline does not support multiple sessions. P2-19 prompt-level task awareness is already available.",
 
-  "default_model": "anthropic:claude-sonnet-4-6",
+  "default_model": "openai:gpt-5.6-terra",
 
   "template_models": {
     "T1": {
-      "preferred": "anthropic:claude-sonnet-4-6",
-      "act_override": "xai:grok-3",
-      "reason": "T1 research requires web search, and Grok has native web_search support"
+      "preferred": "openai:gpt-5.6-terra",
+      "reason": "T1 research needs strong synthesis and explicit source verification"
     },
     "T2": {
-      "preferred": "anthropic:claude-sonnet-4-6",
+      "preferred": "openai:gpt-5.6-terra",
       "reason": "T2 comparison analysis requires strong reasoning ability"
     },
     "T3": {
-      "preferred": "anthropic:claude-opus-4-6",
+      "preferred": "openai:gpt-5.6-sol",
       "reason": "T3 design requires the strongest reasoning plus long context"
     },
     "T4": {
-      "preferred": "anthropic:claude-sonnet-4-6",
+      "preferred": "openai:gpt-5.6-terra",
       "reason": "T4 development requires fast code generation"
     },
     "T5": {
-      "preferred": "anthropic:claude-sonnet-4-6",
-      "act_override": "xai:grok-3",
-      "reason": "T5 KPI iteration may need web access to fetch the latest data"
+      "preferred": "openai:gpt-5.6-terra",
+      "reason": "T5 KPI iteration needs controlled, measurable improvement cycles"
     },
     "T6": {
-      "preferred": "anthropic:claude-haiku-4-5",
+      "preferred": "openai:gpt-5.6-luna",
       "reason": "T6 batch generation prioritizes speed and cost"
     },
     "T7": {
-      "preferred": "anthropic:claude-sonnet-4-6",
+      "preferred": "openai:gpt-5.6-terra",
       "reason": "T7 quality review requires code comprehension"
     },
     "T8": {
-      "preferred": "anthropic:claude-sonnet-4-6",
+      "preferred": "openai:gpt-5.6-terra",
       "reason": "T8 optimization requires architecture comprehension"
     }
   },
@@ -55,8 +53,8 @@
   "multi_session_pipeline": {
     "_status": "Not implemented, reserved interface",
     "enabled": false,
-    "session_launcher": "claude-code",
-    "session_args_template": "--model {model} --headless",
+    "session_launcher": "codex",
+    "session_args_template": "exec --model {model}",
     "comment": "When enabled=true, the pipeline launches an independent session for each template using the preferred model in template_models"
   }
 }

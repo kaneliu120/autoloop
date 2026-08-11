@@ -4,7 +4,7 @@
 
 - **Repository version**: the `version` in the root `pyproject.toml` (often `0.0.0` as a development placeholder).
 - **Protocol and gate SSOT**: `references/gate-manifest.json` may maintain a `version` field (if missing, use the git tag or CHANGELOG as the source of truth).
-- **Skill**: `.claude/skills/autoloop/SKILL.md` (or the same file under your install path) should match the current repository at the **same commit** or the same **git tag** so threshold / phase descriptions do not drift from the manifest.
+- **Skill**: `~/.codex/skills/autoloop/SKILL.md` (or the same file under your install path) should match the current repository at the **same commit** or the same **git tag** so threshold / phase descriptions do not drift from the manifest.
 
 **Recommended convention**: tag reproducible releases as `vX.Y.Z` and note a "manifest-compatible change summary" in the corresponding CHANGELOG entry.
 

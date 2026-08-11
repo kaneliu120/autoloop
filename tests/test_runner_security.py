@@ -1,8 +1,12 @@
 """Regression coverage for the unattended Runner's security boundaries."""
 
-import unittest
+import os
+import subprocess
 import sys
+import tempfile
+import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SERVICES = ROOT / "services"
@@ -11,7 +15,11 @@ if str(SERVICES) not in sys.path:
 
 from autoloop_runner.act import _command_allowed
 from autoloop_runner.security import (
+    RUNNER_ALLOWED_COMMANDS_ENV,
+    RUNNER_WORKDIR_ROOT_ENV,
     resolve_openai_base_url,
+    resolve_runner_command_patterns,
+    resolve_trusted_work_dir,
     sanitized_child_environment,
 )
 
@@ -46,9 +54,90 @@ class TestRunnerCredentialBoundary(unittest.TestCase):
                 "AWS_SESSION_TOKEN": "do-not-pass",
                 "SAFE_FLAG": "ok",
             },
-            {"ANTHROPIC_API_KEY": "do-not-pass", "EXTRA": "kept"},
+            {"VENDOR_API_KEY": "do-not-pass", "EXTRA": "kept"},
         )
         self.assertEqual(child_env, {"PATH": "/usr/bin", "SAFE_FLAG": "ok", "EXTRA": "kept"})
+        self.assertNotIn(RUNNER_ALLOWED_COMMANDS_ENV, sanitized_child_environment(
+            {"PATH": "/usr/bin", RUNNER_ALLOWED_COMMANDS_ENV: '["*"]'}
+        ))
+
+
+class TestRunnerOperatorPolicy(unittest.TestCase):
+    def test_task_state_cannot_supply_the_runner_policy(self):
+        self.assertEqual(
+            resolve_runner_command_patterns(["python3 /opt/autoloop/*.py *"], {}),
+            ["python3 /opt/autoloop/*.py *"],
+        )
+
+    def test_runner_uses_the_builtin_policy_when_state_is_untrusted(self):
+        from autoloop_runner.tick import _allowed_globs
+
+        with patch.dict(os.environ, {}, clear=True):
+            patterns = _allowed_globs("/task-state-is-not-read")
+        self.assertEqual(len(patterns), 1)
+        self.assertIn("autoloop-*.py", patterns[0])
+
+    def test_custom_policy_requires_valid_json_and_rejects_global_glob(self):
+        with self.assertRaises(ValueError):
+            resolve_runner_command_patterns(["default"], {RUNNER_ALLOWED_COMMANDS_ENV: "*"})
+        with self.assertRaises(ValueError):
+            resolve_runner_command_patterns(
+                ["default"], {RUNNER_ALLOWED_COMMANDS_ENV: '["*"]'}
+            )
+
+
+class TestRunnerWorkdirBoundary(unittest.TestCase):
+    def test_workdir_must_resolve_within_operator_root(self):
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as root:
+            child = Path(root) / "task"
+            child.mkdir()
+            env = {RUNNER_WORKDIR_ROOT_ENV: root}
+            self.assertEqual(resolve_trusted_work_dir(str(child), env), str(child.resolve()))
+            with self.assertRaises(ValueError):
+                resolve_trusted_work_dir("/tmp", env)
+
+            escape = Path(root) / "escape"
+            escape.symlink_to("/tmp", target_is_directory=True)
+            with self.assertRaises(ValueError):
+                resolve_trusted_work_dir(str(escape), env)
+
+    def test_missing_root_is_rejected(self):
+        with self.assertRaises(ValueError):
+            resolve_trusted_work_dir("/tmp", {})
+
+
+class TestStateAuthorizationFields(unittest.TestCase):
+    def test_state_update_cannot_restore_legacy_allowlist_fields(self):
+        with tempfile.TemporaryDirectory() as work_dir:
+            init = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts" / "autoloop-state.py"),
+                    "init",
+                    work_dir,
+                    "T1",
+                    "test",
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(init.returncode, 0, init.stderr + init.stdout)
+            update = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts" / "autoloop-state.py"),
+                    "update",
+                    work_dir,
+                    "plan.template_params.allowed_commands",
+                    '["*"]',
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(update.returncode, 0)
+            self.assertIn("Cannot update protected path", update.stdout)
 
 
 class TestOpenAIBaseUrlBoundary(unittest.TestCase):

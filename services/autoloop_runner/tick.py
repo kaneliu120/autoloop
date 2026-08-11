@@ -17,7 +17,11 @@ from autoloop_runner.metrics import record_api_call, record_runner_outcome
 from autoloop_scripts.locate import scripts_directory
 from autoloop_runner.reflect import normalize_reflect, validate_reflect
 from autoloop_runner import runner_log
-from autoloop_runner.security import resolve_openai_base_url
+from autoloop_runner.security import (
+    resolve_openai_base_url,
+    resolve_runner_command_patterns,
+    resolve_trusted_work_dir,
+)
 from autoloop_runner import stateutil
 from autoloop_runner import synthesize
 from autoloop_runner.tsv_auto import apply_auto_tsv_after_verify
@@ -166,7 +170,7 @@ def run_tick(
     Execute exactly one advancement slice. Returns:
       0 success, 1 error, 10 pause required, 11 lock not acquired, 12 cost/budget cap (P1-5).
     """
-    work_dir = os.path.abspath(work_dir)
+    work_dir = resolve_trusted_work_dir(work_dir)
     ok_budget, br = check_cost_budget(work_dir)
     if not ok_budget:
         log.warning("cost budget: %s", br)
@@ -418,17 +422,15 @@ def _runner_decide(work_dir: str, python_exe: str | None) -> bool:
 
 
 def _allowed_globs(work_dir: str) -> list[str]:
-    st = stateutil.load_json(stateutil.state_path(work_dir))
-    tp = st.get("plan", {}).get("template_params") or {}
-    g = tp.get("allowed_script_globs") or tp.get("allowed_commands")
-    if isinstance(g, list):
-        return [str(x) for x in g]
-    if isinstance(g, str) and g.strip():
-        return [g.strip()]
+    """Return the process-owned policy for model-proposed ACT commands.
+
+    ``plan.template_params`` is task data and can be written through the state
+    CLI/MCP tool.  It is therefore not a suitable authorization source.
+    """
     sd = str(scripts_directory())
-    return [
-        "python3 {}/autoloop-*.py *".format(sd),
-    ]
+    return resolve_runner_command_patterns(
+        ["python3 {}/autoloop-*.py *".format(sd)]
+    )
 
 
 def _runner_act(work_dir: str, python_exe: str | None) -> bool:
@@ -438,8 +440,26 @@ def _runner_act(work_dir: str, python_exe: str | None) -> bool:
     if not isinstance(cmds, list):
         return False
     timeout = int(os.environ.get("RUNNER_ACT_TIMEOUT", "300"))
+    try:
+        allowed_globs = _allowed_globs(work_dir)
+    except ValueError as exc:
+        stateutil.run_state_update(
+            work_dir,
+            "metadata.last_error",
+            json.dumps(
+                {
+                    "script": "autoloop-runner.act",
+                    "returncode": -1,
+                    "stderr": str(exc),
+                    "time": "",
+                },
+                ensure_ascii=False,
+            ),
+            python_exe=python_exe,
+        )
+        return False
     results = run_planned_commands(
-        work_dir, cmds, _allowed_globs(work_dir), timeout_per_cmd=timeout
+        work_dir, cmds, allowed_globs, timeout_per_cmd=timeout
     )
     bad = [r for r in results if not r.allowed or r.error]
     if bad:

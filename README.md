@@ -1,6 +1,6 @@
 # AutoLoop
 
-Autonomous iteration engine (Claude Code skill): an eight-stage OODA loop with quality-gated convergence, supporting templates T1 (research) through T8 (architecture optimization) plus chained Pipeline execution.
+Autonomous iteration engine for Codex: an eight-stage OODA loop with quality-gated convergence, supporting templates T1 (research) through T8 (architecture optimization) plus chained Pipeline execution.
 
 Licensed under [Apache-2.0](LICENSE).
 
@@ -31,6 +31,7 @@ The experience registry can be resolved by `autoloop-experience.py` from either 
 - **Dependencies**: tools under `scripts/` use the **Python standard library** only and have no third-party runtime dependencies. Using **`mcp-server/`** requires `pip install "mcp>=1.0.0,<2.0.0"`.
 - **Optional install**: run `pip install -e .` from the repo root to expose console entry points such as `autoloop-state` and `autoloop-validate` (see `autoloop_entrypoints.py`; they still call `scripts/*.py` internally). For unattended mode, install `pip install -e ".[runner]"` and see [docs/RUNNER.md](docs/RUNNER.md) for `autoloop-runner tick|loop|metrics`.
 - **Strict mode**: `AUTOLOOP_STRICT=1` or `autoloop-controller.py <dir> --strict` halts the rest of the round if any hard VERIFY step fails. On the validation side, use `AUTOLOOP_VALIDATE_STRICT=1` or `autoloop-validate.py <dir> --strict`.
+- **Codex MCP**: see [`mcp-server/CODEX_SETUP.md`](mcp-server/CODEX_SETUP.md). MCP calls require an explicit trusted workspace root; write tools also require an explicit write switch.
 
 ## Quick Start (SSOT)
 

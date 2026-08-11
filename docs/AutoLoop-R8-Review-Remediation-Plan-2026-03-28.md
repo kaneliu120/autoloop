@@ -3,7 +3,7 @@
 **Date**: 2026-03-28  
 **Document status (2026-03-29)**: Several F* items were implemented in later iterations (scorers, state machine, SSOT thresholds, and so on). **L4 (`commands/autoloop-quality.md` hard-coded thresholds)**: that command document now points to **`references/quality-gates.md` and `gate-manifest.json`**. Use the repository state as the source of truth and do not rely on the legacy table below. The content here is kept as an archival repair plan.
 
-**Basis**: Codex R8 six-dimension methodology review (3.7/10) + Claude verification pass (4.4/10)  
+**Basis**: Codex R8 six-dimension methodology review (3.7/10) + independent verification pass (4.4/10)
 **Goal**: eliminate the "statement-execution gap" and raise the corrected score from 4.4 to 6.5+
 
 ---

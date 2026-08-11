@@ -434,8 +434,7 @@ After the controller receives `discoveries` during ACT, it immediately writes th
 
 ## MCP Tool Availability (cross-platform)
 
-- **Claude Code**: the subagent automatically inherits all installed MCP tools without additional configuration
-- **Gemini CLI / Codex CLI**: use `autoloop-mcp-bridge.py discover` to inspect available tools
+- **Codex**: configure the AutoLoop MCP server with `codex mcp add` and inspect configured servers with `codex mcp list`
 - **Environment without MCP**: the subagent should use built-in tools (`read_file`, `grep`, `bash`, etc.) to complete the task
 
 The controller detects the platform during ACT and notes MCP availability in the work order.

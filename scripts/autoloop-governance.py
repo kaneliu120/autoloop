@@ -35,7 +35,7 @@ DEFAULT_POLICIES = {
     "max_cost_per_task_usd": 10.0,
     "require_approval_for_deploy": True,
     "require_approval_for_delete": True,
-    "allowed_external_apis": ["openai", "anthropic", "google", "xai"],
+    "allowed_external_apis": ["openai", "google", "xai"],
     "max_concurrent_tasks": 5,
 }
 

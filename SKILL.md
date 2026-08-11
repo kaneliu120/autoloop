@@ -271,61 +271,46 @@ Detail: `references/agent-dispatch.md`.
 
 ---
 
-## Integration with CLAUDE.md
+## Integration with AGENTS.md
 
-When operating within a project that has a `CLAUDE.md`:
+When operating within a project that has an `AGENTS.md`:
 
-- AutoLoop serves as the Orchestrator-First execution engine defined in CLAUDE.md
-- T4 Deliver maps directly to the CLAUDE.md mandatory development flow (phases 0-5)
-- All engineering decisions follow the project CLAUDE.md code conventions
+- AutoLoop serves as an Orchestrator-First execution engine within the project's instructions
+- T4 Deliver maps directly to the project's mandatory development flow (phases 0-5)
+- All engineering decisions follow the project `AGENTS.md` code conventions
 - Technology stack parameters are collected in `autoloop-plan.md` and respected by T4/T7/T8 subagents
 
 ---
 
 ## Optional Enhancements
 
-### Claude Code Hooks (auto-enforcement)
+### Codex execution safeguards
 
-When configured in `~/.claude/settings.json`:
-
-- `PostToolUse:Write|Edit` on `autoloop-findings.md` triggers `autoloop-score.py`
-- `PostToolUse:Write|Edit` on `autoloop-results.tsv` triggers `autoloop-tsv.py validate`
-- `Stop` trigger runs `autoloop-validate.py` for cross-file consistency
+Codex tool permissions remain the host control. AutoLoop does not claim
+automatic hook enforcement. For unattended execution, use the Runner's
+`AUTOLOOP_RUNNER_WORKDIR_ROOT`; for MCP, configure the protected server as
+described below.
 
 ### MCP Server Mode
 
-Install: `bash ${SKILL_DIR}/mcp-server/install.sh`
-Register: `claude mcp add autoloop python3 ${SKILL_DIR}/mcp-server/server.py`
+Install read-only: `bash ${SKILL_DIR}/mcp-server/install.sh /absolute/path/to/trusted-workspaces`
 Provides 10 tools: `autoloop_init`, `autoloop_score`, `autoloop_tsv`, `autoloop_validate`, `autoloop_variance`, `autoloop_state`, `autoloop_render`, `autoloop_experience`, `autoloop_finalize`, `autoloop_controller`.
 
-MCP is an enhancement layer; file-based mode remains the default.
+MCP is an enhancement layer; file-based mode remains the default. Use
+`codex mcp list` to inspect its configuration. See `mcp-server/CODEX_SETUP.md`
+before enabling write tools with `--allow-write`.
 
-### MCP Bridge (Cross-Platform)
+### Codex Skill use
 
-For non-Claude Code environments (Gemini CLI, Codex CLI, etc.) where subagents cannot inherit MCP tools:
-
-```bash
-python3 ${SKILL_DIR}/scripts/autoloop-mcp-bridge.py detect-platform  # Detect the current platform
-python3 ${SKILL_DIR}/scripts/autoloop-mcp-bridge.py discover         # List available MCP tools
-python3 ${SKILL_DIR}/scripts/autoloop-mcp-bridge.py call <tool> <args>  # Call an MCP tool (reserved)
-```
-
-Detail: the MCP tool availability section in `references/agent-dispatch.md`.
+Install this directory under the Codex skills directory, then ask Codex to use
+the `autoloop` skill for a measurable multi-stage task. The skill has no
+implicit permission to write outside the task work directory.
 
 ---
 
 ## Quick Reference
 
-```
-/autoloop          -> Interactive entry (guided template selection)
-/autoloop:plan     -> Guided plan configuration
-/autoloop:research -> T1 Research
-/autoloop:compare  -> T2 Compare
-/autoloop:design   -> T3 Product Design
-/autoloop:iterate  -> T5 Iterate
-/autoloop:generate -> T6 Generate
-/autoloop:deliver  -> T4 Deliver
-/autoloop:quality  -> T7 Quality
-/autoloop:optimize -> T8 Optimize
-/autoloop:pipeline -> Multi-template chain (e.g., T1 -> T2 -> T4)
-```
+- `autoloop` -> guided template selection
+- `autoloop-plan.md` -> plan configuration
+- T1 through T8 -> research, compare, design, deliver, iterate, generate, quality, and optimization workflows
+- `autoloop-pipeline.md` -> multi-template chain (for example, T1 -> T2 -> T4)
