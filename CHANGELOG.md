@@ -1,5 +1,29 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Experience queries now use a matching context-scoped `last_validated` date
+  for time decay, instead of incorrectly decaying a recently revalidated
+  context from an older global record. Time-sensitive tests now use relative
+  dates.
+
+### Security
+
+- The unattended Runner now requires full command-glob matches, defaults to
+  bundled scripts rather than work-directory scripts, strips recognized
+  credential variables from planned subprocesses, and validates OpenAI base
+  URLs before an API key can be sent to a custom host.
+- CI now runs with read-only repository permissions, a timeout, pinned action
+  commits, bounded dependency major versions, dependency consistency checks,
+  and Dependabot updates.
+
+### Project governance
+
+- Added the Apache-2.0 license and package metadata, a contribution guide, a
+  public security policy, private vulnerability reporting, and a PR template.
+
 ## [0.1.0] — 2026-03-29
 
 ### Added

@@ -497,17 +497,31 @@ def _extract_context_tags_from_description(desc):
     return []
 
 
-def _resolve_scoped_status(strategy_id, global_status, scoped_rows, task_tag_set):
-    """Context-scoped supplement table: Exact match > task tags are a superset of row tags (choose the row with the most tags) > global."""
+def _parse_iso_date(value):
+    """Return a date for an ISO ``YYYY-MM-DD`` value, or ``None`` when invalid."""
+    try:
+        return datetime.datetime.strptime(str(value), '%Y-%m-%d').date()
+    except (TypeError, ValueError):
+        return None
+
+
+def _resolve_scoped_status_detail(strategy_id, global_status, scoped_rows, task_tag_set):
+    """Resolve the effective status and the validation date that supports it.
+
+    Context-specific status rows are a stronger signal than the global status.
+    Their ``last_validated`` value must therefore also control time decay; using
+    only the global description date incorrectly hid recently revalidated rows.
+    """
     global_status = global_status or 'To Validate'
     if not task_tag_set:
-        return global_status
+        return global_status, None
     rows = [r for r in scoped_rows if r.get('strategy_id') == strategy_id]
     if not rows:
-        return global_status
+        return global_status, None
     best_pri = -1
     best_len = -1
     chosen = global_status
+    chosen_validated = None
     for r in rows:
         rt = _normalize_tag_set(_parse_tags(r.get('context_tags', '')))
         if not rt:
@@ -523,7 +537,15 @@ def _resolve_scoped_status(strategy_id, global_status, scoped_rows, task_tag_set
             st = r.get('status', '')
             if st:
                 chosen = st
-    return chosen
+                chosen_validated = _parse_iso_date(r.get('last_validated', ''))
+    return chosen, chosen_validated
+
+
+def _resolve_scoped_status(strategy_id, global_status, scoped_rows, task_tag_set):
+    """Compatibility wrapper for callers that need only the effective status."""
+    return _resolve_scoped_status_detail(
+        strategy_id, global_status, scoped_rows, task_tag_set,
+    )[0]
 
 
 def _extract_applicable_templates(desc):
@@ -579,7 +601,7 @@ def cmd_query(registry_path, template, tags, include_observation=False,
             if len(task_tag_set & strategy_tag_set) < 2:
                 continue
 
-        effective_status = _resolve_scoped_status(
+        effective_status, scoped_last_validated = _resolve_scoped_status_detail(
             s.get('strategy_id', ''), s.get('status', 'To Validate'), scoped, task_tag_set,
         )
 
@@ -587,6 +609,8 @@ def cmd_query(registry_path, template, tags, include_observation=False,
         if effective_status in allowed:
             entry = dict(s)
             entry['effective_status'] = effective_status
+            if scoped_last_validated is not None:
+                entry['_last_validated'] = scoped_last_validated
             results.append(entry)
 
     # Time + success_rate (experience-registry.md §time-decay mechanism)
@@ -598,29 +622,28 @@ def cmd_query(registry_path, template, tags, include_observation=False,
         except (ValueError, AttributeError):
             base_rate = 0.0
 
-        # Extract the @YYYY-MM-DD date from description
+        # A matching context-scoped row is more specific than the global row.
+        # Otherwise use the global @YYYY-MM-DD date in the description.
         desc = item.get('description', '')
         decay = 1.0
-        date_match = re.search(r'@(\d{4}-\d{2}-\d{2})', desc)
-        if date_match:
-            try:
-                last_date = datetime.datetime.strptime(
-                    date_match.group(1), '%Y-%m-%d').date()
-                days_ago = (today - last_date).days
-                if days_ago <= 30:
-                    decay = 1.0
-                elif days_ago <= 60:
-                    decay = 0.8
-                elif days_ago <= 90:
-                    decay = 0.5
-                else:
-                    decay = 0.2  # >90d severely decayed
-                    # automatic downgrade note
-                    if item.get('effective_status') == 'Recommended':
-                        item['effective_status'] = 'Observation'
-                        item['_decay_note'] = f'>90d without validation; automatically downgraded to Observation'
-            except ValueError:
-                pass
+        last_date = item.get('_last_validated')
+        if last_date is None:
+            date_match = re.search(r'@(\d{4}-\d{2}-\d{2})', desc)
+            last_date = _parse_iso_date(date_match.group(1)) if date_match else None
+        if last_date is not None:
+            days_ago = (today - last_date).days
+            if days_ago <= 30:
+                decay = 1.0
+            elif days_ago <= 60:
+                decay = 0.8
+            elif days_ago <= 90:
+                decay = 0.5
+            else:
+                decay = 0.2  # >90d severely decayed
+                # automatic downgrade note
+                if item.get('effective_status') == 'Recommended':
+                    item['effective_status'] = 'Observation'
+                    item['_decay_note'] = f'>90d without validation; automatically downgraded to Observation'
 
         return base_rate * decay
 

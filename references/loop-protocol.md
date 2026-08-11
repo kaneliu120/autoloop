@@ -257,13 +257,17 @@ When a subagent fails, the controller automatically classifies `failure_type` an
 
 ### Cross-platform security pipeline (P3-04/05)
 
-Before ACT executes in non-Claude Code environments, `autoloop-security.py` checks:
+For an integration that explicitly invokes `autoloop-security.py` before ACT,
+the helper can check:
 
 1. **Tool allowlist**: tools requested by the subagent must be in `TOOL_ALLOWLIST`
 2. **Sensitive-path detection**: reads / writes to paths such as `.env` / `credentials` / `secrets` are blocked
 3. **Pre-approval for writes**: modifying `.py` / `.sh` / config files requires confirmation
 
-In Claude Code environments, these checks are handled by the host permission system and `security.py` is not activated.
+The standalone helper is not an automatic enforcement point. The unattended
+Runner instead enforces its own complete command-glob allowlist, `shell=False`,
+and credential-stripping boundary; host permission systems still remain the
+primary control in Claude Code environments.
 
 ---
 
