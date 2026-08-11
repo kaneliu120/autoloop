@@ -140,6 +140,54 @@ class TestStateAuthorizationFields(unittest.TestCase):
             self.assertIn("Cannot update protected path", update.stdout)
 
 
+class TestRunnerSensitiveDataBoundary(unittest.TestCase):
+    def test_busy_lock_does_not_log_the_workdir(self):
+        from autoloop_runner import tick
+
+        with tempfile.TemporaryDirectory() as root:
+            work_dir = Path(root) / "project-with-secret-sk-test-value"
+            work_dir.mkdir()
+            with patch.dict(
+                os.environ, {RUNNER_WORKDIR_ROOT_ENV: root}, clear=False
+            ), patch.object(tick.WorkdirLock, "acquire", return_value=False), self.assertLogs(
+                "autoloop_runner", level="WARNING"
+            ) as captured:
+                self.assertEqual(tick.run_tick(str(work_dir)), 11)
+        self.assertNotIn("sk-test-value", "\n".join(captured.output))
+
+    def test_invalid_handoff_does_not_log_model_payload(self):
+        from autoloop_runner import tick
+
+        with tempfile.TemporaryDirectory() as work_dir:
+            Path(work_dir, "autoloop-state.json").write_text(
+                '{"iterations": []}', encoding="utf-8"
+            )
+            invalid_payload = {
+                "strategy_id": "S01-test",
+                "hypothesis": "contains sk-test-value",
+                "planned_commands": "not-a-list",
+            }
+            with patch.dict(os.environ, {"RUNNER_MOCK_LLM": "1"}, clear=False), patch.object(
+                tick, "_mock_decide_json", return_value=invalid_payload
+            ), self.assertLogs("autoloop_runner", level="ERROR") as captured:
+                self.assertFalse(tick._runner_decide(work_dir, None))
+        self.assertNotIn("sk-test-value", "\n".join(captured.output))
+
+    def test_openai_error_event_omits_exception_text(self):
+        from autoloop_runner import tick
+
+        def failing_chat(**_kwargs):
+            raise RuntimeError("Bearer sk-test-value")
+
+        with patch.object(tick.runner_log, "emit") as emit:
+            with self.assertRaises(RuntimeError):
+                tick._chat_json("/tmp", _chat_json_impl=failing_chat)
+        self.assertEqual(emit.call_args.args[1], "openai_chat_error")
+        self.assertEqual(
+            emit.call_args.kwargs["extra"], {"error_type": "RuntimeError"}
+        )
+
+
 class TestOpenAIBaseUrlBoundary(unittest.TestCase):
     def test_allows_openai_and_azure_https_endpoints(self):
         self.assertEqual(

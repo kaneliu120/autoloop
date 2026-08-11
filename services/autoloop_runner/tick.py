@@ -63,7 +63,9 @@ def _chat_json(
             work_dir,
             "openai_chat_error",
             latency_ms=dt,
-            extra={"error": str(e)[:300]},
+            # Provider errors can echo request headers, URLs, or user content.
+            # Keep only the exception class in the persistent runner log.
+            extra={"error_type": type(e).__name__},
         )
         raise
     dt = (time.monotonic() - t0) * 1000.0
@@ -182,7 +184,8 @@ def run_tick(
 
     wl = WorkdirLock(work_dir)
     if not wl.acquire(blocking=lock_blocking):
-        log.warning("work_dir lock busy: %s", work_dir)
+        # A workdir path can itself contain sensitive project information.
+        log.warning("work_dir lock busy")
         record_runner_outcome(work_dir, 11)
         return 11
     try:
@@ -407,12 +410,13 @@ def _runner_decide(work_dir: str, python_exe: str | None) -> bool:
                 max_retries=int(os.environ.get("RUNNER_OPENAI_RETRIES", "5")),
             )
         except Exception as e:
-            log.exception("OpenAI decide failed: %s", e)
+            log.error("OpenAI decide failed (%s)", type(e).__name__)
             return False
 
     ok, reason = validate_handoff(obj)
     if not ok:
-        log.error("handoff invalid: %s %s", reason, obj)
+        # The model response is untrusted and may contain secrets or prompt data.
+        log.error("handoff invalid: %s", reason)
         return False
     payload = handoff_to_state_json(obj)
     rc = stateutil.run_state_update(
@@ -450,7 +454,7 @@ def _runner_act(work_dir: str, python_exe: str | None) -> bool:
                 {
                     "script": "autoloop-runner.act",
                     "returncode": -1,
-                    "stderr": str(exc),
+                    "stderr": "invalid operator command policy",
                     "time": "",
                 },
                 ensure_ascii=False,
@@ -494,8 +498,8 @@ def _runner_act(work_dir: str, python_exe: str | None) -> bool:
                 ],
             },
         )
-    except Exception as e:
-        log.exception("merge_iteration_act: %s", e)
+    except Exception:
+        log.exception("merge_iteration_act failed")
         return False
     return True
 
@@ -530,14 +534,14 @@ def _runner_reflect(work_dir: str, python_exe: str | None) -> bool:
                 max_tokens=int(os.environ.get("RUNNER_MAX_TOKENS", "1024")),
                 temperature=float(os.environ.get("RUNNER_TEMPERATURE", "0.2")),
             )
-        except Exception:
-            log.exception("reflect LLM failed")
+        except Exception as exc:
+            log.error("reflect LLM failed (%s)", type(exc).__name__)
             return False
 
     ref = normalize_reflect(ref)
     ok, rreason = validate_reflect(ref)
     if not ok:
-        log.error("reflect invalid: %s %s", rreason, ref)
+        log.error("reflect invalid: %s", rreason)
         return False
     payload = json.dumps(ref, ensure_ascii=False, separators=(",", ":"))
     rc = stateutil.run_state_update(

@@ -8,6 +8,8 @@
 - MCP calls now require `AUTOLOOP_MCP_WORKDIR_ROOT`; mutating calls require
   `AUTOLOOP_MCP_ALLOW_WRITE=1`, and experience writes require an explicit
   registry path inside that root.
+- Runner logs and telemetry no longer retain model payloads, provider error
+  text, or workdir paths that can contain sensitive data.
 - Added a pinned CodeQL workflow for Python analysis.
 
 ### Changed
