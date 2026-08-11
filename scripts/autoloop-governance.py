@@ -75,7 +75,8 @@ def scan_secrets(file_path):
     result = {"file": file_path, "secrets_found": len(findings), "findings": findings}
     if findings:
         _log_governance_event("secrets_detected", result)
-    print(json.dumps(result, indent=2))
+    safe_result = {"file": file_path, "secrets_found": len(findings)}
+    print(json.dumps(safe_result, indent=2))
     return findings
 
 
