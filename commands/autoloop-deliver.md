@@ -5,7 +5,7 @@ description: >
   strictly mapped to the mandatory development process in AGENTS.md.
   Every phase has explicit quality gates; if a phase fails, do not proceed to the next one.
   See references/quality-gates-engineering.md row T4 for the quality gate threshold.
-  Trigger: /autoloop:deliver or any task that requires end-to-end feature delivery.
+  Use this document for tasks that require end-to-end feature delivery.
 ---
 
 # AutoLoop T4: Deliver — End-to-End Delivery

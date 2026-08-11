@@ -4,7 +4,7 @@ description: >
   AutoLoop T6: Batch content generation template. Template-driven + parallel generation + per-item quality checks + automatic retries.
   Each generation unit is scored independently, and low-scoring units are regenerated automatically. For the retry cap, see the unified retry rules in references/loop-protocol.md (default: 2 retries).
   Quality gate thresholds are in references/quality-gates.md T6.
-  Triggered by /autoloop:generate or any task that requires batch generation of similar content.
+  Use this document for tasks that require batch generation of similar content.
 ---
 
 # AutoLoop T6: Generate — Batch Content Generation

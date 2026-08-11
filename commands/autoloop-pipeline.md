@@ -26,7 +26,8 @@ For each node in the pipeline:
 2. Confirm the input source (first node = user input, later nodes = upstream output)
 3. Confirm whether any gate overrides are needed (default is no override)
 
-After parameter collection, call `/autoloop:plan` to generate `autoloop-plan.md` with `type: pipeline`.
+After parameter collection, use the procedure in `commands/autoloop-plan.md`
+to generate `autoloop-plan.md` with `type: pipeline`.
 
 ### Step 3: Initialize the Pipeline
 
@@ -43,14 +44,14 @@ for each node in pipeline:
      - Skip this step for the first node
 
   2. [Execute] Dispatch the corresponding template command
-     - T1 → /autoloop:research
-     - T2 → /autoloop:compare
-     - T3 → /autoloop:design
-     - T4 → /autoloop:deliver
-     - T5 → /autoloop:iterate
-     - T6 → /autoloop:generate
-     - T7 → /autoloop:quality
-     - T8 → /autoloop:optimize
+     - T1 → `commands/autoloop-research.md`
+     - T2 → `commands/autoloop-compare.md`
+     - T3 → `commands/autoloop-design.md`
+     - T4 → `commands/autoloop-deliver.md`
+     - T5 → `commands/autoloop-iterate.md`
+     - T6 → `commands/autoloop-generate.md`
+     - T7 → `commands/autoloop-quality.md`
+     - T8 → `commands/autoloop-optimize.md`
 
   3. [Gate Check] Check gates after the node completes
      - All pass → extract output fields, update pipeline-progress.md, continue to the next node

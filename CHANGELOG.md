@@ -15,6 +15,7 @@
 ### Changed
 - Migrated skill, MCP setup, routing, and maintenance documentation to Codex.
 - Corrected template documentation to consistently describe T1 through T8.
+- Replaced legacy slash-command instructions with Codex command-document references.
 
 ### Fixed
 

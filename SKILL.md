@@ -2,8 +2,9 @@
 name: autoloop
 description: >
   Autonomous iteration engine combining OODA loop with subagent parallel execution
-  and quality-gated convergence. 7 task templates: research (T1), compare (T2),
-  iterate (T5), generate (T6), deliver (T4), quality (T7), optimize (T8).
+  and quality-gated convergence. Eight task templates: research (T1), compare (T2),
+  product design (T3), deliver (T4), iterate (T5), generate (T6), quality (T7),
+  and optimize (T8).
   Drives multi-round improvement cycles until measurable quality targets are met.
   Use when tasks require systematic multi-step iteration, quality-gated delivery,
   or multi-dimensional optimization with evidence-based scoring.
@@ -12,6 +13,13 @@ description: >
 ---
 
 # AutoLoop — Autonomous Iteration Engine
+
+Before using a shell snippet in this document, set `SKILL_DIR` to the
+absolute path of this repository. Codex does not create this variable:
+
+```bash
+SKILL_DIR=/absolute/path/to/autoloop
+```
 
 ## Core Mechanisms (R4-R7)
 
@@ -58,7 +66,9 @@ Match the user request to a template using trigger words and intent:
 
 **Confidence routing**: When trigger words are ambiguous, apply the confidence matching rules in `references/parameters.md` routing section. If confidence is below threshold, ask the user to clarify.
 
-**Multi-template chains**: Use `/autoloop:pipeline` for sequential template execution (e.g., T1 -> T2 -> T4). Detail: `commands/autoloop-pipeline.md`.
+**Multi-template chains**: Use the pipeline command document for sequential
+template execution (for example, T1 -> T2 -> T4). Detail:
+`commands/autoloop-pipeline.md`.
 
 ---
 

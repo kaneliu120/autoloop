@@ -15,7 +15,7 @@ import datetime
 TSV_HEADER = "iteration\tphase\tstatus\tdimension\tmetric_value\tdelta\tstrategy_id\taction_summary\tside_effect\tevidence_ref\tunit_id\tprotocol_version\tscore_variance\tconfidence\tdetails"
 
 # ---------------------------------------------------------------------------
-# T1-T7 quality gate dimension definitions — loaded from gate-manifest.json (SSOT)
+# T1-T8 quality gate dimension definitions — loaded from gate-manifest.json (SSOT)
 # ---------------------------------------------------------------------------
 
 import json

@@ -108,15 +108,20 @@ T8 Optimize: system/codebase path (required), priority direction (optional)
 
 **Do not ask for things that can be inferred automatically.** For example, do not ask "How many dimensions do you want?" Instead, generate a reasonable list of dimensions and let the user confirm or revise after execution.
 
-### Step 4: Delegate to `/autoloop:plan` to Collect Parameters and Generate the Plan File
+### Step 4: Use the Plan Command Document to Collect Parameters and Generate the Plan File
 
-**Only path**: pass the parsed goal, template type, and initial parameters to the `/autoloop:plan` wizard. The wizard is responsible for creating the plan file, formatting it, and ensuring field completeness; this entry point does not create any plan content itself.
+**Only path**: use the procedure in `commands/autoloop-plan.md` with the parsed
+goal, template type, and initial parameters. The procedure is responsible for
+creating the plan file, formatting it, and ensuring field completeness; this
+entry point does not create plan content itself.
 
 Once the wizard produces a complete `autoloop-plan.md` that conforms to `assets/plan-template.md`, automatically proceed to Step 5.
 
 ### Step 5: Bootstrap — Create Iteration Files
 
-After `/autoloop:plan` confirms the plan, the working directory must contain the artifacts needed to run OODA (see the Bootstrap rules in `references/loop-protocol.md`).
+After the plan procedure confirms the plan, the working directory must contain
+the artifacts needed to run OODA (see the Bootstrap rules in
+`references/loop-protocol.md`).
 
 **Recommended (aligned with the SSOT path in `README.md` / `SKILL.md`)**: run  
 `python3 <skill-package>/scripts/autoloop-state.py init <work-directory> <T1–T8> "<goal>"`  
@@ -138,14 +143,14 @@ After bootstrap completes, **automatically enter the first execution round witho
 
 Run the first round according to the selected template (see the corresponding command file):
 
-- T1: `/autoloop:research` first round: identify the **main subject + additional direction**, generate core chapters and specialized modules, then have the main agent dispatch researcher / verifier subagents by chapter and collect **chapter evidence packs**. If the topic is market/industry research, default to the **high-standard market/industry research report** in `assets/report-template.md` (mandatory core chapters, each with data + analysis + conclusion; add specialized modules if there is an additional direction). Multiple rounds are only for supplementing evidence when gates or chapter depth are not yet sufficient; they are **not** the definition of T1 (see `references/t1-formal-report.md` §0).
-- T2: `/autoloop:compare` first round: option analysis
-- T3: `/autoloop:design` first round: requirement analysis + solution document
-- T4: `/autoloop:deliver` Phase 1: development
-- T5: `/autoloop:iterate` first round: baseline measurement + first improvement
-- T6: `/autoloop:generate` first round: template setup + batch generation
-- T7: `/autoloop:quality` first round: three-dimensional parallel scan
-- T8: `/autoloop:optimize` first round: full diagnosis
+- T1: use `commands/autoloop-research.md` to identify the **main subject + additional direction**, generate core chapters and specialized modules, then have the main agent dispatch researcher / verifier subagents by chapter and collect **chapter evidence packs**. If the topic is market/industry research, default to the **high-standard market/industry research report** in `assets/report-template.md` (mandatory core chapters, each with data + analysis + conclusion; add specialized modules if there is an additional direction). Multiple rounds are only for supplementing evidence when gates or chapter depth are not yet sufficient; they are **not** the definition of T1 (see `references/t1-formal-report.md` §0).
+- T2: use `commands/autoloop-compare.md` for option analysis
+- T3: use `commands/autoloop-design.md` for requirement analysis and the solution document
+- T4: use `commands/autoloop-deliver.md` for Phase 1 development
+- T5: use `commands/autoloop-iterate.md` for baseline measurement and the first improvement
+- T6: use `commands/autoloop-generate.md` for template setup and batch generation
+- T7: use `commands/autoloop-quality.md` for the three-dimensional parallel scan
+- T8: use `commands/autoloop-optimize.md` for the full diagnosis
 
 After every round, **REFLECT must run** for all templates: write the four-layer reflection structure table into `autoloop-findings.md` in the format defined in `assets/findings-template.md`. See the REFLECT section in `references/loop-protocol.md`.
 

@@ -1,5 +1,8 @@
 # AutoLoop T3 Iteration Final Report
 
+> Historical record for 2026-03-28. Scores, file counts, and T1-T7 references
+> describe that review snapshot; use the current repository for T1-T8 behavior.
+
 ## Summary
 
 - **KPI**: Codex six-dimension methodology weighted total score

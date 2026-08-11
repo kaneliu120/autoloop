@@ -3,7 +3,7 @@ name: autoloop-plan
 description: >
   AutoLoop 交互式任务配置向导。帮助用户精确定义任务目标、范围、质量标准和预算。
   输出：完整的 autoloop-plan.md 文件，可直接启动对应模板执行。
-  触发：/autoloop:plan 或当用户想要在开始前详细配置任务时。
+  触发：当用户希望在开始前详细配置任务时，由 Codex 使用本文件。
 ---
 
 # AutoLoop Plan — 交互式任务配置向导

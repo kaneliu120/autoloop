@@ -4,7 +4,7 @@ description: >
 AutoLoop T5: Goal-driven iteration template. Define KPIs and baselines and remeasure after each round of improvements,
 Until the KPI is met or the maximum round is reached. Support manual feedback intervention.
 Quality gate thresholds are found in references/quality-gates.md, line T5.
-Trigger: /autoloop:iterate or any task that requires iterative improvement until it reaches the target.
+Use this document for tasks that require iterative improvement until they reach the target.
 ---
 
 # AutoLoop T5: Iterate — goal-driven iteration
