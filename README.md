@@ -2,6 +2,8 @@
 
 Autonomous iteration engine (Claude Code skill): an eight-stage OODA loop with quality-gated convergence, supporting templates T1 (research) through T8 (architecture optimization) plus chained Pipeline execution.
 
+Licensed under [Apache-2.0](LICENSE).
+
 ## Repository Layout
 
 | Path | Description |
@@ -26,7 +28,7 @@ The experience registry can be resolved by `autoloop-experience.py` from either 
 ## Environment
 
 - **Python**: 3.10+ (CI runs the same test suite on 3.10 and 3.11).
-- **Dependencies**: tools under `scripts/` use the **Python standard library** only and have no third-party runtime dependencies. Using **`mcp-server/`** requires a separate `pip install mcp`.
+- **Dependencies**: tools under `scripts/` use the **Python standard library** only and have no third-party runtime dependencies. Using **`mcp-server/`** requires `pip install "mcp>=1.0.0,<2.0.0"`.
 - **Optional install**: run `pip install -e .` from the repo root to expose console entry points such as `autoloop-state` and `autoloop-validate` (see `autoloop_entrypoints.py`; they still call `scripts/*.py` internally). For unattended mode, install `pip install -e ".[runner]"` and see [docs/RUNNER.md](docs/RUNNER.md) for `autoloop-runner tick|loop|metrics`.
 - **Strict mode**: `AUTOLOOP_STRICT=1` or `autoloop-controller.py <dir> --strict` halts the rest of the round if any hard VERIFY step fails. On the validation side, use `AUTOLOOP_VALIDATE_STRICT=1` or `autoloop-validate.py <dir> --strict`.
 
@@ -64,7 +66,9 @@ If `plan.gates` does not match the current scorer keys, see the **"autoloop-stat
 ## Docs and Changes
 
 - Changelog: [CHANGELOG.md](CHANGELOG.md)  
-- Security notes: [docs/SECURITY.md](docs/SECURITY.md)  
+- Security policy and private reporting: [SECURITY.md](SECURITY.md)
+- Security notes and execution boundaries: [docs/SECURITY.md](docs/SECURITY.md)
+- Contribution guide: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Schema ↔ validation map: [docs/schema-validate-map.md](docs/schema-validate-map.md)  
 - Release/version alignment: [docs/RELEASING.md](docs/RELEASING.md)  
 - MCP and CLI parity: [docs/mcp-cli-parity.md](docs/mcp-cli-parity.md)  

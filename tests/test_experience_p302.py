@@ -2,6 +2,7 @@
 """P3-02: experience query matches the context_tags / context-scoped spec."""
 
 import importlib.util
+import datetime as dt
 import os
 import tempfile
 import unittest
@@ -23,6 +24,11 @@ _MINIMAL_HEAD = """# X
 """
 
 
+def _recent_date():
+    """Keep Recommended fixtures inside the registry's 90-day freshness window."""
+    return (dt.date.today() - dt.timedelta(days=10)).isoformat()
+
+
 class TestExperienceP302ContextMatch(unittest.TestCase):
     def setUp(self):
         self.td = tempfile.mkdtemp(prefix="al_exp302_")
@@ -39,9 +45,10 @@ class TestExperienceP302ContextMatch(unittest.TestCase):
 
     def test_overlap_at_least_two_filters_strategies(self):
         m = self.mod
+        recent = _recent_date()
         rows = (
-            "| S-a | T1 | d | [Keep] @2026-03-15 [python,backend,security] | 1 | — | 2 | 100% | Recommended |\n"
-            "| S-b | T1 | d | [Keep] @2026-03-15 [go,frontend,performance] | 1 | — | 2 | 100% | Recommended |\n"
+            "| S-a | T1 | d | [Keep] @{} [python,backend,security] | 1 | — | 2 | 100% | Recommended |\n".format(recent)
+            + "| S-b | T1 | d | [Keep] @{} [go,frontend,performance] | 1 | — | 2 | 100% | Recommended |\n".format(recent)
         )
         self._write_reg(rows)
         r_all = m.cmd_query(self.reg, "T1", [])
@@ -54,7 +61,7 @@ class TestExperienceP302ContextMatch(unittest.TestCase):
     def test_tag_overlap_case_insensitive(self):
         m = self.mod
         rows = (
-            "| S-a | T1 | d | [Keep] @2026-03-15 [python,backend] | 1 | — | 2 | 100% | Recommended |\n"
+            "| S-a | T1 | d | [Keep] @{} [python,backend] | 1 | — | 2 | 100% | Recommended |\n".format(_recent_date())
         )
         self._write_reg(rows)
         r = m.cmd_query(self.reg, "T1", ["PYTHON", "BACKEND", "security"])
@@ -63,14 +70,16 @@ class TestExperienceP302ContextMatch(unittest.TestCase):
 
     def test_scoped_exact_overrides_global(self):
         m = self.mod
+        recent = _recent_date()
         rows = (
             "| S-z | T1 | d | [Keep] @2026-02-01 [python,backend,security] | 1 | — | 2 | 100% | Observation |\n"
         )
         scoped = """
 | strategy_id | context_tags | status | evidence | last_validated |
 |-------------|--------------|--------|----------|----------------|
-| S-z | [python, backend, security] | Recommended | x | 2026-02-01 |
+| S-z | [python, backend, security] | Recommended | x | {recent} |
 """
+        scoped = scoped.format(recent=recent)
         self._write_reg(rows, scoped)
         r = m.cmd_query(self.reg, "T1", ["python", "backend", "security"])
         self.assertEqual(len(r), 1)
@@ -78,15 +87,17 @@ class TestExperienceP302ContextMatch(unittest.TestCase):
 
     def test_scoped_subset_pick_longest_row(self):
         m = self.mod
+        recent = _recent_date()
         rows = (
             "| S-z | T1 | d | [Keep] @2026-02-01 [python,backend,security] | 1 | — | 2 | 100% | Observation |\n"
         )
         scoped = """
 | strategy_id | context_tags | status | evidence | last_validated |
 |-------------|--------------|--------|----------|----------------|
-| S-z | [python] | Candidate Default | a | 2026-02-01 |
-| S-z | [python, backend] | Recommended | b | 2026-02-01 |
+| S-z | [python] | Candidate Default | a | {recent} |
+| S-z | [python, backend] | Recommended | b | {recent} |
 """
+        scoped = scoped.format(recent=recent)
         self._write_reg(rows, scoped)
         r = m.cmd_query(self.reg, "T1", ["python", "backend", "security"])
         self.assertEqual(len(r), 1)

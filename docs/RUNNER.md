@@ -34,7 +34,8 @@ autoloop-runner metrics /path/to/work_dir
 | Variable | Description |
 |----------|-------------|
 | `OPENAI_API_KEY` | Required when DECIDE / REFLECT call the model |
-| `OPENAI_BASE_URL` | Proxy / Azure compatibility |
+| `OPENAI_BASE_URL` | Optional HTTPS OpenAI or Azure OpenAI endpoint. A different host needs `AUTOLOOP_ALLOW_CUSTOM_OPENAI_BASE_URL=1` after operator review because the API key is sent to that host. |
+| `AUTOLOOP_ALLOW_CUSTOM_OPENAI_BASE_URL` | Explicit opt-in for a reviewed HTTPS OpenAI-compatible endpoint outside OpenAI / Azure OpenAI; unset by default. |
 | `OPENAI_MODEL` | Default `gpt-4o-mini` |
 | `RUNNER_MOCK_LLM` | When `1`, skip API calls and use the mock handoff for handbook validation |
 | `AUTOLOOP_STRICT` | Runner injects `1` into subprocesses by default (disable with `tick --no-strict`) |
@@ -49,6 +50,21 @@ autoloop-runner metrics /path/to/work_dir
 | `RUNNER_SKIP_AUTO_TSV` | Disable automatic TSV writing after VERIFY when `1` (P2-3) |
 | `RUNNER_ACT_TIMEOUT` | Timeout for a single shell command, in seconds |
 | `AUTOLOOP_EXPERIENCE_REQUIRE_MECHANISM` | `1` / `true` / `yes`: after merge, experience `write` must include `--mechanism` when **use_count≥2** (disabled by default; tightens D-03) |
+
+## Runner Security Boundaries
+
+- Model output must match an entire operator-approved command glob; substring
+  matches are not accepted. The default only permits bundled AutoLoop scripts
+  resolved from the installed package, never `scripts/` inside the task work
+  directory.
+- Commands are parsed with `shlex` and executed with `shell=False`. They still
+  run locally, so a custom allowlist is trusted operator configuration and must
+  be as narrow as possible.
+- Planned subprocesses do not inherit recognized credential variables such as
+  `OPENAI_API_KEY`, `GITHUB_TOKEN`, `*_TOKEN`, `*_SECRET`, or `*_PASSWORD`.
+  Do not use model-generated commands for credentialed deployments.
+- The work directory is not a sandbox. Run only trusted tasks in a dedicated
+  directory, and inspect all generated files before committing or publishing.
 
 ## P1 - Stability and Recovery
 
@@ -129,5 +145,6 @@ The Runner does **not** maintain a second task state; `autoloop-state.json` and 
 
 ```bash
 PYTHONPATH=services python -m unittest tests.test_runner_unattended -v
+PYTHONPATH=services python -m unittest tests.test_runner_security -v
 RUN_FULL_RUNNER_TICK=1 PYTHONPATH=services python -m unittest tests.test_runner_unattended.TestRunnerTickMockIntegration -v
 ```

@@ -10,10 +10,12 @@
 
 ## Pre-release Checklist
 
-1. `python3 -m unittest discover -s tests -v`
-2. Update `CHANGELOG.md` (user-visible behavior, breaking changes, migration notes)
-3. If gates or default rounds changed, sync `references/gate-manifest.json` and `references/parameters.md`
-4. Create the tag: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`
+1. `python -m pip install -e ".[dev,runner]" && python -m pip check`
+2. `python3 -m unittest discover -s tests -v`
+3. Review `SECURITY.md`, `docs/SECURITY.md`, and `CONTRIBUTING.md` when Runner, MCP, CLI, dependency, CI, or permission behavior changes.
+4. Update `CHANGELOG.md` (user-visible behavior, breaking changes, migration notes)
+5. If gates or default rounds changed, sync `references/gate-manifest.json` and `references/parameters.md`
+6. Create the tag: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`
 
 ## Optional GitHub Release Notes Template
 

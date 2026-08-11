@@ -6,23 +6,29 @@ on:
   pull_request:
     branches: [main, master]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Python ${{ matrix.python-version }}
+    timeout-minutes: 15
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.10", "3.11"]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install MCP (contract tests)
-        run: pip install mcp
-      - name: Install package (wheel layout + scripts_directory)
+      - name: Install package and test dependencies
         run: |
-          pip install .
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev,runner]"
           python3 -c "from autoloop_scripts.locate import scripts_directory; p=scripts_directory(); assert (p/'autoloop-state.py').is_file(), p"
+      - name: Check installed dependency consistency
+        run: python -m pip check
       - name: Run unit tests
         run: python3 -m unittest discover -s tests -v

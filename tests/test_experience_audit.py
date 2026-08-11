@@ -2,6 +2,7 @@
 """P2-05: audit subcommand for closed-loop continuous-learning checks."""
 
 import importlib.util
+import datetime as dt
 import os
 import shutil
 import tempfile
@@ -10,6 +11,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
+
+
+def _days_ago(days):
+    """Return an ISO date relative to the test run, not a fixed calendar date."""
+    return (dt.date.today() - dt.timedelta(days=days)).isoformat()
 
 REGISTRY_TEMPLATE = """\
 # Experience Registry - global experience registry
@@ -115,7 +121,9 @@ class TestAuditDecayToObservation(unittest.TestCase):
         self.assertEqual(len(decay), 1)
 
     def test_no_decay_recent(self):
-        row = "| S07-test | T3 | qual | [Keep] @2026-03-25 recent | 0.5 | — | 2 | 60% | Recommended |"
+        row = "| S07-test | T3 | qual | [Keep] @{} recent | 0.5 | — | 2 | 60% | Recommended |".format(
+            _days_ago(10)
+        )
         reg = _make_registry(self.td, row)
         result = self.mod.cmd_audit(reg, dry_run=True)
         decay = [r for r in result if "Observation" in r["action"]]
@@ -140,7 +148,9 @@ class TestAuditNoSuggestions(unittest.TestCase):
     def test_healthy_strategies(self):
         rows = (
             "| S08-test | T1 | cov | [Keep] @2026-03-20 ok | 0.5 | — | 2 | 60% | Observation |\n"
-            "| S09-test | T2 | acc | [Keep] @2026-03-20 fine | 1.0 | — | 3 | 70% | Recommended |"
+            "| S09-test | T2 | acc | [Keep] @{} fine | 1.0 | — | 3 | 70% | Recommended |".format(
+                _days_ago(10)
+            )
         )
         reg = _make_registry(self.td, rows)
         result = self.mod.cmd_audit(reg, dry_run=True)

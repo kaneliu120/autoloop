@@ -14,7 +14,7 @@ fi
 
 # Install the mcp package
 echo "1. Installing the mcp package..."
-pip install mcp 2>/dev/null || pip3 install mcp
+python3 -m pip install "mcp>=1.0.0,<2.0.0"
 echo "   ✓ mcp installed"
 
 # Verify the server can start

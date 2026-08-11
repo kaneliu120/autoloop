@@ -17,6 +17,7 @@ from autoloop_runner.metrics import record_api_call, record_runner_outcome
 from autoloop_scripts.locate import scripts_directory
 from autoloop_runner.reflect import normalize_reflect, validate_reflect
 from autoloop_runner import runner_log
+from autoloop_runner.security import resolve_openai_base_url
 from autoloop_runner import stateutil
 from autoloop_runner import synthesize
 from autoloop_runner.tsv_auto import apply_auto_tsv_after_verify
@@ -313,7 +314,7 @@ def _tick_unlocked(
                         user=user,
                         model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
                         api_key=os.environ.get("OPENAI_API_KEY", ""),
-                        base_url=os.environ.get("OPENAI_BASE_URL") or None,
+                        base_url=resolve_openai_base_url(),
                         timeout=float(os.environ.get("RUNNER_OPENAI_TIMEOUT", "120")),
                         max_tokens=int(os.environ.get("RUNNER_MAX_TOKENS", "1024")),
                         temperature=float(os.environ.get("RUNNER_TEMPERATURE", "0.25")),
@@ -395,7 +396,7 @@ def _runner_decide(work_dir: str, python_exe: str | None) -> bool:
                 user=user,
                 model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
                 api_key=key,
-                base_url=os.environ.get("OPENAI_BASE_URL") or None,
+                base_url=resolve_openai_base_url(),
                 timeout=float(os.environ.get("RUNNER_OPENAI_TIMEOUT", "120")),
                 max_tokens=int(os.environ.get("RUNNER_MAX_TOKENS", "2048")),
                 temperature=float(os.environ.get("RUNNER_TEMPERATURE", "0.3")),
@@ -426,7 +427,6 @@ def _allowed_globs(work_dir: str) -> list[str]:
         return [g.strip()]
     sd = str(scripts_directory())
     return [
-        "python3 scripts/autoloop-*.py *",
         "python3 {}/autoloop-*.py *".format(sd),
     ]
 
@@ -505,7 +505,7 @@ def _runner_reflect(work_dir: str, python_exe: str | None) -> bool:
                 user=user,
                 model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
                 api_key=key,
-                base_url=os.environ.get("OPENAI_BASE_URL") or None,
+                base_url=resolve_openai_base_url(),
                 timeout=float(os.environ.get("RUNNER_OPENAI_TIMEOUT", "120")),
                 max_tokens=int(os.environ.get("RUNNER_MAX_TOKENS", "1024")),
                 temperature=float(os.environ.get("RUNNER_TEMPERATURE", "0.2")),

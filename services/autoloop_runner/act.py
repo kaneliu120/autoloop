@@ -10,6 +10,8 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any, Sequence
 
+from autoloop_runner.security import sanitized_child_environment
+
 
 @dataclass
 class CommandResult:
@@ -22,13 +24,17 @@ class CommandResult:
 
 
 def _command_allowed(cmd: str, patterns: Sequence[str]) -> bool:
+    """Allow only complete, operator-supplied glob matches.
+
+    Substring matching made a short or broad configuration value unexpectedly
+    authorize a longer command.  The caller may still use deliberate globs,
+    but they must match the entire normalized command string.
+    """
     if not patterns:
         return False
     for p in patterns:
-        if fnmatch.fnmatch(cmd, p) or fnmatch.fnmatch(cmd.strip(), p):
-            return True
-        # Also allow the pattern as a substring (manual: fragment matching)
-        if p in cmd:
+        pattern = str(p or "").strip()
+        if pattern and fnmatch.fnmatchcase(cmd.strip(), pattern):
             return True
     return False
 
@@ -43,7 +49,7 @@ def run_planned_commands(
 ) -> list[CommandResult]:
     """Execute planned_commands; commands failing the allowlist are recorded as errors but not raised."""
     wd = os.path.abspath(work_dir)
-    merged_env = {**os.environ, **(env or {})}
+    merged_env = sanitized_child_environment(additions=env)
     results: list[CommandResult] = []
     globs = list(allowed_globs or [])
 
